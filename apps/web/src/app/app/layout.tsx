@@ -22,9 +22,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <header className="border-b border-border">
-        <div className="mx-auto max-w-6xl px-6 py-4 flex items-center justify-between">
+    <div className="h-screen flex flex-col">
+      <header className="shrink-0 border-b border-border">
+        <div className="mx-auto max-w-7xl px-6 py-3 flex items-center justify-between">
           <Logo variant="lockup" size="sm" href="/app" />
           <div className="flex items-center gap-3">
             <span className="text-sm text-fg-muted hidden sm:inline">{user.email}</span>
@@ -34,7 +34,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
         </div>
       </header>
-      <main className="flex-1">{children}</main>
+      <main className="flex-1 min-h-0">{children}</main>
     </div>
   );
 }
