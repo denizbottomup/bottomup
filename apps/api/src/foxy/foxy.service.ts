@@ -114,8 +114,8 @@ export class FoxyService {
 
     const closes = klines.map((k) => Number(k[4]));
     const rsi = computeRsi(closes, 14);
-    const last = closes[closes.length - 1];
-    const prev24 = closes.length >= 24 ? closes[closes.length - 24] : closes[0];
+    const last = closes[closes.length - 1] ?? 0;
+    const prev24 = (closes.length >= 24 ? closes[closes.length - 24] : closes[0]) ?? 0;
     const changePct = prev24 ? ((last - prev24) / prev24) * 100 : 0;
 
     return {
@@ -247,14 +247,14 @@ function computeRsi(closes: number[], period: number): number | null {
   let gains = 0;
   let losses = 0;
   for (let i = 1; i <= period; i++) {
-    const d = closes[i] - closes[i - 1];
+    const d = (closes[i] ?? 0) - (closes[i - 1] ?? 0);
     if (d > 0) gains += d;
     else losses -= d;
   }
   gains /= period;
   losses /= period;
   for (let i = period + 1; i < closes.length; i++) {
-    const d = closes[i] - closes[i - 1];
+    const d = (closes[i] ?? 0) - (closes[i - 1] ?? 0);
     gains = (gains * (period - 1) + Math.max(0, d)) / period;
     losses = (losses * (period - 1) + Math.max(0, -d)) / period;
   }
