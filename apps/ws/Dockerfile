@@ -1,5 +1,9 @@
-FROM node:22-alpine AS base
-RUN corepack enable && corepack prepare pnpm@10.33.1 --activate
+FROM node:22-slim AS base
+# git is required to resolve uWebSockets.js (installed from GitHub URL);
+# ca-certificates for https clone.
+RUN apt-get update && apt-get install -y --no-install-recommends git ca-certificates \
+  && rm -rf /var/lib/apt/lists/* \
+  && corepack enable && corepack prepare pnpm@10.33.1 --activate
 WORKDIR /repo
 
 FROM base AS deps
@@ -15,7 +19,7 @@ COPY . .
 RUN pnpm --filter @bottomup/config --filter @bottomup/events build
 RUN pnpm --filter @bottomup/ws build
 
-FROM node:22-alpine AS runtime
+FROM node:22-slim AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
 COPY --from=build /repo/node_modules ./node_modules
