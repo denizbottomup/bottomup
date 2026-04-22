@@ -1,6 +1,10 @@
 import Link from 'next/link';
 import { Logo } from '@/components/logo';
 
+const TRADE = process.env.NEXT_PUBLIC_TRADE_URL ?? '';
+const signin = `${TRADE}/signin`;
+const signup = `${TRADE}/signup`;
+
 export default function LandingPage() {
   return (
     <main className="min-h-screen flex flex-col">
@@ -8,10 +12,10 @@ export default function LandingPage() {
         <div className="mx-auto max-w-6xl px-6 py-4 flex items-center justify-between">
           <Logo variant="lockup" size="md" />
           <nav className="flex items-center gap-2">
-            <Link href="/signin" className="btn-ghost">
+            <Link href={signin} className="btn-ghost">
               Giriş yap
             </Link>
-            <Link href="/signup" className="btn-primary">
+            <Link href={signup} className="btn-primary">
               Kayıt ol
             </Link>
           </nav>
@@ -28,10 +32,10 @@ export default function LandingPage() {
             Mobil'de olan her şey artık tarayıcıda da.
           </p>
           <div className="mt-10 flex gap-3">
-            <Link href="/signup" className="btn-primary px-6 py-3 text-base">
+            <Link href={signup} className="btn-primary px-6 py-3 text-base">
               Ücretsiz başla
             </Link>
-            <Link href="/signin" className="btn-ghost px-6 py-3 text-base">
+            <Link href={signin} className="btn-ghost px-6 py-3 text-base">
               Hesabım var
             </Link>
           </div>
