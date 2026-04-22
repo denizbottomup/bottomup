@@ -1,5 +1,7 @@
-FROM node:22-alpine AS base
-RUN corepack enable && corepack prepare pnpm@10.33.1 --activate
+FROM node:22-slim AS base
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates \
+  && rm -rf /var/lib/apt/lists/* \
+  && corepack enable && corepack prepare pnpm@10.33.1 --activate
 WORKDIR /repo
 
 FROM base AS deps
@@ -13,15 +15,13 @@ RUN pnpm install --frozen-lockfile
 FROM base AS build
 COPY --from=deps /repo /repo
 COPY . .
-RUN pnpm --filter @bottomup/db db:generate
-RUN pnpm --filter @bottomup/config --filter @bottomup/events --filter @bottomup/db build
-RUN pnpm --filter @bottomup/workers build
+RUN pnpm --filter @bottomup/db db:generate \
+  && pnpm --filter @bottomup/config --filter @bottomup/events --filter @bottomup/db build \
+  && pnpm --filter @bottomup/workers build
 
-FROM node:22-alpine AS runtime
-WORKDIR /app
+FROM base AS runtime
 ENV NODE_ENV=production
-COPY --from=build /repo/node_modules ./node_modules
-COPY --from=build /repo/apps/workers/dist ./dist
-COPY --from=build /repo/apps/workers/package.json ./
-COPY --from=build /repo/packages ./packages
+WORKDIR /repo
+COPY --from=build /repo /repo
+WORKDIR /repo/apps/workers
 CMD ["node", "dist/main.js"]

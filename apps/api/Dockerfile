@@ -1,5 +1,7 @@
-FROM node:22-alpine AS base
-RUN corepack enable && corepack prepare pnpm@10.33.1 --activate
+FROM node:22-slim AS base
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates \
+  && rm -rf /var/lib/apt/lists/* \
+  && corepack enable && corepack prepare pnpm@10.33.1 --activate
 WORKDIR /repo
 
 # ─── Install deps ────────────────────────────────────────────────────
@@ -15,20 +17,18 @@ RUN pnpm install --frozen-lockfile
 FROM base AS build
 COPY --from=deps /repo /repo
 COPY . .
-# Generate Prisma client (emits packages/db/generated/client)
-RUN pnpm --filter @bottomup/db db:generate
-# Compile shared packages (emits dist/ — required by consuming apps)
-RUN pnpm --filter @bottomup/config --filter @bottomup/events --filter @bottomup/db build
-# Compile the api
-RUN pnpm --filter @bottomup/api build
+RUN pnpm --filter @bottomup/db db:generate \
+  && pnpm --filter @bottomup/config --filter @bottomup/events --filter @bottomup/db build \
+  && pnpm --filter @bottomup/api build
 
-# ─── Slim runtime image ──────────────────────────────────────────────
-FROM node:22-alpine AS runtime
-WORKDIR /app
+# ─── Runtime (workspace-preserving) ──────────────────────────────────
+# Keep the full repo layout so pnpm's node_modules/.pnpm symlinks resolve
+# correctly (@bottomup/* point at ../../packages/*/dist which only exist
+# in the workspace tree).
+FROM base AS runtime
 ENV NODE_ENV=production
-COPY --from=build /repo/node_modules ./node_modules
-COPY --from=build /repo/apps/api/dist ./dist
-COPY --from=build /repo/apps/api/package.json ./
-COPY --from=build /repo/packages ./packages
+WORKDIR /repo
+COPY --from=build /repo /repo
+WORKDIR /repo/apps/api
 EXPOSE 8000
 CMD ["node", "dist/main.js"]
