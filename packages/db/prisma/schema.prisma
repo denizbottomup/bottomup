@@ -10,16 +10,9 @@ datasource db {
   relationMode = "foreignKeys"
 }
 
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
-model omer_premiums {
-  email              String? @unique(map: "table_name_pk") @db.VarChar
-  is_active          Boolean @default(true)
-  is_valid           Boolean @default(true)
-  transaction_number Int     @default(dbgenerated("nextval('_omer_premiums_transaction_number_seq'::regclass)"))
-
-  @@map("_omer_premiums")
-  @@ignore
-}
+// Legacy prod-only table `_omer_premiums` dropped from the 3.0 schema.
+// It depends on a sequence that Prisma introspection can't push cleanly
+// to a fresh DB. If re-added later, create the sequence manually first.
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model ad_audit_logs {
