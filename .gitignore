@@ -11,3 +11,7 @@ dist
 packages/db/generated
 # Firebase service account (never commit)
 firebase-service-account*.json
+
+# Next.js build output
+apps/web/.next
+apps/web/out
