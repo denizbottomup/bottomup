@@ -4,11 +4,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates
   && corepack enable && corepack prepare pnpm@10.33.1 --activate
 WORKDIR /repo
 
+# ─── Install deps ────────────────────────────────────────────────────
 FROM base AS deps
 COPY pnpm-workspace.yaml package.json pnpm-lock.yaml .npmrc ./
 COPY apps/web/package.json apps/web/
 RUN pnpm install --frozen-lockfile --filter @bottomup/web...
 
+# ─── Build ───────────────────────────────────────────────────────────
 FROM base AS build
 ARG NEXT_PUBLIC_FIREBASE_API_KEY
 ARG NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
@@ -28,13 +30,15 @@ COPY --from=deps /repo /repo
 COPY . .
 RUN pnpm --filter @bottomup/web build
 
+# ─── Runtime (Next.js standalone) ────────────────────────────────────
+# Standalone output with outputFileTracingRoot=../../ emits at
+#   apps/web/.next/standalone/{apps/web/server.js, node_modules, package.json}
+# We copy the whole standalone tree to /app and cd into apps/web to run it.
 FROM base AS runtime
 ENV NODE_ENV=production
 WORKDIR /app
-# Next.js standalone output bundles node_modules
-COPY --from=build /repo/apps/web/.next/standalone /app
-COPY --from=build /repo/apps/web/.next/static /app/apps/web/.next/static
-COPY --from=build /repo/apps/web/public /app/apps/web/public
+COPY --from=build /repo/apps/web/.next/standalone ./
+COPY --from=build /repo/apps/web/.next/static ./apps/web/.next/static
 EXPOSE 3000
 WORKDIR /app/apps/web
 CMD ["node", "server.js"]
