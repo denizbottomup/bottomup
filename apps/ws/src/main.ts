@@ -10,7 +10,9 @@ async function main(): Promise<void> {
   const bus = new RedisBus(env.REDIS_URL, log);
   await bus.start();
 
-  const gateway = startGateway({ log, port: env.WS_PORT, jwtSecret: env.JWT_ACCESS_SECRET, bus });
+  // Railway injects PORT and routes to whatever port the service listens on.
+  const port = process.env['PORT'] ? Number(process.env['PORT']) : env.WS_PORT;
+  const gateway = startGateway({ log, port, jwtSecret: env.JWT_ACCESS_SECRET, bus });
 
   const shutdown = async (signal: string): Promise<void> => {
     log.info({ signal }, 'shutting down');

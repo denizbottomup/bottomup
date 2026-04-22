@@ -38,9 +38,12 @@ async function bootstrap(): Promise<void> {
   process.on('SIGTERM', () => void shutdown('SIGTERM'));
   process.on('SIGINT', () => void shutdown('SIGINT'));
 
-  await app.listen({ port: env.API_PORT, host: '0.0.0.0' });
+  // Railway injects PORT at runtime and its proxy expects the service on that
+  // port. Fall back to API_PORT for local dev.
+  const port = process.env['PORT'] ? Number(process.env['PORT']) : env.API_PORT;
+  await app.listen({ port, host: '0.0.0.0' });
   // eslint-disable-next-line no-console
-  console.log(`[api] listening on :${env.API_PORT} (${env.NODE_ENV})`);
+  console.log(`[api] listening on :${port} (${env.NODE_ENV})`);
 }
 
 void bootstrap();
