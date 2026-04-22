@@ -1,7 +1,13 @@
-// Early diagnostic log — printed before any heavy import so we know the
-// container got past Node startup.
+// Force stdout to be line-buffered so logs appear in real time on Railway.
+// By default Node buffers stdout when piped (Docker captures via pipe).
+if (process.stdout.isTTY === false) {
+  // @ts-expect-error _handle is internal but consistently present
+  if (process.stdout._handle?.setBlocking) process.stdout._handle.setBlocking(true);
+}
+
+// Early diagnostic (hoisted after imports in ESM, but first runtime stmt).
 // eslint-disable-next-line no-console
-console.log(`[boot] pid=${process.pid} node=${process.version} PORT=${process.env['PORT'] ?? '(unset)'}`);
+console.log(`[boot] pid=${process.pid} node=${process.version} PORT=${process.env['PORT'] ?? '(unset)'} API_PORT=${process.env['API_PORT'] ?? '(unset)'}`);
 
 import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
@@ -58,12 +64,13 @@ async function bootstrap(): Promise<void> {
   process.on('SIGTERM', () => void shutdown('SIGTERM'));
   process.on('SIGINT', () => void shutdown('SIGINT'));
 
-  // Railway injects PORT at runtime and its proxy expects the service on that
-  // port. Fall back to API_PORT for local dev.
-  const port = process.env['PORT'] ? Number(process.env['PORT']) : env.API_PORT;
+  // Always listen on API_PORT. Railway's auto-injected PORT is unreliable
+  // (may not match Generate Domain target). Configure API_PORT to match the
+  // Generate Domain target port explicitly.
+  const port = env.API_PORT;
   await app.listen({ port, host: '0.0.0.0' });
   // eslint-disable-next-line no-console
-  console.log(`[api] listening on :${port} (${env.NODE_ENV})`);
+  console.log(`[api] listening on 0.0.0.0:${port} (${env.NODE_ENV})`);
 }
 
 void bootstrap();
