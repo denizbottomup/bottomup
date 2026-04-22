@@ -10,7 +10,7 @@ export class UserController {
 
   @Get('/me')
   async me(@CurrentUser() user: AuthedUser): Promise<Record<string, unknown>> {
-    const userId = user.kind === 'jwt' ? user.sub : user.uid;
-    return this.users.findMe(userId);
+    const id = user.kind === 'jwt' ? user.sub : user.uid;
+    return this.users.findMe({ kind: user.kind, id });
   }
 }
