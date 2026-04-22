@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { ApiError, api } from '@/lib/api';
-import { SetupCardView, type SetupCard } from '@/components/setup-card';
+import type { SetupCard } from '@/components/setup-card';
+import { SetupRow } from '@/components/setup-row';
 
 type Tab = 'opportunities' | 'active';
 
@@ -43,7 +44,7 @@ export default function FeedPage() {
   const items = tab === 'opportunities' ? opp ?? [] : act ?? [];
 
   return (
-    <div className="mx-auto max-w-7xl px-6 py-6">
+    <div className="mx-auto max-w-6xl px-6 py-6">
       <div className="flex items-center gap-2">
         <TabButton
           active={tab === 'opportunities'}
@@ -61,12 +62,9 @@ export default function FeedPage() {
 
       <div className="mt-5">
         {err ? (
-          <EmptyState
-            title="Akış yüklenemedi"
-            hint={err}
-          />
+          <EmptyState title="Akış yüklenemedi" hint={err} />
         ) : loading ? (
-          <SkeletonGrid />
+          <SkeletonList />
         ) : items.length === 0 ? (
           <EmptyState
             title={
@@ -77,9 +75,9 @@ export default function FeedPage() {
             hint="Takip ettiğin trader'lar yeni bir emir paylaştığında burada görünecek."
           />
         ) : (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          <div className="flex flex-col gap-2">
             {items.map((s) => (
-              <SetupCardView key={s.id} setup={s} />
+              <SetupRow key={s.id} setup={s} />
             ))}
           </div>
         )}
@@ -124,14 +122,11 @@ function TabButton({
   );
 }
 
-function SkeletonGrid() {
+function SkeletonList() {
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-      {Array.from({ length: 6 }).map((_, i) => (
-        <div
-          key={i}
-          className="h-48 animate-pulse rounded-2xl border border-white/5 bg-white/[0.02]"
-        />
+    <div className="flex flex-col gap-2">
+      {Array.from({ length: 8 }).map((_, i) => (
+        <div key={i} className="h-12 animate-pulse rounded-xl border border-white/5 bg-white/[0.02]" />
       ))}
     </div>
   );
