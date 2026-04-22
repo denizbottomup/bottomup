@@ -34,7 +34,7 @@ export function TradingViewChart({
     script.type = 'text/javascript';
     script.src = SCRIPT_SRC;
     script.async = true;
-    script.text = JSON.stringify({
+    script.innerHTML = JSON.stringify({
       autosize: true,
       symbol,
       interval,
@@ -43,11 +43,6 @@ export function TradingViewChart({
       style: '1',
       locale: 'tr',
       allow_symbol_change: true,
-      withdateranges: true,
-      hide_side_toolbar: false,
-      details: true,
-      hotlist: true,
-      calendar: false,
       support_host: 'https://www.tradingview.com',
     });
     host.appendChild(script);
