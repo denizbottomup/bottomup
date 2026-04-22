@@ -197,3 +197,4 @@ function buildUpsert(spec: TableReplicationSpec, cols: string[]): string {
     : `INSERT INTO ${q(spec.name)} (${colList}) VALUES (${placeholders})
          ON CONFLICT (${pkList}) DO NOTHING`;
 }
+// replicator deploy trigger
