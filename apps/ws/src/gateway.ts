@@ -117,10 +117,13 @@ export function startGateway(opts: {
   });
 
   let listenSocket: unknown = null;
-  app.listen(port, (socket) => {
+  // Bind to all interfaces explicitly. Railway's edge proxy otherwise can
+  // return 502 with x-railway-fallback=true — uWS single-arg listen() binds
+  // to a default that the proxy's internal reachability check mis-detects.
+  app.listen('0.0.0.0', port, (socket) => {
     if (!socket) throw new Error(`ws: failed to listen on :${port}`);
     listenSocket = socket;
-    log.info({ port }, 'ws: listening');
+    log.info({ port, host: '0.0.0.0' }, 'ws: listening');
   });
 
   return {
