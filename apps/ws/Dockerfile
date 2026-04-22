@@ -3,7 +3,7 @@ RUN corepack enable && corepack prepare pnpm@10.33.1 --activate
 WORKDIR /repo
 
 FROM base AS deps
-COPY pnpm-workspace.yaml package.json pnpm-lock.yaml* ./
+COPY pnpm-workspace.yaml package.json pnpm-lock.yaml .npmrc ./
 COPY packages/config/package.json packages/config/
 COPY packages/events/package.json packages/events/
 COPY apps/ws/package.json apps/ws/
@@ -12,6 +12,7 @@ RUN pnpm install --frozen-lockfile
 FROM base AS build
 COPY --from=deps /repo /repo
 COPY . .
+RUN pnpm --filter @bottomup/config --filter @bottomup/events build
 RUN pnpm --filter @bottomup/ws build
 
 FROM node:22-alpine AS runtime

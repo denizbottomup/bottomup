@@ -3,7 +3,7 @@ RUN corepack enable && corepack prepare pnpm@10.33.1 --activate
 WORKDIR /repo
 
 FROM base AS deps
-COPY pnpm-workspace.yaml package.json pnpm-lock.yaml* ./
+COPY pnpm-workspace.yaml package.json pnpm-lock.yaml .npmrc ./
 COPY packages/db/package.json packages/db/
 COPY packages/config/package.json packages/config/
 COPY packages/events/package.json packages/events/
@@ -14,6 +14,7 @@ FROM base AS build
 COPY --from=deps /repo /repo
 COPY . .
 RUN pnpm --filter @bottomup/db db:generate
+RUN pnpm --filter @bottomup/config --filter @bottomup/events --filter @bottomup/db build
 RUN pnpm --filter @bottomup/workers build
 
 FROM node:22-alpine AS runtime
