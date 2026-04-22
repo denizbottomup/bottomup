@@ -1,9 +1,9 @@
 'use client';
 
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { useAuth } from '@/lib/auth-context';
+import { Logo } from '@/components/logo';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -25,10 +25,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen flex flex-col">
       <header className="border-b border-border">
         <div className="mx-auto max-w-6xl px-6 py-4 flex items-center justify-between">
-          <Link href="/app" className="flex items-center gap-2">
-            <div className="h-7 w-7 rounded-md bg-brand" />
-            <span className="font-semibold">bottomUP</span>
-          </Link>
+          <Logo variant="lockup" size="sm" href="/app" />
           <div className="flex items-center gap-3">
             <span className="text-sm text-fg-muted hidden sm:inline">{user.email}</span>
             <button onClick={() => void signOut()} className="btn-ghost text-sm">

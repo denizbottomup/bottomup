@@ -1,5 +1,5 @@
-import Link from 'next/link';
 import type { ReactNode } from 'react';
+import { Logo } from './logo';
 
 export function AuthCard({
   title,
@@ -15,10 +15,9 @@ export function AuthCard({
   return (
     <main className="min-h-screen flex items-center justify-center px-4 py-16">
       <div className="w-full max-w-md">
-        <Link href="/" className="flex items-center gap-2 mb-10">
-          <div className="h-8 w-8 rounded-lg bg-brand" />
-          <span className="text-lg font-semibold">bottomUP</span>
-        </Link>
+        <div className="flex justify-center mb-10">
+          <Logo variant="lockup" size="md" />
+        </div>
 
         <div className="card p-8">
           <h1 className="text-2xl font-semibold">{title}</h1>

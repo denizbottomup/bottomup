@@ -1,14 +1,12 @@
 import Link from 'next/link';
+import { Logo } from '@/components/logo';
 
 export default function LandingPage() {
   return (
     <main className="min-h-screen flex flex-col">
       <header className="border-b border-border">
         <div className="mx-auto max-w-6xl px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-lg bg-brand" />
-            <span className="text-lg font-semibold">bottomUP</span>
-          </div>
+          <Logo variant="lockup" size="md" />
           <nav className="flex items-center gap-2">
             <Link href="/signin" className="btn-ghost">
               Giriş yap
