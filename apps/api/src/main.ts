@@ -1,3 +1,8 @@
+// Early diagnostic log — printed before any heavy import so we know the
+// container got past Node startup.
+// eslint-disable-next-line no-console
+console.log(`[boot] pid=${process.pid} node=${process.version} PORT=${process.env['PORT'] ?? '(unset)'}`);
+
 import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
 import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify';
@@ -7,8 +12,23 @@ import { apiSchema, loadEnv } from '@bottomup/config';
 import { AppModule } from './app.module.js';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter.js';
 
+process.on('uncaughtException', (err) => {
+  // eslint-disable-next-line no-console
+  console.error('[boot] uncaughtException', err);
+  process.exit(1);
+});
+process.on('unhandledRejection', (err) => {
+  // eslint-disable-next-line no-console
+  console.error('[boot] unhandledRejection', err);
+  process.exit(1);
+});
+
 async function bootstrap(): Promise<void> {
+  // eslint-disable-next-line no-console
+  console.log('[boot] entering bootstrap, loading env');
   const env = loadEnv(apiSchema);
+  // eslint-disable-next-line no-console
+  console.log(`[boot] env loaded, NODE_ENV=${env.NODE_ENV}, API_PORT=${env.API_PORT}`);
 
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,
