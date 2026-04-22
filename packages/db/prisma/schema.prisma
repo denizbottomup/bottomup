@@ -1,0 +1,1951 @@
+generator client {
+  provider        = "prisma-client-js"
+  output          = "../generated/client"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider     = "postgresql"
+  url          = env("DATABASE_URL")
+  relationMode = "foreignKeys"
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model omer_premiums {
+  email              String? @unique(map: "table_name_pk") @db.VarChar
+  is_active          Boolean @default(true)
+  is_valid           Boolean @default(true)
+  transaction_number Int     @default(dbgenerated("nextval('_omer_premiums_transaction_number_seq'::regclass)"))
+
+  @@map("_omer_premiums")
+  @@ignore
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model ad_audit_logs {
+  id          Int       @id @default(autoincrement())
+  admin_id    String    @db.Uuid
+  action      String    @db.VarChar(30)
+  target_type String    @db.VarChar(20)
+  target_id   Int
+  payload     Json      @default("{}")
+  created_at  DateTime? @default(now()) @db.Timestamptz(6)
+  user        user      @relation(fields: [admin_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([admin_id, created_at], map: "ix_audit_admin_id")
+  @@index([target_type, target_id], map: "ix_audit_target")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model ad_transactions {
+  id            Int        @id @default(autoincrement())
+  wallet_id     Int
+  campaign_id   Int?
+  type          String     @db.VarChar(30)
+  amount        Decimal    @db.Decimal(12, 2)
+  balance_after Decimal    @db.Decimal(12, 2)
+  note          String?
+  created_at    DateTime?  @default(now()) @db.Timestamptz(6)
+  campaigns     campaigns? @relation(fields: [campaign_id], references: [id], onUpdate: NoAction)
+  ad_wallets    ad_wallets @relation(fields: [wallet_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([wallet_id, created_at], map: "ix_ad_transactions_wallet")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model ad_wallets {
+  id              Int               @id @default(autoincrement())
+  trader_id       String            @unique @db.Uuid
+  balance         Decimal           @default(0) @db.Decimal(12, 2)
+  reserved        Decimal           @default(0) @db.Decimal(12, 2)
+  updated_at      DateTime?         @default(now()) @db.Timestamptz(6)
+  ad_transactions ad_transactions[]
+  user            user              @relation(fields: [trader_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model ads {
+  id           String    @id @db.Uuid
+  created_at   DateTime? @db.Timestamp(6)
+  updated_at   DateTime? @db.Timestamp(6)
+  is_deleted   Boolean
+  ads_id       String    @db.VarChar
+  ads_group_id String    @db.VarChar
+  image        String?   @db.VarChar
+  video        String?   @db.VarChar
+  content      String?   @db.VarChar
+  title        String?   @db.VarChar
+  url          String?   @db.VarChar
+  lang         String    @default("en") @db.VarChar
+  start_date   DateTime  @db.Timestamp(6)
+  end_date     DateTime  @db.Timestamp(6)
+  pages        String?   @db.VarChar
+  campaign     String?   @db.VarChar
+  company      String?   @db.VarChar
+  sort_no      Int?      @default(0)
+
+  @@index([ads_group_id], map: "ix_ads_ads_group_id")
+  @@index([ads_id], map: "ix_ads_ads_id")
+  @@index([created_at], map: "ix_ads_created_at")
+  @@index([end_date], map: "ix_ads_end_date")
+  @@index([is_deleted], map: "ix_ads_is_deleted")
+  @@index([lang], map: "ix_ads_lang")
+  @@index([start_date], map: "ix_ads_start_date")
+}
+
+model affiliate_trader_credentials {
+  trader_id         String    @db.Uuid
+  is_active         Boolean
+  is_demo           Boolean
+  copy_trade_market String    @db.VarChar
+  api_key           String?   @db.VarChar
+  api_secret        String?   @db.VarChar
+  passphrase        String?   @db.VarChar
+  id                String    @id @db.Uuid
+  created_at        DateTime? @db.Timestamp(6)
+  updated_at        DateTime? @db.Timestamp(6)
+  is_deleted        Boolean
+  user              user      @relation(fields: [trader_id], references: [id])
+
+  @@unique([trader_id, copy_trade_market])
+  @@index([is_active, copy_trade_market], map: "ix_active_market")
+  @@index([created_at], map: "ix_affiliate_trader_credentials_created_at")
+  @@index([is_active], map: "ix_affiliate_trader_credentials_is_active")
+  @@index([is_deleted], map: "ix_affiliate_trader_credentials_is_deleted")
+}
+
+model alembic_version {
+  version_num String @id(map: "alembic_version_pkc") @db.VarChar(32)
+}
+
+model api_key {
+  user_id      String    @db.Uuid
+  name         String    @db.VarChar(128)
+  key_prefix   String    @db.VarChar(8)
+  key_hash     String    @unique @db.VarChar(64)
+  scopes       Json
+  allowed_ips  Json?
+  expires_at   DateTime  @db.Timestamptz(6)
+  last_used_at DateTime? @db.Timestamptz(6)
+  is_active    Boolean   @default(true)
+  id           String    @id @db.Uuid
+  created_at   DateTime? @db.Timestamp(6)
+  updated_at   DateTime? @db.Timestamp(6)
+  is_deleted   Boolean   @default(false)
+  user         user      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([created_at], map: "ix_api_key_created_at")
+  @@index([is_active], map: "ix_api_key_is_active")
+  @@index([is_deleted], map: "ix_api_key_is_deleted")
+  @@index([key_prefix], map: "ix_api_key_key_prefix")
+  @@index([key_prefix, key_hash], map: "ix_api_key_prefix_hash")
+  @@index([user_id, is_active], map: "ix_api_key_user_active")
+  @@index([user_id], map: "ix_api_key_user_id")
+}
+
+model app_store_product_price {
+  product_code String   @db.VarChar
+  country_code String   @db.VarChar
+  activated_at DateTime @db.Timestamp(6)
+  price        Float
+  currency     String   @db.VarChar
+  id           String   @id @db.Uuid
+
+  @@unique([product_code, country_code, activated_at])
+  @@index([activated_at], map: "ix_app_store_product_price_activated_at")
+  @@index([country_code], map: "ix_app_store_product_price_country_code")
+  @@index([product_code], map: "ix_app_store_product_price_product_code")
+}
+
+model bank_account {
+  user_id           String              @db.Uuid
+  iban              String              @db.VarChar(34)
+  bank_name         String?             @db.VarChar(128)
+  account_holder    String              @db.VarChar(128)
+  swift_code        String?             @db.VarChar(11)
+  currency          String              @db.VarChar(3)
+  is_verified       Boolean
+  verified_at       DateTime?           @db.Timestamp(6)
+  meta_data         Json?
+  id                String              @id @db.Uuid
+  created_at        DateTime?           @db.Timestamp(6)
+  updated_at        DateTime?           @db.Timestamp(6)
+  is_deleted        Boolean
+  user              user                @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  credit_withdrawal credit_withdrawal[]
+
+  @@unique([user_id, iban], map: "ux_bank_account_user_iban")
+  @@index([created_at], map: "ix_bank_account_created_at")
+  @@index([is_deleted], map: "ix_bank_account_is_deleted")
+  @@index([is_verified], map: "ix_bank_account_is_verified")
+  @@index([user_id], map: "ix_bank_account_user_id")
+}
+
+model boost {
+  id                  String    @id @db.Uuid
+  created_at          DateTime? @db.Timestamp(6)
+  updated_at          DateTime? @db.Timestamp(6)
+  is_deleted          Boolean   @default(false)
+  user_id             String    @db.Uuid
+  target_type         String    @db.VarChar(16)
+  target_id           String    @db.Uuid
+  tier_name           String    @db.VarChar(32)
+  daily_price_credits Float
+  total_credits       Float
+  days                Int
+  started_at          DateTime? @db.Timestamp(6)
+  expires_at          DateTime  @db.Timestamp(6)
+  status              String    @default("active") @db.VarChar(16)
+  credit_tx_id        String?   @db.Uuid
+  user                user      @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([created_at], map: "ix_boost_created_at")
+  @@index([expires_at], map: "ix_boost_expires_at")
+  @@index([is_deleted], map: "ix_boost_is_deleted")
+  @@index([status], map: "ix_boost_status")
+  @@index([target_id], map: "ix_boost_target_id")
+  @@index([target_type, target_id, status, expires_at], map: "ix_boost_target_status_expires")
+  @@index([user_id], map: "ix_boost_user_id")
+}
+
+model boost_tier {
+  id                    String    @id @db.Uuid
+  created_at            DateTime? @db.Timestamp(6)
+  updated_at            DateTime? @db.Timestamp(6)
+  is_deleted            Boolean   @default(false)
+  name                  String    @db.VarChar(32)
+  target_type           String    @db.VarChar(16)
+  daily_price_credits   Float
+  visibility_multiplier Float     @default(1)
+  is_featured           Boolean   @default(false)
+  sort_order            Int       @default(0)
+
+  @@unique([name, target_type], map: "uq_boost_tier_name_type")
+  @@index([created_at], map: "ix_boost_tier_created_at")
+  @@index([is_deleted], map: "ix_boost_tier_is_deleted")
+}
+
+model calendar {
+  id              String          @id @db.Uuid
+  created_at      DateTime?       @db.Timestamp(6)
+  updated_at      DateTime?       @db.Timestamp(6)
+  is_deleted      Boolean
+  data_event_id   Int
+  data_ecobaseid  Int?
+  date            DateTime?       @db.Date
+  time            String?         @db.VarChar
+  impact          String?         @db.VarChar
+  title           String?         @db.VarChar
+  actual          String?         @db.VarChar
+  forecast        String?         @db.VarChar
+  previous        String?         @db.VarChar
+  source          String?         @db.VarChar
+  measures        String?         @db.VarChar
+  usual_effect    String?         @db.VarChar
+  frequency       String?         @db.VarChar
+  next_release    String?         @db.VarChar
+  cc_notes        String?         @db.VarChar
+  why_traderscare String?         @db.VarChar
+  derived_via     String?         @db.VarChar
+  acro_expand     String?         @db.VarChar
+  also_called     String?         @db.VarChar
+  description     String?         @db.VarChar
+  speaker         String?         @db.VarChar
+  event_datetime  DateTime?       @db.Timestamp(6)
+  country         String?         @db.VarChar
+  cc_notice       String?         @db.VarChar
+  country_code    String?         @db.VarChar
+  calendar_text   calendar_text[]
+
+  @@index([created_at], map: "ix_calendar_created_at")
+  @@index([is_deleted], map: "ix_calendar_is_deleted")
+}
+
+model calendar_text {
+  id              String   @id @db.Uuid
+  calendar_id     String   @db.Uuid
+  language        String   @default("en") @db.VarChar
+  title           String?  @db.VarChar
+  source          String?  @db.VarChar
+  measures        String?  @db.VarChar
+  usual_effect    String?  @db.VarChar
+  frequency       String?  @db.VarChar
+  cc_notes        String?  @db.VarChar
+  why_traderscare String?  @db.VarChar
+  derived_via     String?  @db.VarChar
+  acro_expand     String?  @db.VarChar
+  also_called     String?  @db.VarChar
+  description     String?  @db.VarChar
+  cc_notice       String?  @db.VarChar
+  speaker         String?  @db.VarChar
+  country         String?  @db.VarChar
+  calendar        calendar @relation(fields: [calendar_id], references: [id])
+
+  @@unique([calendar_id, language])
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model campaign_stats {
+  id            Int       @id @default(autoincrement())
+  campaign_id   Int
+  date          DateTime  @db.Date
+  impressions   Int       @default(0)
+  clicks        Int       @default(0)
+  unique_clicks Int       @default(0)
+  spend         Decimal   @default(0) @db.Decimal(12, 2)
+  campaigns     campaigns @relation(fields: [campaign_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([campaign_id, date], map: "campaign_date_unique")
+  @@index([campaign_id, date], map: "ix_campaign_stats_camp_date")
+  @@index([campaign_id], map: "ix_campaign_stats_campaign")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model campaigns {
+  id                               Int               @id @default(autoincrement())
+  trader_id                        String            @db.Uuid
+  title                            String            @db.VarChar(120)
+  format                           String            @db.VarChar(20)
+  pricing_model                    String            @db.VarChar(10)
+  status                           String            @default("draft") @db.VarChar(20)
+  content                          Json              @default("{}")
+  targeting                        Json              @default("{}")
+  total_budget                     Decimal           @db.Decimal(12, 2)
+  daily_limit                      Decimal?          @db.Decimal(12, 2)
+  unit_price                       Decimal           @db.Decimal(10, 4)
+  starts_at                        DateTime?         @db.Timestamptz(6)
+  ends_at                          DateTime          @db.Timestamptz(6)
+  rejection_reason                 String?
+  reviewed_by                      String?           @db.Uuid
+  reviewed_at                      DateTime?         @db.Timestamptz(6)
+  created_at                       DateTime?         @default(now()) @db.Timestamptz(6)
+  updated_at                       DateTime?         @default(now()) @db.Timestamptz(6)
+  ad_transactions                  ad_transactions[]
+  campaign_stats                   campaign_stats[]
+  user_campaigns_reviewed_byTouser user?             @relation("campaigns_reviewed_byTouser", fields: [reviewed_by], references: [id], onUpdate: NoAction)
+  user_campaigns_trader_idTouser   user              @relation("campaigns_trader_idTouser", fields: [trader_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([created_at], map: "ix_campaigns_created_at")
+  @@index([status], map: "ix_campaigns_status")
+  @@index([status, format], map: "ix_campaigns_status_format")
+  @@index([targeting], map: "ix_campaigns_targeting", type: Gin)
+  @@index([trader_id], map: "ix_campaigns_trader_id")
+}
+
+model can_update {
+  id         String    @id @db.Uuid
+  language   String    @default("en") @db.VarChar
+  title      String?   @db.VarChar
+  created_at DateTime? @db.Timestamp(6)
+  updated_at DateTime? @db.Timestamp(6)
+  is_deleted Boolean
+
+  @@index([created_at], map: "ix_can_update_created_at")
+  @@index([is_deleted], map: "ix_can_update_is_deleted")
+}
+
+model clap {
+  id         String    @id @db.Uuid
+  created_at DateTime? @db.Timestamp(6)
+  updated_at DateTime? @db.Timestamp(6)
+  is_deleted Boolean
+  user_id    String?   @db.Uuid
+  setup_id   String?   @db.Uuid
+  setup      setup?    @relation(fields: [setup_id], references: [id], onDelete: Restrict)
+  user       user?     @relation(fields: [user_id], references: [id], onDelete: Restrict)
+
+  @@unique([user_id, setup_id])
+  @@index([created_at], map: "ix_clap_created_at")
+  @@index([is_deleted], map: "ix_clap_is_deleted")
+}
+
+model coin {
+  id         String    @id @db.Uuid
+  created_at DateTime? @db.Timestamp(6)
+  updated_at DateTime? @db.Timestamp(6)
+  is_deleted Boolean
+  name       String    @db.VarChar
+  code       String    @unique(map: "ix_coin_code") @db.VarChar
+  image      String?   @db.VarChar
+  is_spot    Boolean   @default(true)
+  is_futures Boolean   @default(true)
+
+  @@index([created_at], map: "ix_coin_created_at")
+  @@index([is_deleted], map: "ix_coin_is_deleted")
+  @@index([is_futures], map: "ix_coin_is_futures")
+  @@index([is_spot], map: "ix_coin_is_spot")
+  @@index([name], map: "ix_coin_name")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model content_metrics {
+  content_id   String @id @db.Uuid
+  page         String @db.VarChar
+  feed_views   Int?
+  direct_views Int?
+  views        Int?
+
+  @@index([page], map: "ix_content_metrics_page")
+}
+
+model copy_trade_order {
+  copy_trade_id   String?      @db.Uuid
+  user_id         String?      @db.Uuid
+  setup_id        String?      @db.Uuid
+  side            String       @db.VarChar(5)
+  tp_value        String       @db.VarChar(3)
+  status          String       @db.VarChar(20)
+  status_at       DateTime?    @db.Timestamp(6)
+  status_message  String?      @db.VarChar
+  requested_at    DateTime?    @db.Timestamp(6)
+  request_sz      Float?
+  request_px      Float?
+  take_profit_px  Float?
+  stop_loss_px    Float?
+  act_px          Float?
+  act_sz          Float?
+  percentage      Int?
+  id              String       @id @db.Uuid
+  created_at      DateTime?    @db.Timestamp(6)
+  updated_at      DateTime?    @db.Timestamp(6)
+  is_deleted      Boolean
+  starting_equity Float?
+  copy_trades     copy_trades? @relation(fields: [copy_trade_id], references: [id], onDelete: Restrict)
+  setup           setup?       @relation(fields: [setup_id], references: [id], onDelete: Restrict)
+  user            user?        @relation(fields: [user_id], references: [id], onDelete: Restrict)
+
+  @@unique([user_id, setup_id, side, tp_value])
+  @@index([created_at], map: "ix_copy_trade_order_created_at")
+  @@index([is_deleted], map: "ix_copy_trade_order_is_deleted")
+  @@index([side], map: "ix_copy_trade_order_side")
+  @@index([status], map: "ix_copy_trade_order_status")
+  @@index([tp_value], map: "ix_copy_trade_order_tp_value")
+}
+
+model copy_trades {
+  user_id                          String?            @db.Uuid
+  trader_id                        String?            @db.Uuid
+  setup_id                         String?            @db.Uuid
+  state                            String?            @db.VarChar
+  error_no                         String?            @db.VarChar
+  error_message                    String?            @db.VarChar
+  copied_at                        DateTime           @default(now()) @db.Timestamp(6)
+  activated_at                     DateTime?          @db.Timestamp(6)
+  id                               String             @id @db.Uuid
+  created_at                       DateTime?          @db.Timestamp(6)
+  updated_at                       DateTime?          @db.Timestamp(6)
+  is_deleted                       Boolean
+  realized_pnl                     Float?
+  roe                              Float?
+  position_size_usd                Float?
+  position_size                    Float?
+  market                           String?            @db.VarChar
+  category                         String?            @db.VarChar
+  leverage                         Float?
+  pnl_percentage                   Float?
+  starting_equity                  Float?
+  copy_trade_order                 copy_trade_order[]
+  setup                            setup?             @relation(fields: [setup_id], references: [id], onDelete: Restrict)
+  user_copy_trades_trader_idTouser user?              @relation("copy_trades_trader_idTouser", fields: [trader_id], references: [id], onDelete: Restrict)
+  user_copy_trades_user_idTouser   user?              @relation("copy_trades_user_idTouser", fields: [user_id], references: [id], onDelete: Restrict)
+
+  @@index([category], map: "ix_copy_trades_category")
+  @@index([copied_at], map: "ix_copy_trades_copied_at")
+  @@index([created_at], map: "ix_copy_trades_created_at")
+  @@index([is_deleted], map: "ix_copy_trades_is_deleted")
+  @@index([market], map: "ix_copy_trades_market")
+  @@index([state], map: "ix_copy_trades_state")
+}
+
+model credit_balance {
+  user_id       String    @unique(map: "ix_credit_balance_user_id") @db.Uuid
+  balance       Float
+  last_earn_at  DateTime? @db.Timestamp(6)
+  last_spend_at DateTime? @db.Timestamp(6)
+  id            String    @id @db.Uuid
+  created_at    DateTime? @db.Timestamp(6)
+  updated_at    DateTime? @db.Timestamp(6)
+  is_deleted    Boolean
+  user          user      @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([created_at], map: "ix_credit_balance_created_at")
+  @@index([is_deleted], map: "ix_credit_balance_is_deleted")
+}
+
+model credit_lot {
+  user_id                String                   @db.Uuid
+  credit_tx_id           String                   @db.Uuid
+  source_type            String                   @db.VarChar(32)
+  original_amount        Float
+  remaining_amount       Float
+  expires_at             DateTime?                @db.Timestamp(6)
+  is_expired             Boolean
+  expired_at             DateTime?                @db.Timestamp(6)
+  meta_data              Json?
+  id                     String                   @id @db.Uuid
+  created_at             DateTime?                @db.Timestamp(6)
+  updated_at             DateTime?                @db.Timestamp(6)
+  is_deleted             Boolean
+  credit_transaction     credit_transaction       @relation(fields: [credit_tx_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  user                   user                     @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  credit_lot_consumption credit_lot_consumption[]
+
+  @@index([created_at], map: "ix_credit_lot_created_at")
+  @@index([expires_at], map: "ix_credit_lot_expires_at")
+  @@index([user_id, is_expired, created_at], map: "ix_credit_lot_fifo")
+  @@index([is_deleted], map: "ix_credit_lot_is_deleted")
+  @@index([is_expired], map: "ix_credit_lot_is_expired")
+  @@index([source_type], map: "ix_credit_lot_source_type")
+  @@index([user_id, expires_at], map: "ix_credit_lot_user_expires")
+  @@index([user_id], map: "ix_credit_lot_user_id")
+  @@index([user_id, remaining_amount], map: "ix_credit_lot_user_remaining")
+}
+
+model credit_lot_consumption {
+  lot_id             String             @db.Uuid
+  spend_tx_id        String             @db.Uuid
+  amount             Float
+  id                 String             @id @db.Uuid
+  created_at         DateTime?          @db.Timestamp(6)
+  updated_at         DateTime?          @db.Timestamp(6)
+  is_deleted         Boolean
+  credit_lot         credit_lot         @relation(fields: [lot_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  credit_transaction credit_transaction @relation(fields: [spend_tx_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([created_at], map: "ix_credit_lot_consumption_created_at")
+  @@index([is_deleted], map: "ix_credit_lot_consumption_is_deleted")
+  @@index([lot_id], map: "ix_credit_lot_consumption_lot_id")
+  @@index([spend_tx_id], map: "ix_credit_lot_consumption_spend_tx_id")
+  @@index([lot_id, spend_tx_id], map: "ix_lot_consumption_lot_spend")
+}
+
+model credit_payout {
+  user_id           String    @db.Uuid
+  source_type       String    @db.VarChar(32)
+  source_id         String?   @db.VarChar(100)
+  amount_credits    Float
+  amount_usd        Float?
+  payout_multiplier Float
+  paid_date         DateTime  @db.Timestamp(6)
+  credit_tx_id      String?   @db.Uuid
+  meta_data         Json?
+  id                String    @id @db.Uuid
+  created_at        DateTime? @db.Timestamp(6)
+  updated_at        DateTime? @db.Timestamp(6)
+  is_deleted        Boolean
+  user              user      @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([created_at], map: "ix_credit_payout_created_at")
+  @@index([is_deleted], map: "ix_credit_payout_is_deleted")
+  @@index([paid_date], map: "ix_credit_payout_paid_date")
+  @@index([source_id], map: "ix_credit_payout_source_id")
+  @@index([source_type], map: "ix_credit_payout_source_type")
+  @@index([user_id], map: "ix_credit_payout_user_id")
+}
+
+model credit_transaction {
+  user_id                String                   @db.Uuid
+  type                   String                   @db.VarChar(32)
+  amount_credits         Float
+  amount_usd             Float?
+  description            String?                  @db.VarChar(512)
+  meta_data              Json?
+  anomaly_flag           Boolean
+  id                     String                   @id @db.Uuid
+  created_at             DateTime?                @db.Timestamp(6)
+  updated_at             DateTime?                @db.Timestamp(6)
+  is_deleted             Boolean
+  raw_data               String?
+  source                 String                   @db.VarChar(16)
+  source_id              String?                  @db.VarChar(100)
+  credit_lot             credit_lot[]
+  credit_lot_consumption credit_lot_consumption[]
+  user                   user                     @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  receipt                receipt?
+
+  @@index([anomaly_flag], map: "ix_credit_transaction_anomaly_flag")
+  @@index([created_at], map: "ix_credit_transaction_created_at")
+  @@index([is_deleted], map: "ix_credit_transaction_is_deleted")
+  @@index([source], map: "ix_credit_transaction_source")
+  @@index([source_id], map: "ix_credit_transaction_source_id")
+  @@index([user_id], map: "ix_credit_transaction_user_id")
+  @@index([user_id, created_at], map: "ix_credit_tx_user_created")
+}
+
+model credit_ttl_config {
+  source_type String    @unique(map: "ix_credit_ttl_config_source_type") @db.VarChar(32)
+  ttl_days    Int?
+  is_active   Boolean
+  id          String    @id @db.Uuid
+  created_at  DateTime? @db.Timestamp(6)
+  updated_at  DateTime? @db.Timestamp(6)
+  is_deleted  Boolean
+
+  @@index([created_at], map: "ix_credit_ttl_config_created_at")
+  @@index([is_deleted], map: "ix_credit_ttl_config_is_deleted")
+}
+
+model credit_withdrawal {
+  user_id          String         @db.Uuid
+  method           String         @db.VarChar(16)
+  amount_credits   Float
+  amount_usd       Float
+  fee_credits      Float
+  fee_usd          Float
+  net_amount_usd   Float
+  status           String         @db.VarChar(16)
+  wallet_id        String?        @db.Uuid
+  tx_hash          String?        @db.VarChar(128)
+  bank_account_id  String?        @db.Uuid
+  bank_reference   String?        @db.VarChar(128)
+  credit_tx_id     String?        @db.Uuid
+  reviewed_by      String?        @db.Uuid
+  reviewed_at      DateTime?      @db.Timestamp(6)
+  completed_at     DateTime?      @db.Timestamp(6)
+  rejection_reason String?        @db.VarChar(512)
+  meta_data        Json?
+  id               String         @id @db.Uuid
+  created_at       DateTime?      @db.Timestamp(6)
+  updated_at       DateTime?      @db.Timestamp(6)
+  is_deleted       Boolean
+  bank_account     bank_account?  @relation(fields: [bank_account_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  user             user           @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  crypto_wallet    crypto_wallet? @relation(fields: [wallet_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([created_at], map: "ix_credit_withdrawal_created_at")
+  @@index([is_deleted], map: "ix_credit_withdrawal_is_deleted")
+  @@index([method], map: "ix_credit_withdrawal_method")
+  @@index([status], map: "ix_credit_withdrawal_status")
+  @@index([user_id], map: "ix_credit_withdrawal_user_id")
+  @@index([status, created_at], map: "ix_withdrawal_status_created")
+  @@index([user_id, status], map: "ix_withdrawal_user_status")
+}
+
+model crypto_loan {
+  user_id           String        @db.Uuid
+  wallet_id         String        @db.Uuid
+  collateral_asset  String        @db.VarChar(32)
+  collateral_amount Float
+  collateral_usd    Float
+  ltv               Float
+  loan_usd          Float
+  loan_credits      Float
+  status            String        @db.VarChar(16)
+  activated_at      DateTime?     @db.Timestamp(6)
+  repaid_at         DateTime?     @db.Timestamp(6)
+  credit_tx_id      String?       @db.Uuid
+  repay_tx_id       String?       @db.Uuid
+  meta_data         Json?
+  id                String        @id @db.Uuid
+  created_at        DateTime?     @db.Timestamp(6)
+  updated_at        DateTime?     @db.Timestamp(6)
+  is_deleted        Boolean
+  user              user          @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  crypto_wallet     crypto_wallet @relation(fields: [wallet_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([created_at], map: "ix_crypto_loan_created_at")
+  @@index([is_deleted], map: "ix_crypto_loan_is_deleted")
+  @@index([status], map: "ix_crypto_loan_status")
+  @@index([user_id], map: "ix_crypto_loan_user_id")
+  @@index([user_id, status], map: "ix_crypto_loan_user_status")
+  @@index([wallet_id], map: "ix_crypto_loan_wallet_id")
+}
+
+model crypto_wallet {
+  user_id           String              @db.Uuid
+  address           String              @db.VarChar(128)
+  chain             String              @db.VarChar(32)
+  label             String?             @db.VarChar(64)
+  is_verified       Boolean
+  verified_at       DateTime?           @db.Timestamp(6)
+  last_used_at      DateTime?           @db.Timestamp(6)
+  meta_data         Json?
+  id                String              @id @db.Uuid
+  created_at        DateTime?           @db.Timestamp(6)
+  updated_at        DateTime?           @db.Timestamp(6)
+  is_deleted        Boolean
+  credit_withdrawal credit_withdrawal[]
+  crypto_loan       crypto_loan[]
+  user              user                @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([user_id, address, chain], map: "ux_crypto_wallet_user_address_chain")
+  @@index([created_at], map: "ix_crypto_wallet_created_at")
+  @@index([is_deleted], map: "ix_crypto_wallet_is_deleted")
+  @@index([is_verified], map: "ix_crypto_wallet_is_verified")
+  @@index([user_id], map: "ix_crypto_wallet_user_id")
+}
+
+model follow_notify {
+  id                                 String    @id @db.Uuid
+  created_at                         DateTime? @db.Timestamp(6)
+  updated_at                         DateTime? @db.Timestamp(6)
+  is_deleted                         Boolean
+  user_id                            String?   @db.Uuid
+  trader_id                          String?   @db.Uuid
+  follow                             Boolean   @default(false)
+  block                              Boolean   @default(false)
+  user_follow_notify_trader_idTouser user?     @relation("follow_notify_trader_idTouser", fields: [trader_id], references: [id], onDelete: Restrict)
+  user_follow_notify_user_idTouser   user?     @relation("follow_notify_user_idTouser", fields: [user_id], references: [id], onDelete: Restrict)
+
+  @@unique([user_id, trader_id])
+  @@index([block], map: "ix_follow_notify_block")
+  @@index([created_at], map: "ix_follow_notify_created_at")
+  @@index([follow], map: "ix_follow_notify_follow")
+  @@index([is_deleted], map: "ix_follow_notify_is_deleted")
+}
+
+model invitees {
+  uid          String?   @db.VarChar
+  market       String?   @db.VarChar
+  activated_at DateTime? @db.Timestamp(6)
+  id           String    @id @db.Uuid
+
+  @@unique([uid, market])
+  @@index([market], map: "ix_invitees_market")
+  @@index([uid], map: "ix_invitees_uid")
+}
+
+model news {
+  created_at    DateTime?   @db.Timestamp(6)
+  updated_at    DateTime?   @db.Timestamp(6)
+  is_deleted    Boolean
+  id            String      @id @unique @db.Uuid
+  title         String?     @db.VarChar
+  news_url      String?     @db.VarChar
+  image_url     String?     @db.VarChar
+  text          String?     @db.VarChar
+  source_name   String?     @db.VarChar
+  date          DateTime?   @db.Timestamp(6)
+  sentiment     String?     @db.VarChar
+  type          String?     @db.VarChar
+  topics        String[]    @db.VarChar
+  tickers       String[]    @db.VarChar
+  full_text     String?
+  thumbnail_url String?     @db.VarChar
+  news_text     news_text[]
+
+  @@index([created_at], map: "ix_news_created_at")
+  @@index([is_deleted], map: "ix_news_is_deleted")
+  @@index([date(sort: Desc)], map: "news_date_desc_index")
+}
+
+model news_text {
+  id        String  @id @db.Uuid
+  news_id   String  @db.Uuid
+  language  String  @default("en") @db.VarChar
+  title     String? @db.VarChar
+  text      String? @db.VarChar
+  full_text String?
+  news      news    @relation(fields: [news_id], references: [id])
+
+  @@unique([news_id, language])
+}
+
+model notification_logs {
+  id                   String                 @id @db.Uuid
+  setup_id             String?                @db.Uuid
+  trader_id            String?                @db.Uuid
+  notification_type    String                 @db.VarChar(50)
+  title                String                 @db.VarChar(255)
+  body                 String
+  image_url            String?
+  data                 Json?
+  user_count           Int                    @default(0)
+  success_count        Int                    @default(0)
+  failure_count        Int                    @default(0)
+  created_at           DateTime               @default(now()) @db.Timestamptz(6)
+  updated_at           DateTime               @default(now()) @db.Timestamptz(6)
+  notification_results notification_results[]
+
+  @@index([created_at], map: "idx_notification_logs_created_at")
+  @@index([setup_id], map: "idx_notification_logs_setup_id")
+  @@index([trader_id], map: "idx_notification_logs_trader_id")
+}
+
+model notification_results {
+  id                String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  notification_id   String            @db.Uuid
+  token             String
+  success           Boolean           @default(false)
+  error_message     String?
+  sent_at           DateTime?         @db.Timestamptz(6)
+  created_at        DateTime          @default(now()) @db.Timestamptz(6)
+  retry_count       Int?
+  user_id           String?           @db.Uuid
+  notification_logs notification_logs @relation(fields: [notification_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([notification_id], map: "idx_notification_results_notification_id")
+  @@index([success], map: "idx_notification_results_success")
+}
+
+model payout_batch {
+  shop_id       String?        @db.Uuid
+  trader_id     String?        @db.Uuid
+  total_credits Float
+  status        String         @db.VarChar(32)
+  external_ref  String?        @db.VarChar(128)
+  scheduled_at  DateTime?      @db.Timestamp(6)
+  sent_at       DateTime?      @db.Timestamp(6)
+  meta_data     Json?
+  id            String         @id @db.Uuid
+  created_at    DateTime?      @db.Timestamp(6)
+  updated_at    DateTime?      @db.Timestamp(6)
+  is_deleted    Boolean
+  shop          shop?          @relation(fields: [shop_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  user          user?          @relation(fields: [trader_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  shop_earning  shop_earning[]
+
+  @@index([created_at], map: "ix_payout_batch_created_at")
+  @@index([is_deleted], map: "ix_payout_batch_is_deleted")
+  @@index([shop_id], map: "ix_payout_batch_shop_id")
+  @@index([shop_id, trader_id], map: "ix_payout_batch_shop_user")
+  @@index([shop_id, status], map: "ix_payout_batch_status")
+  @@index([trader_id], map: "ix_payout_batch_trader_id")
+}
+
+model product {
+  id                       String              @id @db.Uuid
+  created_at               DateTime?           @db.Timestamp(6)
+  updated_at               DateTime?           @db.Timestamp(6)
+  is_deleted               Boolean
+  code                     String              @unique(map: "ix_product_code") @db.VarChar
+  name                     String              @db.VarChar
+  price                    Float?
+  referral_discount        Float?
+  discounted_price         Float?
+  trader_share_ratio       Float?
+  trader_referral_earnings Float?
+  trader_pool_ratio        Float?
+  pool_money               Float?
+  gross_revenue            Float?
+  duration                 Int?
+  user_subscription        user_subscription[]
+
+  @@index([created_at], map: "ix_product_created_at")
+  @@index([is_deleted], map: "ix_product_is_deleted")
+  @@index([name], map: "ix_product_name")
+}
+
+model receipt {
+  transaction_id     String             @unique(map: "ix_receipt_transaction_id") @db.Uuid
+  user_id            String             @db.Uuid
+  receipt_number     String             @unique(map: "ix_receipt_receipt_number") @db.VarChar(32)
+  generated_at       DateTime           @db.Timestamp(6)
+  meta_data          Json?
+  id                 String             @id @db.Uuid
+  created_at         DateTime?          @db.Timestamp(6)
+  updated_at         DateTime?          @db.Timestamp(6)
+  is_deleted         Boolean
+  credit_transaction credit_transaction @relation(fields: [transaction_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  user               user               @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([created_at], map: "ix_receipt_created_at")
+  @@index([is_deleted], map: "ix_receipt_is_deleted")
+  @@index([user_id], map: "ix_receipt_user_id")
+}
+
+model referral_tier {
+  name          String    @unique @db.VarChar(32)
+  min_referrals Int
+  max_referrals Int?
+  multiplier    Float
+  is_active     Boolean
+  display_order Int
+  meta_data     Json?
+  id            String    @id @db.Uuid
+  created_at    DateTime? @db.Timestamp(6)
+  updated_at    DateTime? @db.Timestamp(6)
+  is_deleted    Boolean
+
+  @@index([created_at], map: "ix_referral_tier_created_at")
+  @@index([is_deleted], map: "ix_referral_tier_is_deleted")
+}
+
+model report {
+  id                          String    @id @db.Uuid
+  created_at                  DateTime? @db.Timestamp(6)
+  updated_at                  DateTime? @db.Timestamp(6)
+  is_deleted                  Boolean
+  user_id                     String?   @db.Uuid
+  setup_id                    String?   @db.Uuid
+  trader_id                   String?   @db.Uuid
+  content                     String
+  setup                       setup?    @relation(fields: [setup_id], references: [id], onDelete: Restrict)
+  user_report_trader_idTouser user?     @relation("report_trader_idTouser", fields: [trader_id], references: [id], onDelete: Restrict)
+  user_report_user_idTouser   user?     @relation("report_user_idTouser", fields: [user_id], references: [id], onDelete: Restrict)
+
+  @@unique([user_id, setup_id])
+  @@unique([user_id, trader_id])
+  @@index([created_at], map: "ix_report_created_at")
+  @@index([is_deleted], map: "ix_report_is_deleted")
+}
+
+model server_notification_messages {
+  provider          String?   @db.VarChar
+  message           String?
+  id                String    @id @db.Uuid
+  created_at        DateTime? @db.Timestamp(6)
+  updated_at        DateTime? @db.Timestamp(6)
+  is_deleted        Boolean
+  message_json      String?
+  notification_type String?   @db.VarChar
+  notification_id   String?   @db.VarChar
+  transaction_id    String?   @db.VarChar
+
+  @@index([created_at], map: "ix_server_notification_messages_created_at")
+  @@index([is_deleted], map: "ix_server_notification_messages_is_deleted")
+  @@index([notification_id], map: "ix_server_notification_messages_notification_id")
+  @@index([transaction_id], map: "ix_server_notification_messages_transaction_id")
+}
+
+model setup {
+  id                              String                        @id @db.Uuid
+  created_at                      DateTime?                     @db.Timestamp(6)
+  updated_at                      DateTime?                     @db.Timestamp(6)
+  is_deleted                      Boolean
+  trader_id                       String?                       @db.Uuid
+  category                        categories_type
+  coin_name                       String                        @db.VarChar
+  is_active                       Boolean                       @default(true)
+  is_targeted                     Boolean                       @default(false)
+  target_date                     DateTime?                     @db.Timestamp(6)
+  position                        positions_type?
+  profit_taking_1                 Float?
+  profit_taking_2                 Float?
+  profit_taking_3                 Float?
+  stop_value                      Float?
+  image                           String?                       @db.VarChar
+  tags                            String[]                      @db.VarChar
+  clap_count                      Int?
+  status                          statuses_type
+  activation_date                 DateTime?                     @db.Timestamp(6)
+  entry_value                     Float
+  entry_value_end                 Float?
+  duration                        durations_type?
+  r_value                         Float?
+  is_hidden                       Boolean                       @default(true)
+  profit_taking_amount_1          Int?
+  profit_taking_amount_2          Int?
+  profit_taking_amount_3          Int?
+  initial_entry_value             Float?
+  initial_entry_value_end         Float?
+  initial_stop_value              Float?
+  initial_profit_taking_1         Float?
+  initial_profit_taking_2         Float?
+  initial_profit_taking_3         Float?
+  previous_entry_value            Float?
+  previous_entry_value_end        Float?
+  previous_stop_value             Float?
+  previous_profit_taking_1        Float?
+  previous_profit_taking_2        Float?
+  previous_profit_taking_3        Float?
+  is_tp1                          Boolean?                      @default(false)
+  is_tp2                          Boolean?                      @default(false)
+  is_tp3                          Boolean?                      @default(false)
+  close_price                     Float?
+  sub_status                      String?                       @db.VarChar
+  tp1_date                        DateTime?                     @db.Timestamp(6)
+  tp2_date                        DateTime?                     @db.Timestamp(6)
+  tp3_date                        DateTime?                     @db.Timestamp(6)
+  close_date                      DateTime?                     @db.Timestamp(6)
+  closed_by_id                    String?                       @db.Uuid
+  activated_stop_value            Float?
+  is_stop                         Boolean?                      @default(false)
+  stop_date                       DateTime?                     @db.Timestamp(6)
+  image_success                   String?                       @db.VarChar
+  initial_profit_taking_amount_1  Float?
+  initial_profit_taking_amount_2  Float?
+  initial_profit_taking_amount_3  Float?
+  previous_profit_taking_amount_1 Float?
+  previous_profit_taking_amount_2 Float?
+  previous_profit_taking_amount_3 Float?
+  initial_rr                      String?                       @db.VarChar
+  stop_distance                   Float?
+  risk_ratio                      String?                       @db.VarChar
+  note                            String?
+  open_leverage                   Int?
+  order_type                      order_types_type              @default(limit)
+  last_acted_at                   DateTime?                     @default(now()) @db.Timestamp(6)
+  rank_score                      Float?
+  trade_guard_score               Float?
+  shop_id                         String?                       @db.Uuid
+  rank_status_active              Float?
+  rank_status_closed              Float?
+  price_credits                   Float?                        @default(0)
+  clap                            clap[]
+  copy_trade_order                copy_trade_order[]
+  copy_trades                     copy_trades[]
+  report                          report[]
+  shop                            shop?                         @relation(fields: [shop_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  user                            user?                         @relation(fields: [trader_id], references: [id], onDelete: Restrict)
+  setup_events                    setup_events[]
+  setup_purchase                  setup_purchase[]
+  setup_value_history             setup_value_history[]
+  trader_setup_pnl_performance    trader_setup_pnl_performance?
+  trader_violation                trader_violation[]
+  user_notification               user_notification[]
+  watch_list                      watch_list[]
+
+  @@index([category], map: "ix_setup_category")
+  @@index([clap_count], map: "ix_setup_clap_count")
+  @@index([closed_by_id], map: "ix_setup_closed_by_id")
+  @@index([coin_name], map: "ix_setup_coin_name")
+  @@index([created_at], map: "ix_setup_created_at")
+  @@index([is_active], map: "ix_setup_is_active")
+  @@index([is_deleted], map: "ix_setup_is_deleted")
+  @@index([last_acted_at], map: "ix_setup_last_acted_at")
+  @@index([order_type], map: "ix_setup_order_type")
+  @@index([rank_status_active], map: "ix_setup_rank_status_active")
+  @@index([rank_status_closed], map: "ix_setup_rank_status_closed")
+  @@index([shop_id], map: "ix_setup_shop_id")
+  @@index([is_deleted, shop_id, status, last_acted_at], map: "ix_setup_shop_status_acted")
+  @@index([status], map: "ix_setup_status")
+  @@index([is_deleted, status, last_acted_at], map: "ix_setup_status_acted")
+  @@index([tags], map: "ix_setup_tags")
+  @@index([is_deleted, trader_id, status, last_acted_at], map: "ix_setup_trader_status")
+}
+
+model setup_events {
+  setup_id       String?   @db.Uuid
+  trader_id      String?   @db.Uuid
+  event_time     DateTime? @db.Timestamp(6)
+  changed_column String?   @db.VarChar(256)
+  old_value      String?   @db.VarChar
+  new_value      String?   @db.VarChar
+  action         String?   @db.VarChar
+  id             Int       @id(map: "setup_events_pk") @default(autoincrement())
+  setup          setup?    @relation(fields: [setup_id], references: [id], onDelete: Restrict)
+  user           user?     @relation(fields: [trader_id], references: [id], onDelete: Restrict)
+}
+
+model setup_purchase {
+  id            String    @id @db.Uuid
+  created_at    DateTime? @db.Timestamp(6)
+  updated_at    DateTime? @db.Timestamp(6)
+  is_deleted    Boolean   @default(false)
+  user_id       String    @db.Uuid
+  setup_id      String    @db.Uuid
+  price_credits Float     @default(0)
+  credit_tx_id  String?   @db.Uuid
+  setup         setup     @relation(fields: [setup_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  user          user      @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([user_id, setup_id], map: "uq_setup_purchase_user_setup")
+  @@index([created_at], map: "ix_setup_purchase_created_at")
+  @@index([is_deleted], map: "ix_setup_purchase_is_deleted")
+  @@index([setup_id], map: "ix_setup_purchase_setup_id")
+  @@index([user_id], map: "ix_setup_purchase_user_id")
+  @@index([user_id, setup_id], map: "ix_setup_purchase_user_setup")
+}
+
+model setup_value_history {
+  setup_id   String?   @db.Uuid
+  value      Float?
+  field      String    @db.VarChar
+  created_at DateTime? @db.Timestamp(6)
+  id         String    @id @db.Uuid
+  setup      setup?    @relation(fields: [setup_id], references: [id], onDelete: Restrict)
+
+  @@index([created_at], map: "ix_setup_value_history_created_at")
+  @@index([field], map: "ix_setup_value_history_field")
+  @@index([setup_id, field], map: "ix_setup_value_history_setup_id_field")
+}
+
+model shop {
+  name                  String                @db.VarChar(128)
+  slug                  String                @unique(map: "ix_shop_slug") @db.VarChar(160)
+  owner_trader_id       String?               @db.Uuid
+  description           String?               @db.VarChar(1024)
+  is_group              Boolean
+  monthly_price_credits Float
+  commission_rate       Float?
+  is_active             Boolean
+  subscribers_count     Int
+  followers_count       Int
+  id                    String                @id @db.Uuid
+  created_at            DateTime?             @db.Timestamp(6)
+  updated_at            DateTime?             @db.Timestamp(6)
+  is_deleted            Boolean
+  image                 String?               @db.VarChar(512)
+  avg_rating            Float?
+  review_count          Int                   @default(0)
+  trial_days            Int?
+  payout_batch          payout_batch[]
+  setup                 setup[]
+  user                  user?                 @relation(fields: [owner_trader_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  shop_application      shop_application[]
+  shop_dispute          shop_dispute[]
+  shop_earning          shop_earning[]
+  shop_follower         shop_follower[]
+  shop_review           shop_review[]
+  shop_subscription     shop_subscription[]
+  shop_trader           shop_trader[]
+  shop_trader_history   shop_trader_history[]
+
+  @@index([created_at], map: "ix_shop_created_at")
+  @@index([is_deleted], map: "ix_shop_is_deleted")
+  @@index([name], map: "ix_shop_name")
+  @@index([owner_trader_id], map: "ix_shop_owner_trader_id")
+}
+
+model shop_application {
+  id                                      String    @id @db.Uuid
+  user_id                                 String    @db.Uuid
+  shop_id                                 String?   @db.Uuid
+  type                                    String    @db.VarChar(16)
+  status                                  String    @default("pending") @db.VarChar(16)
+  shop_name                               String?   @db.VarChar(128)
+  shop_description                        String?   @db.VarChar(1024)
+  message                                 String?   @db.VarChar(2048)
+  reviewed_by                             String?   @db.Uuid
+  reviewed_at                             DateTime? @db.Timestamp(6)
+  review_note                             String?   @db.VarChar(2048)
+  is_deleted                              Boolean   @default(false)
+  created_at                              DateTime? @default(now()) @db.Timestamp(6)
+  updated_at                              DateTime? @db.Timestamp(6)
+  user_shop_application_reviewed_byTouser user?     @relation("shop_application_reviewed_byTouser", fields: [reviewed_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  shop                                    shop?     @relation(fields: [shop_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  user_shop_application_user_idTouser     user      @relation("shop_application_user_idTouser", fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([status], map: "ix_shop_application_status")
+  @@index([user_id], map: "ix_shop_application_user_id")
+}
+
+model shop_dispute {
+  id                                  String             @id @db.Uuid
+  shop_id                             String             @db.Uuid
+  user_id                             String             @db.Uuid
+  subscription_id                     String?            @db.Uuid
+  reason                              String             @db.VarChar(64)
+  description                         String             @db.VarChar(2048)
+  status                              String             @default("open") @db.VarChar(16)
+  resolution                          String?            @db.VarChar(2048)
+  resolved_by                         String?            @db.Uuid
+  resolved_at                         DateTime?          @db.Timestamp(6)
+  refund_amount                       Float?
+  meta_data                           Json?              @db.Json
+  is_deleted                          Boolean            @default(false)
+  created_at                          DateTime?          @default(now()) @db.Timestamp(6)
+  updated_at                          DateTime?          @db.Timestamp(6)
+  user_shop_dispute_resolved_byTouser user?              @relation("shop_dispute_resolved_byTouser", fields: [resolved_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  shop                                shop               @relation(fields: [shop_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  shop_subscription                   shop_subscription? @relation(fields: [subscription_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  user_shop_dispute_user_idTouser     user               @relation("shop_dispute_user_idTouser", fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([shop_id, status], map: "ix_dispute_shop_status")
+  @@index([user_id, status], map: "ix_dispute_user_status")
+  @@index([shop_id], map: "ix_shop_dispute_shop_id")
+  @@index([user_id], map: "ix_shop_dispute_user_id")
+}
+
+model shop_earning {
+  shop_id            String?            @db.Uuid
+  user_id            String?            @db.Uuid
+  subscription_id    String?            @db.Uuid
+  gross_credits      Float
+  commission_rate    Float
+  commission_credits Float
+  net_credits        Float
+  earned_at          DateTime?          @db.Timestamp(6)
+  available_after    DateTime           @db.Timestamp(6)
+  paid_out_at        DateTime?          @db.Timestamp(6)
+  payout_batch_id    String?            @db.Uuid
+  meta_data          Json?
+  id                 String             @id @db.Uuid
+  created_at         DateTime?          @db.Timestamp(6)
+  updated_at         DateTime?          @db.Timestamp(6)
+  is_deleted         Boolean
+  earning_type       String             @db.VarChar(32)
+  payout_batch       payout_batch?      @relation(fields: [payout_batch_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  shop               shop?              @relation(fields: [shop_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  shop_subscription  shop_subscription? @relation(fields: [subscription_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  user               user?              @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([created_at], map: "ix_shop_earning_created_at")
+  @@index([is_deleted], map: "ix_shop_earning_is_deleted")
+  @@index([shop_id, available_after], map: "ix_shop_earning_shop_available")
+  @@index([shop_id], map: "ix_shop_earning_shop_id")
+  @@index([user_id], map: "ix_shop_earning_user_id")
+}
+
+model shop_follower {
+  user_id    String?   @db.Uuid
+  shop_id    String?   @db.Uuid
+  id         String    @id @db.Uuid
+  created_at DateTime? @db.Timestamp(6)
+  shop       shop?     @relation(fields: [shop_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  user       user?     @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([user_id, shop_id], map: "uq_shop_follow")
+  @@index([created_at], map: "ix_shop_follower_created_at")
+  @@index([shop_id], map: "ix_shop_follower_shop_id")
+  @@index([user_id], map: "ix_shop_follower_user_id")
+}
+
+model shop_review {
+  id                     String              @id @db.Uuid
+  shop_id                String              @db.Uuid
+  user_id                String              @db.Uuid
+  rating                 Int
+  content                String?             @db.VarChar(2048)
+  is_verified_subscriber Boolean             @default(false)
+  status                 String              @default("active") @db.VarChar(16)
+  is_deleted             Boolean             @default(false)
+  created_at             DateTime?           @default(now()) @db.Timestamp(6)
+  updated_at             DateTime?           @db.Timestamp(6)
+  shop                   shop                @relation(fields: [shop_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  user                   user                @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  shop_review_reply      shop_review_reply[]
+
+  @@unique([shop_id, user_id], map: "uq_shop_review_user")
+  @@index([shop_id], map: "ix_shop_review_shop_id")
+  @@index([shop_id, status], map: "ix_shop_review_shop_status")
+  @@index([user_id], map: "ix_shop_review_user_id")
+}
+
+model shop_review_reply {
+  id          String      @id @db.Uuid
+  review_id   String      @db.Uuid
+  user_id     String      @db.Uuid
+  content     String      @db.VarChar(2048)
+  is_deleted  Boolean     @default(false)
+  created_at  DateTime?   @default(now()) @db.Timestamp(6)
+  updated_at  DateTime?   @db.Timestamp(6)
+  shop_review shop_review @relation(fields: [review_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  user        user        @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([review_id], map: "ix_review_reply_review")
+}
+
+model shop_subscription {
+  user_id      String?        @db.Uuid
+  shop_id      String?        @db.Uuid
+  started_at   DateTime?      @db.Timestamp(6)
+  expires_at   DateTime       @db.Timestamp(6)
+  auto_renew   Boolean
+  cancelled_at DateTime?      @db.Timestamp(6)
+  last_tx_id   String?        @db.Uuid
+  refund_until DateTime?      @db.Timestamp(6)
+  id           String         @id @db.Uuid
+  created_at   DateTime?      @db.Timestamp(6)
+  updated_at   DateTime?      @db.Timestamp(6)
+  is_deleted   Boolean
+  is_trial     Boolean        @default(false)
+  trial_days   Int?
+  shop_dispute shop_dispute[]
+  shop_earning shop_earning[]
+  shop         shop?          @relation(fields: [shop_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  user         user?          @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([user_id, expires_at, cancelled_at, shop_id], map: "ix_shop_sub_user_expired")
+  @@index([expires_at, auto_renew, cancelled_at], map: "ix_shop_sub_user_expired2")
+  @@index([shop_id, user_id, started_at, expires_at], map: "ix_shop_sub_user_started")
+  @@index([created_at], map: "ix_shop_subscription_created_at")
+  @@index([is_deleted], map: "ix_shop_subscription_is_deleted")
+  @@index([shop_id], map: "ix_shop_subscription_shop_id")
+  @@index([user_id], map: "ix_shop_subscription_user_id")
+}
+
+model shop_trader {
+  trader_id String @db.Uuid
+  shop_id   String @db.Uuid
+  shop      shop   @relation(fields: [shop_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  user      user   @relation(fields: [trader_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([shop_id, trader_id], map: "ix_shop_trader_shop_user")
+  @@index([shop_id], map: "ix_shop_trader_shop_id")
+  @@index([trader_id], map: "ix_shop_trader_trader_id")
+}
+
+model shop_trader_history {
+  shop_id                                             String    @db.Uuid
+  trader_id                                           String    @db.Uuid
+  action                                              String    @db.VarChar(32)
+  performed_by_user_id                                String?   @db.Uuid
+  meta_data                                           Json?
+  id                                                  String    @id @db.Uuid
+  created_at                                          DateTime? @db.Timestamp(6)
+  updated_at                                          DateTime? @db.Timestamp(6)
+  user_shop_trader_history_performed_by_user_idTouser user?     @relation("shop_trader_history_performed_by_user_idTouser", fields: [performed_by_user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  shop                                                shop      @relation(fields: [shop_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  user_shop_trader_history_trader_idTouser            user      @relation("shop_trader_history_trader_idTouser", fields: [trader_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([shop_id, created_at], map: "ix_shop_trader_hist_shop_created")
+  @@index([shop_id, trader_id, created_at], map: "ix_shop_trader_hist_shop_trader_created")
+  @@index([action], map: "ix_shop_trader_history_action")
+  @@index([created_at], map: "ix_shop_trader_history_created_at")
+  @@index([performed_by_user_id], map: "ix_shop_trader_history_performed_by_user_id")
+  @@index([shop_id], map: "ix_shop_trader_history_shop_id")
+  @@index([trader_id], map: "ix_shop_trader_history_trader_id")
+}
+
+model subscription_pool {
+  subscription_id     String?            @db.Uuid
+  amount              Float?
+  paid_date           DateTime?          @db.Timestamp(6)
+  is_paid             Boolean
+  cancellation_date   DateTime?          @db.Timestamp(6)
+  is_cancelled        Boolean
+  withdrawal_date     DateTime?          @db.Timestamp(6)
+  is_withdrawal       Boolean
+  id                  String             @id @db.Uuid
+  created_at          DateTime?          @db.Timestamp(6)
+  updated_at          DateTime?          @db.Timestamp(6)
+  is_deleted          Boolean
+  trader_earn_date    DateTime?          @db.Timestamp(6)
+  payout_multiplier   Float?
+  paid_amount_credits Float?
+  user_subscription   user_subscription? @relation(fields: [subscription_id], references: [id], onDelete: Restrict)
+
+  @@index([cancellation_date], map: "ix_subscription_pool_cancellation_date")
+  @@index([created_at], map: "ix_subscription_pool_created_at")
+  @@index([is_cancelled], map: "ix_subscription_pool_is_cancelled")
+  @@index([is_deleted], map: "ix_subscription_pool_is_deleted")
+  @@index([is_paid], map: "ix_subscription_pool_is_paid")
+  @@index([is_withdrawal], map: "ix_subscription_pool_is_withdrawal")
+  @@index([paid_date], map: "ix_subscription_pool_paid_date")
+  @@index([withdrawal_date], map: "ix_subscription_pool_withdrawal_date")
+}
+
+model team_traders {
+  team_id    String    @db.Uuid
+  trader_id  String    @db.Uuid
+  id         String    @id @db.Uuid
+  updated_at DateTime? @db.Timestamp(6)
+  is_deleted Boolean
+  created_at DateTime? @db.Timestamp(6)
+  teams      teams     @relation(fields: [team_id], references: [id])
+  user       user      @relation(fields: [trader_id], references: [id])
+
+  @@unique([team_id, trader_id])
+  @@index([created_at], map: "ix_team_traders_created_at")
+  @@index([is_deleted], map: "ix_team_traders_is_deleted")
+}
+
+model teams {
+  user_id             String         @unique @db.Uuid
+  name                String?        @db.VarChar
+  stat_at             DateTime?      @db.Timestamp(6)
+  weekly_pnl          Float?
+  monthly_pnl         Float?
+  pnl                 Float?
+  id                  String         @id @db.Uuid
+  spot_daily_pnl      Float?
+  spot_weekly_pnl     Float?
+  spot_monthly_pnl    Float?
+  spot_pnl            Float?
+  daily_pnl           Float?
+  spot_daily_closed   Int?
+  spot_weekly_closed  Int?
+  spot_monthly_closed Int?
+  spot_closed         Int?
+  daily_closed        Int?
+  weekly_closed       Int?
+  monthly_closed      Int?
+  closed              Int?
+  spot_daily_wr       Float?
+  spot_weekly_wr      Float?
+  spot_monthly_wr     Float?
+  spot_wr             Float?
+  daily_wr            Float?
+  weekly_wr           Float?
+  monthly_wr          Float?
+  wr                  Float?
+  summary_daily_wr    Float?
+  summary_weekly_wr   Float?
+  summary_monthly_wr  Float?
+  summary_wr          Float?
+  daily_roe           Float?
+  weekly_roe          Float?
+  monthly_roe         Float?
+  roe                 Float?
+  spot_daily_roe      Float?
+  spot_weekly_roe     Float?
+  spot_monthly_roe    Float?
+  spot_roe            Float?
+  summary_daily_roe   Float?
+  summary_weekly_roe  Float?
+  summary_monthly_roe Float?
+  summary_roe         Float?
+  team_traders        team_traders[]
+  user                user           @relation(fields: [user_id], references: [id])
+
+  @@index([stat_at], map: "ix_teams_stat_at")
+}
+
+model trader_application {
+  id                                        String    @id @db.Uuid
+  user_id                                   String    @db.Uuid
+  status                                    String    @default("pending") @db.VarChar(16)
+  message                                   String?   @db.VarChar(2048)
+  reviewed_by                               String?   @db.Uuid
+  reviewed_at                               DateTime? @db.Timestamp(6)
+  review_note                               String?   @db.VarChar(2048)
+  is_deleted                                Boolean   @default(false)
+  created_at                                DateTime? @default(now()) @db.Timestamp(6)
+  updated_at                                DateTime? @db.Timestamp(6)
+  user_trader_application_reviewed_byTouser user?     @relation("trader_application_reviewed_byTouser", fields: [reviewed_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  user_trader_application_user_idTouser     user      @relation("trader_application_user_idTouser", fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([status], map: "ix_trader_application_status")
+  @@index([user_id], map: "ix_trader_application_user_id")
+}
+
+model trader_pool_earning {
+  trader_id           String    @db.Uuid
+  period_start        DateTime  @db.Timestamp(6)
+  period_end          DateTime  @db.Timestamp(6)
+  pool_total          Float?
+  trader_count        Int?
+  amount              Float?
+  paid_date           DateTime? @db.Timestamp(6)
+  is_paid             Boolean
+  payout_multiplier   Float?
+  paid_amount_credits Float?
+  credit_tx_id        String?   @db.Uuid
+  id                  String    @id @db.Uuid
+  created_at          DateTime? @db.Timestamp(6)
+  updated_at          DateTime? @db.Timestamp(6)
+  is_deleted          Boolean
+  user                user      @relation(fields: [trader_id], references: [id])
+
+  @@unique([trader_id, period_start, period_end], map: "trader_pool_period_uc")
+  @@index([created_at], map: "ix_trader_pool_earning_created_at")
+  @@index([is_deleted], map: "ix_trader_pool_earning_is_deleted")
+  @@index([is_paid], map: "ix_trader_pool_earning_is_paid")
+  @@index([paid_date], map: "ix_trader_pool_earning_paid_date")
+  @@index([period_end], map: "ix_trader_pool_earning_period_end")
+  @@index([period_start], map: "ix_trader_pool_earning_period_start")
+  @@index([trader_id], map: "ix_trader_pool_earning_trader_id")
+}
+
+model trader_profile {
+  trader_id   String    @unique @db.Uuid
+  content     String?
+  cover_image String?   @db.VarChar
+  links       Json?     @db.Json
+  id          String    @id @db.Uuid
+  created_at  DateTime? @db.Timestamp(6)
+  updated_at  DateTime? @db.Timestamp(6)
+  is_deleted  Boolean
+  user        user      @relation(fields: [trader_id], references: [id])
+
+  @@index([created_at], map: "ix_trader_profile_created_at")
+  @@index([is_deleted], map: "ix_trader_profile_is_deleted")
+}
+
+model trader_referral_earning {
+  id                  String             @id @db.Uuid
+  created_at          DateTime?          @db.Timestamp(6)
+  updated_at          DateTime?          @db.Timestamp(6)
+  is_deleted          Boolean
+  trader_id           String?            @db.Uuid
+  amount              Float?
+  paid_date           DateTime?          @db.Timestamp(6)
+  is_paid             Boolean
+  is_cancelled        Boolean
+  is_withdrawal       Boolean
+  trader_earn_date    DateTime           @db.Timestamp(6)
+  subscription_id     String?            @db.Uuid
+  cancellation_date   DateTime?          @db.Timestamp(6)
+  withdrawal_date     DateTime?          @db.Timestamp(6)
+  installments        Int                @default(1)
+  installment         Int                @default(1)
+  is_trial            Boolean            @default(false)
+  payout_multiplier   Float?
+  paid_amount_credits Float?
+  credit_tx_id        String?            @db.Uuid
+  user_subscription   user_subscription? @relation(fields: [subscription_id], references: [id], onDelete: Restrict)
+  user                user?              @relation(fields: [trader_id], references: [id], onDelete: Restrict)
+
+  @@unique([subscription_id, trader_earn_date], map: "subscription_earn_date_uc")
+  @@index([cancellation_date], map: "ix_trader_referral_earning_cancellation_date")
+  @@index([created_at], map: "ix_trader_referral_earning_created_at")
+  @@index([is_cancelled], map: "ix_trader_referral_earning_is_cancelled")
+  @@index([is_deleted], map: "ix_trader_referral_earning_is_deleted")
+  @@index([is_paid], map: "ix_trader_referral_earning_is_paid")
+  @@index([is_trial], map: "ix_trader_referral_earning_is_trial")
+  @@index([is_withdrawal], map: "ix_trader_referral_earning_is_withdrawal")
+  @@index([paid_date], map: "ix_trader_referral_earning_paid_date")
+  @@index([withdrawal_date], map: "ix_trader_referral_earning_withdrawal_date")
+}
+
+model trader_referral_tier_history {
+  trader_id      String    @db.Uuid
+  period_year    Int
+  period_month   Int
+  tier_name      String    @db.VarChar(32)
+  referral_count Int
+  multiplier     Float
+  meta_data      Json?
+  id             String    @id @db.Uuid
+  created_at     DateTime? @db.Timestamp(6)
+  updated_at     DateTime? @db.Timestamp(6)
+  is_deleted     Boolean
+  user           user      @relation(fields: [trader_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([trader_id, period_year, period_month], map: "ux_tier_history_trader_period")
+  @@index([created_at], map: "ix_trader_referral_tier_history_created_at")
+  @@index([is_deleted], map: "ix_trader_referral_tier_history_is_deleted")
+  @@index([trader_id], map: "ix_trader_referral_tier_history_trader_id")
+}
+
+model trader_setup_pnl_performance {
+  trader_id          String?   @db.Uuid
+  setup_id           String    @unique @db.Uuid
+  created_at         DateTime? @db.Timestamp(6)
+  updated_at         DateTime? @db.Timestamp(6)
+  pnl                Float?
+  pnl_rate           Float?
+  id                 String    @id @db.Uuid
+  r_r                Float?
+  fee_rate           Float?
+  estimated_pnl      Float?
+  estimated_pnl_rate Float?
+  setup              setup     @relation(fields: [setup_id], references: [id])
+  user               user?     @relation(fields: [trader_id], references: [id], onDelete: Restrict)
+
+  @@index([created_at], map: "ix_trader_setup_pnl_performance_created_at")
+  @@index([updated_at], map: "ix_trader_setup_pnl_performance_updated_at")
+}
+
+model trader_stats {
+  trader_id        String    @unique(map: "un_trader_stats_trader_id") @db.Uuid
+  stat_at          DateTime? @db.Timestamp(6)
+  win_rate         Float?
+  monthly_win_rate Float?
+  id               String    @id @db.Uuid
+  rate             Int?
+  pnl              Float?
+  pnl_rate         Float?
+  monthly_r        Float?
+  monthly_roi      Float?
+  monthly_pnl      Float?
+  monthly_pnl_rate Float?
+  risk_score       Int?
+  user             user      @relation(fields: [trader_id], references: [id])
+
+  @@index([stat_at], map: "ix_trader_stats_stat_at")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model trader_suspension {
+  trader_id             String    @unique @db.Uuid
+  suspension_start_date DateTime? @db.Timestamp(6)
+  suspension_end_date   DateTime? @db.Timestamp(6)
+  id                    String    @id @db.Uuid
+  created_at            DateTime? @db.Timestamp(6)
+  updated_at            DateTime? @db.Timestamp(6)
+  is_deleted            Boolean
+  reason                String?   @db.VarChar
+  rule_type             String?   @db.VarChar
+  user                  user      @relation(fields: [trader_id], references: [id])
+
+  @@index([created_at], map: "ix_trader_suspension_created_at")
+  @@index([is_deleted], map: "ix_trader_suspension_is_deleted")
+}
+
+model trader_violation {
+  trader_id        String    @db.Uuid
+  rule_type        String    @db.VarChar
+  description      String?   @db.VarChar
+  r_value          Float?
+  suspension_hours Int
+  related_setup_id String?   @db.Uuid
+  id               String    @id @db.Uuid
+  created_at       DateTime? @db.Timestamp(6)
+  updated_at       DateTime? @db.Timestamp(6)
+  is_deleted       Boolean
+  setup            setup?    @relation(fields: [related_setup_id], references: [id])
+  user             user      @relation(fields: [trader_id], references: [id])
+
+  @@index([created_at], map: "ix_trader_violation_created_at")
+  @@index([is_deleted], map: "ix_trader_violation_is_deleted")
+  @@index([rule_type], map: "ix_trader_violation_rule_type")
+  @@index([trader_id], map: "ix_trader_violation_trader_id")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model user {
+  id                                                                 String                         @id @db.Uuid
+  created_at                                                         DateTime?                      @db.Timestamp(6)
+  updated_at                                                         DateTime?                      @db.Timestamp(6)
+  is_deleted                                                         Boolean
+  email                                                              String?                        @unique(map: "ix_user_email") @db.VarChar
+  phone                                                              String?                        @unique(map: "ix_user_phone") @db.VarChar
+  is_email_verified                                                  Boolean                        @default(false)
+  email_validation_code                                              String?                        @db.VarChar
+  image                                                              String?                        @db.VarChar
+  uid                                                                String?                        @db.VarChar
+  device_id                                                          String?                        @db.VarChar
+  hashed_password                                                    String?                        @db.VarChar
+  instagram                                                          String?                        @db.VarChar
+  telegram                                                           String?                        @db.VarChar
+  is_approved                                                        Boolean                        @default(false)
+  approved_at                                                        DateTime?                      @db.Timestamp(6)
+  is_active                                                          Boolean                        @default(false)
+  is_admin                                                           Boolean                        @default(false)
+  is_trader                                                          Boolean                        @default(false)
+  is_customer                                                        Boolean                        @default(false)
+  name                                                               String?                        @db.VarChar
+  rate                                                               Int?                           @db.SmallInt
+  monthly_r                                                          Int?                           @db.SmallInt
+  twitter                                                            String?                        @db.VarChar
+  is_change_password                                                 Boolean                        @default(false)
+  registration_token                                                 String?                        @db.VarChar
+  monthly_roi                                                        String?                        @db.VarChar
+  first_name                                                         String?                        @db.VarChar
+  last_name                                                          String?                        @db.VarChar
+  is_trending                                                        Boolean                        @default(false)
+  is_membership_completed                                            Boolean                        @default(false)
+  language                                                           String?                        @default("en") @db.VarChar
+  suspension_start_date                                              DateTime?                      @db.Timestamp(6)
+  is_copy_notify                                                     Boolean                        @default(true)
+  is_notify                                                          Boolean                        @default(true)
+  copy_trade_market                                                  String?                        @db.VarChar
+  copy_trade_connected                                               Boolean                        @default(false)
+  can_copy_trade                                                     Boolean                        @default(false)
+  copy_trade_market_uid                                              String?                        @db.VarChar
+  last_login_at                                                      DateTime?                      @db.Timestamp(6)
+  referral_code                                                      String?                        @unique(map: "ix_user_referral_code") @db.VarChar
+  referral_trader_id                                                 String?                        @db.Uuid
+  copy_trade_paused                                                  Boolean                        @default(false)
+  timezone                                                           String?                        @default("UTC") @db.VarChar
+  is_notify_calendar                                                 Boolean                        @default(false)
+  suspension_end_date                                                DateTime?                      @db.Timestamp(6)
+  reason                                                             String?                        @db.VarChar
+  rule_type                                                          String?                        @db.VarChar
+  ad_audit_logs                                                      ad_audit_logs[]
+  ad_wallets                                                         ad_wallets?
+  affiliate_trader_credentials                                       affiliate_trader_credentials[]
+  api_key                                                            api_key[]
+  bank_account                                                       bank_account[]
+  boost                                                              boost[]
+  campaigns_campaigns_reviewed_byTouser                              campaigns[]                    @relation("campaigns_reviewed_byTouser")
+  campaigns_campaigns_trader_idTouser                                campaigns[]                    @relation("campaigns_trader_idTouser")
+  clap                                                               clap[]
+  copy_trade_order                                                   copy_trade_order[]
+  copy_trades_copy_trades_trader_idTouser                            copy_trades[]                  @relation("copy_trades_trader_idTouser")
+  copy_trades_copy_trades_user_idTouser                              copy_trades[]                  @relation("copy_trades_user_idTouser")
+  credit_balance                                                     credit_balance?
+  credit_lot                                                         credit_lot[]
+  credit_payout                                                      credit_payout[]
+  credit_transaction                                                 credit_transaction[]
+  credit_withdrawal                                                  credit_withdrawal[]
+  crypto_loan                                                        crypto_loan[]
+  crypto_wallet                                                      crypto_wallet[]
+  follow_notify_follow_notify_trader_idTouser                        follow_notify[]                @relation("follow_notify_trader_idTouser")
+  follow_notify_follow_notify_user_idTouser                          follow_notify[]                @relation("follow_notify_user_idTouser")
+  payout_batch                                                       payout_batch[]
+  receipt                                                            receipt[]
+  report_report_trader_idTouser                                      report[]                       @relation("report_trader_idTouser")
+  report_report_user_idTouser                                        report[]                       @relation("report_user_idTouser")
+  setup                                                              setup[]
+  setup_events                                                       setup_events[]
+  setup_purchase                                                     setup_purchase[]
+  shop                                                               shop[]
+  shop_application_shop_application_reviewed_byTouser                shop_application[]             @relation("shop_application_reviewed_byTouser")
+  shop_application_shop_application_user_idTouser                    shop_application[]             @relation("shop_application_user_idTouser")
+  shop_dispute_shop_dispute_resolved_byTouser                        shop_dispute[]                 @relation("shop_dispute_resolved_byTouser")
+  shop_dispute_shop_dispute_user_idTouser                            shop_dispute[]                 @relation("shop_dispute_user_idTouser")
+  shop_earning                                                       shop_earning[]
+  shop_follower                                                      shop_follower[]
+  shop_review                                                        shop_review[]
+  shop_review_reply                                                  shop_review_reply[]
+  shop_subscription                                                  shop_subscription[]
+  shop_trader                                                        shop_trader[]
+  shop_trader_history_shop_trader_history_performed_by_user_idTouser shop_trader_history[]          @relation("shop_trader_history_performed_by_user_idTouser")
+  shop_trader_history_shop_trader_history_trader_idTouser            shop_trader_history[]          @relation("shop_trader_history_trader_idTouser")
+  team_traders                                                       team_traders[]
+  teams                                                              teams?
+  trader_application_trader_application_reviewed_byTouser            trader_application[]           @relation("trader_application_reviewed_byTouser")
+  trader_application_trader_application_user_idTouser                trader_application[]           @relation("trader_application_user_idTouser")
+  trader_pool_earning                                                trader_pool_earning[]
+  trader_profile                                                     trader_profile?
+  trader_referral_earning                                            trader_referral_earning[]
+  trader_referral_tier_history                                       trader_referral_tier_history[]
+  trader_setup_pnl_performance                                       trader_setup_pnl_performance[]
+  trader_stats                                                       trader_stats?
+  trader_suspension                                                  trader_suspension?
+  trader_violation                                                   trader_violation[]
+  user                                                               user?                          @relation("userTouser", fields: [referral_trader_id], references: [id], onDelete: Restrict)
+  other_user                                                         user[]                         @relation("userTouser")
+  user_notification_user_notification_trader_idTouser                user_notification[]            @relation("user_notification_trader_idTouser")
+  user_notification_user_notification_user_idTouser                  user_notification[]            @relation("user_notification_user_idTouser")
+  user_session                                                       user_session[]
+  user_subscription_user_subscription_trader_idTouser                user_subscription[]            @relation("user_subscription_trader_idTouser")
+  user_subscription_user_subscription_user_idTouser                  user_subscription[]            @relation("user_subscription_user_idTouser")
+  voucher                                                            voucher[]
+  voucher_redemption                                                 voucher_redemption[]
+  watch_list                                                         watch_list[]
+  webhook                                                            webhook[]
+
+  @@index([approved_at], map: "ix_user_approved_at")
+  @@index([created_at], map: "ix_user_created_at")
+  @@index([device_id], map: "ix_user_device_id")
+  @@index([is_active], map: "ix_user_is_active")
+  @@index([is_admin], map: "ix_user_is_admin")
+  @@index([is_approved], map: "ix_user_is_approved")
+  @@index([is_customer], map: "ix_user_is_customer")
+  @@index([is_deleted], map: "ix_user_is_deleted")
+  @@index([is_trader], map: "ix_user_is_trader")
+  @@index([is_trending], map: "ix_user_is_trending")
+  @@index([name], map: "ix_user_name")
+  @@index([referral_trader_id], map: "ix_user_referral_trader_id")
+  @@index([registration_token], map: "ix_user_registration_token")
+  @@index([uid], map: "ix_user_uid")
+}
+
+model user_notification {
+  id                                     String    @id @db.Uuid
+  created_at                             DateTime? @db.Timestamp(6)
+  updated_at                             DateTime? @db.Timestamp(6)
+  is_deleted                             Boolean
+  user_id                                String?   @db.Uuid
+  is_read                                Boolean?
+  trader_id                              String?   @db.Uuid
+  setup_id                               String?   @db.Uuid
+  message                                String?   @db.VarChar
+  type                                   Int       @db.SmallInt
+  message_id                             String?   @db.VarChar
+  updated_column                         String?   @db.VarChar
+  column_value                           String?   @db.VarChar
+  setup                                  setup?    @relation(fields: [setup_id], references: [id], onDelete: Restrict)
+  user_user_notification_trader_idTouser user?     @relation("user_notification_trader_idTouser", fields: [trader_id], references: [id], onDelete: Restrict)
+  user_user_notification_user_idTouser   user?     @relation("user_notification_user_idTouser", fields: [user_id], references: [id], onDelete: Restrict)
+
+  @@index([created_at], map: "ix_user_notification_created_at")
+  @@index([is_deleted], map: "ix_user_notification_is_deleted")
+}
+
+model user_session {
+  user_id            String    @db.Uuid
+  device_id          String?   @db.VarChar
+  registration_token String?   @db.VarChar
+  is_active          Boolean   @default(true)
+  revoked_at         DateTime? @db.Timestamp(6)
+  last_seen_at       DateTime? @db.Timestamp(6)
+  os_name            String?   @db.VarChar
+  os_version         String?   @db.VarChar
+  app_version        String?   @db.VarChar
+  ip_address         String?   @db.VarChar
+  id                 String    @id @db.Uuid
+  created_at         DateTime? @db.Timestamp(6)
+  updated_at         DateTime? @db.Timestamp(6)
+  is_deleted         Boolean
+  user               user      @relation(fields: [user_id], references: [id])
+
+  @@index([created_at], map: "ix_user_session_created_at")
+  @@index([device_id], map: "ix_user_session_device_id")
+  @@index([is_deleted], map: "ix_user_session_is_deleted")
+  @@index([registration_token], map: "ix_user_session_registration_token")
+  @@index([user_id], map: "ix_user_session_user_id")
+}
+
+model user_subscription {
+  id                                     String                    @id @db.Uuid
+  created_at                             DateTime?                 @db.Timestamp(6)
+  updated_at                             DateTime?                 @db.Timestamp(6)
+  is_deleted                             Boolean
+  user_id                                String                    @db.Uuid
+  product_id                             String?                   @db.Uuid
+  market                                 String                    @db.VarChar
+  transaction_id                         String                    @db.VarChar
+  raw_data                               String
+  data                                   String
+  start_date                             DateTime                  @db.Timestamp(6)
+  expire_date                            DateTime                  @db.Timestamp(6)
+  is_expired                             Boolean
+  is_cancelled                           Boolean
+  is_trial                               Boolean
+  is_payment_received                    Boolean?
+  trader_id                              String?                   @db.Uuid
+  auto_renew_status                      Boolean                   @default(false)
+  auto_renew_product_code                String?                   @db.VarChar
+  price                                  Float?
+  currency                               String?                   @db.VarChar
+  subscription_pool                      subscription_pool[]
+  trader_referral_earning                trader_referral_earning[]
+  product                                product?                  @relation(fields: [product_id], references: [id], onDelete: Restrict)
+  user_user_subscription_trader_idTouser user?                     @relation("user_subscription_trader_idTouser", fields: [trader_id], references: [id], onDelete: Restrict)
+  user_user_subscription_user_idTouser   user                      @relation("user_subscription_user_idTouser", fields: [user_id], references: [id])
+
+  @@unique([market, transaction_id])
+  @@index([created_at], map: "ix_user_subscription_created_at")
+  @@index([expire_date], map: "ix_user_subscription_expire_date")
+  @@index([is_cancelled], map: "ix_user_subscription_is_cancelled")
+  @@index([is_deleted], map: "ix_user_subscription_is_deleted")
+  @@index([is_expired], map: "ix_user_subscription_is_expired")
+  @@index([start_date], map: "ix_user_subscription_start_date")
+  @@index([transaction_id], map: "ix_user_subscription_transaction_id")
+}
+
+model voucher {
+  code                       String               @unique(map: "ix_voucher_code") @db.VarChar(64)
+  name                       String?              @db.VarChar(128)
+  type                       String               @db.VarChar(16)
+  start_at                   DateTime?            @db.Timestamp(6)
+  end_at                     DateTime?            @db.Timestamp(6)
+  is_active                  Boolean
+  max_uses                   Int?
+  max_uses_per_user          Int?
+  usage_count                Int
+  membership_duration_days   Int?
+  membership_duration_months Int?
+  discount_type              String?              @db.VarChar(16)
+  discount_value             Float?
+  credits_amount             Float?
+  utm_source                 String?              @db.VarChar(128)
+  utm_medium                 String?              @db.VarChar(128)
+  utm_campaign               String?              @db.VarChar(128)
+  utm_term                   String?              @db.VarChar(128)
+  utm_content                String?              @db.VarChar(128)
+  created_by                 String?              @db.Uuid
+  meta_data                  Json?
+  id                         String               @id @db.Uuid
+  created_at                 DateTime?            @db.Timestamp(6)
+  updated_at                 DateTime?            @db.Timestamp(6)
+  is_deleted                 Boolean
+  new_users_only             Boolean              @default(false)
+  new_users_days             Int?
+  user                       user?                @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  voucher_redemption         voucher_redemption[]
+
+  @@index([is_active, start_at, end_at], map: "ix_voucher_active_dates")
+  @@index([created_at], map: "ix_voucher_created_at")
+  @@index([end_at], map: "ix_voucher_end_at")
+  @@index([is_active], map: "ix_voucher_is_active")
+  @@index([is_deleted], map: "ix_voucher_is_deleted")
+  @@index([start_at], map: "ix_voucher_start_at")
+  @@index([type], map: "ix_voucher_type")
+}
+
+model voucher_redemption {
+  voucher_id       String    @db.Uuid
+  user_id          String    @db.Uuid
+  redeemed_at      DateTime  @db.Timestamp(6)
+  status           String    @db.VarChar(16)
+  reason           String?
+  credit_tx_id     String?   @db.Uuid
+  subscription_id  String?   @db.Uuid
+  credits_added    Float?
+  original_price   Float?
+  final_price      Float?
+  discount_amount  Float?
+  discount_percent Float?
+  meta_data        Json?
+  id               String    @id @db.Uuid
+  created_at       DateTime? @db.Timestamp(6)
+  updated_at       DateTime? @db.Timestamp(6)
+  is_deleted       Boolean
+  user             user      @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  voucher          voucher   @relation(fields: [voucher_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([created_at], map: "ix_voucher_redemption_created_at")
+  @@index([is_deleted], map: "ix_voucher_redemption_is_deleted")
+  @@index([redeemed_at], map: "ix_voucher_redemption_redeemed_at")
+  @@index([status], map: "ix_voucher_redemption_status")
+  @@index([user_id], map: "ix_voucher_redemption_user_id")
+  @@index([voucher_id], map: "ix_voucher_redemption_voucher_id")
+}
+
+model watch_list {
+  id         String    @id @db.Uuid
+  created_at DateTime? @db.Timestamp(6)
+  updated_at DateTime? @db.Timestamp(6)
+  is_deleted Boolean
+  user_id    String?   @db.Uuid
+  setup_id   String?   @db.Uuid
+  setup      setup?    @relation(fields: [setup_id], references: [id], onDelete: Restrict)
+  user       user?     @relation(fields: [user_id], references: [id], onDelete: Restrict)
+
+  @@unique([user_id, setup_id])
+  @@index([created_at], map: "ix_watch_list_created_at")
+  @@index([is_deleted], map: "ix_watch_list_is_deleted")
+}
+
+model webhook {
+  id                   String             @id @db.Uuid
+  created_at           DateTime?          @db.Timestamp(6)
+  updated_at           DateTime?          @db.Timestamp(6)
+  is_deleted           Boolean            @default(false)
+  user_id              String             @db.Uuid
+  url                  String             @db.VarChar(2048)
+  secret               String             @db.VarChar(256)
+  events               Json               @default("[]")
+  scope                webhook_scope_enum @default(own)
+  is_active            Boolean            @default(true)
+  description          String?            @db.VarChar(512)
+  consecutive_failures Int                @default(0)
+  last_triggered_at    DateTime?          @db.Timestamptz(6)
+  user                 user               @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  webhook_delivery     webhook_delivery[]
+
+  @@index([created_at], map: "ix_webhook_created_at")
+  @@index([is_active], map: "ix_webhook_is_active")
+  @@index([is_deleted], map: "ix_webhook_is_deleted")
+  @@index([user_id, is_active], map: "ix_webhook_user_active")
+  @@index([user_id], map: "ix_webhook_user_id")
+}
+
+model webhook_delivery {
+  id            String    @id @db.Uuid
+  created_at    DateTime? @db.Timestamp(6)
+  updated_at    DateTime? @db.Timestamp(6)
+  is_deleted    Boolean   @default(false)
+  webhook_id    String    @db.Uuid
+  event_type    String    @db.VarChar(64)
+  payload       Json
+  status_code   Int?
+  response_body String?
+  success       Boolean   @default(false)
+  attempt       Int       @default(1)
+  next_retry_at DateTime? @db.Timestamptz(6)
+  delivered_at  DateTime? @db.Timestamptz(6)
+  error_message String?   @db.VarChar(512)
+  webhook       webhook   @relation(fields: [webhook_id], references: [id], onDelete: Cascade)
+
+  @@index([created_at], map: "ix_webhook_delivery_created_at")
+  @@index([event_type], map: "ix_webhook_delivery_event_type")
+  @@index([is_deleted], map: "ix_webhook_delivery_is_deleted")
+  @@index([next_retry_at], map: "ix_webhook_delivery_next_retry_at")
+  @@index([next_retry_at, success], map: "ix_webhook_delivery_retry")
+  @@index([webhook_id], map: "ix_webhook_delivery_webhook_id")
+}
+
+enum categories_type {
+  spot
+  futures
+}
+
+enum durations_type {
+  shortterm
+  midterm
+  longterm
+}
+
+enum order_types_type {
+  market
+  limit
+  stop
+}
+
+enum positions_type {
+  long
+  short
+}
+
+enum statuses_type {
+  incoming
+  active
+  cancelled
+  stopped
+  success
+  closed
+}
+
+enum webhook_scope_enum {
+  own
+  subscribed_shops
+  followed_traders
+}
