@@ -106,7 +106,6 @@ export class FeedService {
           AND c.is_deleted = FALSE
         WHERE s.status = $2::statuses_type
           AND s.is_deleted = FALSE
-          AND s.is_hidden  = FALSE
         ORDER BY s.last_acted_at DESC NULLS LAST, s.created_at DESC NULLS LAST
         LIMIT ${Number(limit)}`,
       viewerId,
