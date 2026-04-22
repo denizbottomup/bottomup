@@ -39,6 +39,9 @@ ENV NODE_ENV=production
 WORKDIR /app
 COPY --from=build /repo/apps/web/.next/standalone ./
 COPY --from=build /repo/apps/web/.next/static ./apps/web/.next/static
+# Static assets under public/ (served at the root URL) aren't bundled by
+# Next.js's standalone output — copy them explicitly.
+COPY --from=build /repo/apps/web/public ./apps/web/public
 EXPOSE 3000
 WORKDIR /app/apps/web
 CMD ["node", "server.js"]
