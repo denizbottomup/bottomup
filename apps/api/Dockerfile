@@ -1,3 +1,4 @@
+# api Dockerfile — Docker build context is shrunk by the repo-root .dockerignore
 FROM node:22-slim AS base
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates \
   && rm -rf /var/lib/apt/lists/* \
