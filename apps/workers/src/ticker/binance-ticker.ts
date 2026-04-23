@@ -42,12 +42,17 @@ export class BinanceTicker {
 
   private connect(): void {
     if (this.closed) return;
-    const url = 'wss://stream.binance.com:9443/ws/!ticker@arr';
+    // `!ticker@arr` was observed returning 0 frames in practice (both from
+    // Railway and a local probe) as of 2026-04-24; `!miniTicker@arr` still
+    // works and carries the same open/close/high/low fields we need. The
+    // `P` (24h percent change) isn't in the mini payload, so we derive it
+    // from (close - open) / open below.
+    const url = 'wss://stream.binance.com:9443/ws/!miniTicker@arr';
     const sock = new WebSocket(url);
     this.sock = sock;
 
     sock.addEventListener('open', () => {
-      this.log.info('ticker: connected to binance !ticker@arr');
+      this.log.info('ticker: connected to binance !miniTicker@arr');
     });
     sock.addEventListener('message', (ev) => this.onMessage(ev.data));
     sock.addEventListener('close', () => this.onDown('close'));
@@ -85,7 +90,12 @@ export class BinanceTicker {
       const close = String((t as Record<string, unknown>).c ?? '');
       const high = String((t as Record<string, unknown>).h ?? '');
       const low = String((t as Record<string, unknown>).l ?? '');
-      const change = String((t as Record<string, unknown>).P ?? '0');
+      const openNum = Number(open);
+      const closeNum = Number(close);
+      const change =
+        Number.isFinite(openNum) && openNum > 0 && Number.isFinite(closeNum)
+          ? (((closeNum - openNum) / openNum) * 100).toFixed(3)
+          : '0';
       const tsm = Number((t as Record<string, unknown>).E ?? now);
       const color = Number(change) >= 0 ? 'g' : 'r';
 
