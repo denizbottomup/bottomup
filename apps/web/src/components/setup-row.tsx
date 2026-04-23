@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { ApiError, api } from '@/lib/api';
 import { SetupChart } from './setup-chart';
@@ -88,10 +89,17 @@ export function SetupRow({ setup, pulseKey = 0 }: { setup: SetupCard; pulseKey?:
         pulsing ? 'border-brand/60 ring-1 ring-brand/30' : 'border-white/10'
       }`}
     >
-      <button
-        type="button"
+      <div
+        role="button"
+        tabIndex={0}
         onClick={() => setOpen((v) => !v)}
-        className="grid w-full grid-cols-[auto_minmax(0,1.2fr)_minmax(0,2fr)_minmax(0,1fr)_auto] items-center gap-3 px-3 py-2 text-left hover:bg-white/[0.02]"
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            setOpen((v) => !v);
+          }
+        }}
+        className="grid w-full cursor-pointer grid-cols-[auto_minmax(0,1.2fr)_minmax(0,2fr)_minmax(0,1fr)_auto] items-center gap-3 px-3 py-2 text-left hover:bg-white/[0.02]"
       >
         {/* Direction */}
         <DirectionPill position={setup.position} />
@@ -102,7 +110,19 @@ export function SetupRow({ setup, pulseKey = 0 }: { setup: SetupCard; pulseKey?:
           <div className="min-w-0">
             <div className="truncate font-mono text-sm font-semibold text-fg">{coinCode}</div>
             <div className="truncate text-[11px] text-fg-dim">
-              {traderName} · {setup.category === 'futures' ? 'Fut' : 'Spot'} · {setup.order_type}
+              {setup.trader.id ? (
+                <Link
+                  href={`/app/trader/${setup.trader.id}`}
+                  onClick={(e) => e.stopPropagation()}
+                  className="font-medium text-fg-muted transition hover:text-brand"
+                >
+                  {traderName}
+                </Link>
+              ) : (
+                <span className="text-fg-muted">{traderName}</span>
+              )}
+              {' · '}
+              {setup.category === 'futures' ? 'Fut' : 'Spot'} · {setup.order_type}
             </div>
           </div>
         </div>
@@ -124,7 +144,7 @@ export function SetupRow({ setup, pulseKey = 0 }: { setup: SetupCard; pulseKey?:
 
         {/* Foxy chip */}
         <FoxyChip foxy={foxy} open={open} />
-      </button>
+      </div>
 
       {open ? (
         <div className="border-t border-white/5 bg-black/20">
