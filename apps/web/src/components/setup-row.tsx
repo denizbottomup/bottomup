@@ -165,6 +165,16 @@ export function SetupRow({ setup, pulseKey = 0 }: { setup: SetupCard; pulseKey?:
           </div>
 
           <EventsTimeline events={events} />
+
+          <div className="flex items-center justify-end border-t border-white/5 px-4 py-2">
+            <Link
+              href={`/app/setup/${setup.id}`}
+              onClick={(e) => e.stopPropagation()}
+              className="text-xs text-fg-muted transition hover:text-brand"
+            >
+              Detay →
+            </Link>
+          </div>
         </div>
       ) : null}
     </div>
