@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Put, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Put, Query, UseGuards } from '@nestjs/common';
 import { FirebaseAuthGuard } from '../common/guards/firebase-auth.guard.js';
 import { CurrentUser, type AuthedUser } from '../common/decorators/current-user.decorator.js';
 import { UserService, type NotificationRow } from './user.service.js';
@@ -65,5 +65,15 @@ export class UserController {
     @Param('traderId') traderId: string,
   ): Promise<{ ok: true }> {
     return this.users.unblockTrader(user, traderId);
+  }
+
+  @Post('/traders/:traderId/report')
+  reportTrader(
+    @CurrentUser() user: AuthedUser,
+    @Param('traderId') traderId: string,
+    @Body() body: { content?: string; reason?: string },
+  ): Promise<{ ok: true }> {
+    const content = String(body?.content ?? body?.reason ?? '').trim();
+    return this.users.reportTrader(user, traderId, content);
   }
 }

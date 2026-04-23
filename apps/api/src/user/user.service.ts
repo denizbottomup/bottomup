@@ -123,6 +123,28 @@ export class UserService {
     }));
   }
 
+  async reportTrader(
+    viewer: AuthedUser,
+    traderId: string,
+    content: string,
+  ): Promise<{ ok: true }> {
+    const body = String(content ?? '').trim();
+    if (body.length < 4 || body.length > 400) {
+      throw new NotFoundException('Report content must be 4-400 characters');
+    }
+    const viewerId = await this.resolveViewerId(viewer);
+    await this.prisma.$executeRawUnsafe(
+      `INSERT INTO report (id, created_at, updated_at, is_deleted, user_id, trader_id, setup_id, content)
+       VALUES (gen_random_uuid(), NOW(), NOW(), FALSE, $1::uuid, $2::uuid, NULL, $3)
+       ON CONFLICT (user_id, trader_id)
+       DO UPDATE SET content = EXCLUDED.content, is_deleted = FALSE, updated_at = NOW()`,
+      viewerId,
+      traderId,
+      body,
+    );
+    return { ok: true };
+  }
+
   async blockTrader(viewer: AuthedUser, traderId: string): Promise<{ ok: true }> {
     const viewerId = await this.resolveViewerId(viewer);
     if (viewerId === traderId) return { ok: true };

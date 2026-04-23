@@ -68,4 +68,17 @@ export class SetupController {
     const content = String(body?.content ?? body?.reason ?? '').trim();
     return this.setups.report(viewer, setupId, content);
   }
+
+  /**
+   * Mobile-frozen: POST /setup/batch-impressions. The mobile client
+   * batches view events into one array. For MVP we just acknowledge;
+   * a future analytics worker can tail a Redis stream populated here.
+   */
+  @Post('/batch-impressions')
+  batchImpressions(
+    @Body() body: { impressions?: Array<{ setup_id?: string; ts?: number }> },
+  ): { ok: true; received: number } {
+    const n = Array.isArray(body?.impressions) ? body.impressions.length : 0;
+    return { ok: true, received: n };
+  }
 }
