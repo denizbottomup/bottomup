@@ -128,6 +128,30 @@ export default function TraderProfilePage() {
     };
   }, [traderId, tab, profile]);
 
+  const onToggleBlock = useCallback(async () => {
+    if (!profile || profile.viewer.is_self) return;
+    const next = !profile.viewer.is_blocked;
+    try {
+      await api<{ ok: true }>(`/user/traders/${profile.id}/block`, {
+        method: next ? 'PUT' : 'DELETE',
+      });
+      setProfile((prev) =>
+        prev
+          ? {
+              ...prev,
+              viewer: {
+                ...prev.viewer,
+                is_blocked: next,
+                is_following: next ? false : prev.viewer.is_following,
+              },
+            }
+          : prev,
+      );
+    } catch (x) {
+      setErr((x as Error).message);
+    }
+  }, [profile]);
+
   const onToggleFollow = useCallback(async () => {
     if (!profile || profile.viewer.is_self) return;
     setFollowPending(true);
@@ -217,21 +241,33 @@ export default function TraderProfilePage() {
           </div>
 
           {!profile.viewer.is_self ? (
-            <button
-              onClick={() => void onToggleFollow()}
-              disabled={followPending}
-              className={`rounded-lg px-4 py-2 text-sm font-medium ring-1 transition ${
-                profile.viewer.is_following
-                  ? 'bg-white/5 text-fg-muted ring-white/10 hover:bg-white/10'
-                  : 'bg-brand text-white ring-brand hover:bg-brand-dark'
-              } disabled:opacity-60`}
-            >
-              {followPending
-                ? '…'
-                : profile.viewer.is_following
-                  ? 'Takiptesin'
-                  : 'Takip et'}
-            </button>
+            <div className="flex flex-col items-end gap-2">
+              <button
+                onClick={() => void onToggleFollow()}
+                disabled={followPending || profile.viewer.is_blocked}
+                className={`rounded-lg px-4 py-2 text-sm font-medium ring-1 transition ${
+                  profile.viewer.is_following
+                    ? 'bg-white/5 text-fg-muted ring-white/10 hover:bg-white/10'
+                    : 'bg-brand text-white ring-brand hover:bg-brand-dark'
+                } disabled:opacity-60`}
+              >
+                {followPending
+                  ? '…'
+                  : profile.viewer.is_following
+                    ? 'Takiptesin'
+                    : 'Takip et'}
+              </button>
+              <button
+                onClick={() => void onToggleBlock()}
+                className={`text-[11px] transition ${
+                  profile.viewer.is_blocked
+                    ? 'text-emerald-300 hover:text-emerald-200'
+                    : 'text-fg-dim hover:text-rose-300'
+                }`}
+              >
+                {profile.viewer.is_blocked ? 'Engeli kaldır' : 'Engelle'}
+              </button>
+            </div>
           ) : null}
         </div>
       </header>
