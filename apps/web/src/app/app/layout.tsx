@@ -2,25 +2,51 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '@/lib/auth-context';
 import { Logo } from '@/components/logo';
+import { api } from '@/lib/api';
 
 const NAV = [
   { href: '/app', label: 'Grafik' },
   { href: '/app/feed', label: 'Akış' },
   { href: '/app/watchlist', label: 'Watchlist' },
   { href: '/app/news', label: 'Haberler' },
+  { href: '/app/notifications', label: 'Bildirimler', badgeKey: 'notifications' as const },
 ] as const;
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const { user, loading, signOut } = useAuth();
+  const [unread, setUnread] = useState<number>(0);
 
   useEffect(() => {
     if (!loading && !user) router.replace('/signin');
   }, [loading, user, router]);
+
+  const refreshUnread = useCallback(async () => {
+    if (!user) return;
+    try {
+      const r = await api<{ unread: number }>('/user/me/notifications?limit=1');
+      setUnread(r.unread);
+    } catch {
+      /* silent */
+    }
+  }, [user]);
+
+  // Refetch unread count on every pathname change + on explicit mark-read event
+  useEffect(() => {
+    void refreshUnread();
+  }, [pathname, refreshUnread]);
+
+  useEffect(() => {
+    const h = (): void => {
+      setUnread(0);
+    };
+    window.addEventListener('bup:notifications-read', h);
+    return () => window.removeEventListener('bup:notifications-read', h);
+  }, []);
 
   if (loading || !user) {
     return (
@@ -42,17 +68,23 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                   item.href === '/app'
                     ? pathname === '/app'
                     : pathname === item.href || pathname.startsWith(`${item.href}/`);
+                const hasBadge = 'badgeKey' in item && item.badgeKey === 'notifications' && unread > 0;
                 return (
                   <Link
                     key={item.href}
                     href={item.href}
-                    className={`rounded-md px-3 py-1.5 text-sm transition ${
+                    className={`relative rounded-md px-3 py-1.5 text-sm transition ${
                       active
                         ? 'bg-white/5 text-fg ring-1 ring-white/10'
                         : 'text-fg-muted hover:text-fg'
                     }`}
                   >
-                    {item.label}
+                    <span>{item.label}</span>
+                    {hasBadge ? (
+                      <span className="ml-1.5 inline-flex min-w-[18px] items-center justify-center rounded-full bg-brand px-1 font-mono text-[10px] font-semibold text-white">
+                        {unread > 99 ? '99+' : unread}
+                      </span>
+                    ) : null}
                   </Link>
                 );
               })}
