@@ -3,6 +3,21 @@ import type { PrismaClient } from '@bottomup/db';
 import { PRISMA } from '../common/prisma.module.js';
 import type { AuthedUser } from '../common/decorators/current-user.decorator.js';
 
+export interface TraderCardRow {
+  id: string;
+  name: string | null;
+  first_name: string | null;
+  last_name: string | null;
+  image: string | null;
+  cover_image: string | null;
+  content: string | null;
+  is_trending: boolean;
+  monthly_roi: string | null;
+  followers: number;
+  active_setups: number;
+  viewer_following: boolean;
+}
+
 export interface TraderProfileDetail {
   id: string;
   name: string | null;
@@ -68,6 +83,64 @@ type TraderStatus = (typeof ALLOWED_STATUSES)[number];
 @Injectable()
 export class TraderService {
   constructor(@Inject(PRISMA) private readonly prisma: PrismaClient) {}
+
+  async search(
+    viewer: AuthedUser,
+    opts: { sort?: 'trending' | 'followers' | 'new'; limit?: number; onlyFollowed?: boolean },
+  ): Promise<TraderCardRow[]> {
+    const viewerId = await this.resolveViewerId(viewer);
+    const capped = Math.max(1, Math.min(200, Math.floor(opts.limit ?? 40)));
+    const order =
+      opts.sort === 'new'
+        ? 'u.created_at DESC NULLS LAST'
+        : opts.sort === 'followers'
+          ? 'followers DESC'
+          : 'u.is_trending DESC, followers DESC';
+
+    const followFilter = opts.onlyFollowed
+      ? `EXISTS (SELECT 1 FROM follow_notify fn
+                   WHERE fn.trader_id = u.id AND fn.user_id = $1::uuid
+                     AND fn.follow = TRUE AND fn.is_deleted = FALSE)`
+      : `TRUE`;
+
+    const rows = await this.prisma.$queryRawUnsafe<Array<Record<string, unknown>>>(
+      `SELECT u.id::text AS id, u.name, u.first_name, u.last_name, u.image,
+              u.is_trending, u.monthly_roi, u.rate,
+              tp.cover_image AS cover_image, tp.content AS content,
+              (SELECT COUNT(*)::int FROM follow_notify f
+                WHERE f.trader_id = u.id AND f.follow = TRUE AND f.is_deleted = FALSE) AS followers,
+              (SELECT COUNT(*)::int FROM setup s
+                WHERE s.trader_id = u.id AND s.is_deleted = FALSE
+                  AND s.status = 'active'::statuses_type) AS active_setups,
+              COALESCE((SELECT fn.follow FROM follow_notify fn
+                         WHERE fn.user_id = $1::uuid AND fn.trader_id = u.id
+                           AND fn.is_deleted = FALSE), FALSE) AS viewer_following
+         FROM "user" u
+         LEFT JOIN trader_profile tp ON tp.trader_id = u.id AND tp.is_deleted = FALSE
+        WHERE u.is_trader = TRUE
+          AND u.is_deleted = FALSE
+          AND u.is_active = TRUE
+          AND ${followFilter}
+        ORDER BY ${order}
+        LIMIT ${capped}`,
+      viewerId,
+    );
+
+    return rows.map((r) => ({
+      id: r.id as string,
+      name: (r.name as string | null) ?? null,
+      first_name: (r.first_name as string | null) ?? null,
+      last_name: (r.last_name as string | null) ?? null,
+      image: (r.image as string | null) ?? null,
+      cover_image: (r.cover_image as string | null) ?? null,
+      content: (r.content as string | null) ?? null,
+      is_trending: Boolean(r.is_trending),
+      monthly_roi: (r.monthly_roi as string | null) ?? null,
+      followers: Number(r.followers ?? 0),
+      active_setups: Number(r.active_setups ?? 0),
+      viewer_following: Boolean(r.viewer_following),
+    }));
+  }
 
   async profile(viewer: AuthedUser, traderId: string): Promise<TraderProfileDetail> {
     const viewerId = await this.resolveViewerId(viewer);

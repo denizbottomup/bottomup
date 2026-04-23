@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Patch, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Query, UseGuards } from '@nestjs/common';
 import { FirebaseAuthGuard } from '../common/guards/firebase-auth.guard.js';
 import { CurrentUser, type AuthedUser } from '../common/decorators/current-user.decorator.js';
 import { UserService, type NotificationRow } from './user.service.js';
@@ -12,6 +12,14 @@ export class UserController {
   async me(@CurrentUser() user: AuthedUser): Promise<Record<string, unknown>> {
     const id = user.kind === 'jwt' ? user.sub : user.uid;
     return this.users.findMe({ kind: user.kind, id });
+  }
+
+  @Patch('/me')
+  patchMe(
+    @CurrentUser() user: AuthedUser,
+    @Body() body: Record<string, unknown>,
+  ): Promise<Record<string, unknown>> {
+    return this.users.updateMe(user, body ?? {});
   }
 
   @Get('/me/notifications')

@@ -3,6 +3,7 @@ import { FirebaseAuthGuard } from '../common/guards/firebase-auth.guard.js';
 import { CurrentUser, type AuthedUser } from '../common/decorators/current-user.decorator.js';
 import {
   TraderService,
+  type TraderCardRow,
   type TraderProfileDetail,
   type TraderSetupRow,
 } from './trader.service.js';
@@ -17,6 +18,22 @@ import {
 @UseGuards(FirebaseAuthGuard)
 export class TraderController {
   constructor(private readonly traders: TraderService) {}
+
+  @Get('/traders')
+  async search(
+    @CurrentUser() viewer: AuthedUser,
+    @Query('sort') sort?: string,
+    @Query('limit') limitRaw?: string,
+    @Query('only_followed') onlyFollowed?: string,
+  ): Promise<{ items: TraderCardRow[] }> {
+    const limit = Number.parseInt(limitRaw ?? '40', 10);
+    const items = await this.traders.search(viewer, {
+      sort: sort === 'followers' || sort === 'new' ? sort : 'trending',
+      limit: Number.isFinite(limit) ? limit : 40,
+      onlyFollowed: onlyFollowed === 'true' || onlyFollowed === '1',
+    });
+    return { items };
+  }
 
   @Get('/trader/:traderId')
   profile(

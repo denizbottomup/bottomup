@@ -49,6 +49,51 @@ export class UserService {
     return user;
   }
 
+  /**
+   * Patch a sparse set of editable profile fields on the viewer's user row.
+   * Mobile PATCH /user/me uses the same whitelist (name, first_name,
+   * last_name, instagram, telegram, twitter, monthly_roi, image, timezone,
+   * language). We silently ignore unknown fields so a forward-compatible
+   * client doesn't get a 400 on an added field.
+   */
+  async updateMe(
+    viewer: AuthedUser,
+    patch: Record<string, unknown>,
+  ): Promise<Record<string, unknown>> {
+    const viewerId = await this.resolveViewerId(viewer);
+    const allowed = [
+      'name',
+      'first_name',
+      'last_name',
+      'instagram',
+      'telegram',
+      'twitter',
+      'monthly_roi',
+      'image',
+      'timezone',
+      'language',
+    ] as const;
+
+    const setClauses: string[] = [];
+    const values: unknown[] = [viewerId];
+    for (const k of allowed) {
+      if (Object.prototype.hasOwnProperty.call(patch, k)) {
+        values.push(patch[k] === '' ? null : (patch[k] as string | null));
+        setClauses.push(`${k} = $${values.length}`);
+      }
+    }
+    if (setClauses.length === 0) {
+      // Nothing to update — just return current row.
+      return this.findMe({ kind: viewer.kind, id: viewer.kind === 'jwt' ? viewer.sub : viewer.uid });
+    }
+    setClauses.push(`updated_at = NOW()`);
+    await this.prisma.$executeRawUnsafe(
+      `UPDATE "user" SET ${setClauses.join(', ')} WHERE id = $1::uuid`,
+      ...values,
+    );
+    return this.findMe({ kind: viewer.kind, id: viewer.kind === 'jwt' ? viewer.sub : viewer.uid });
+  }
+
   async listNotifications(
     viewer: AuthedUser,
     limit = 100,

@@ -10,6 +10,11 @@ export interface FoxyVerdict {
   comment: string;            // Turkish, 1-2 sentences
 }
 
+export interface FoxyChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
 interface SetupRow {
   id: string;
   coin_name: string;
@@ -65,6 +70,45 @@ export class FoxyService {
 
     cache.set(setupId, { at: Date.now(), value: verdict });
     return verdict;
+  }
+
+  /**
+   * Free-form chat with Foxy. Mobile's BupAI calls OpenAI directly from
+   * the client with a key fetched out of Firebase Remote Config; we proxy
+   * through the backend so the key never hits the browser. System prompt
+   * is product-scoped (crypto/trading context) and turns are limited to
+   * 20 round-trips so history doesn't grow unbounded.
+   */
+  async chat(messages: FoxyChatMessage[]): Promise<string> {
+    if (!this.client) {
+      return 'Foxy AI anahtarı ayarlı değil. Yöneticiyle iletişime geç.';
+    }
+    const trimmed = messages
+      .filter((m) => (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string')
+      .slice(-20)
+      .map((m) => ({
+        role: m.role as 'user' | 'assistant',
+        content: m.content.slice(0, 4000),
+      }));
+
+    const res = await this.client.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 700,
+      system:
+        'You are Foxy AI, the in-app assistant for bottomUP — a crypto trading-signal community. ' +
+        'Users are active traders asking about markets, indicators, setup interpretation, risk, ' +
+        'or platform usage. Answer in Turkish unless the user writes in another language. ' +
+        'Stay concise (2-5 short paragraphs max), never give direct financial advice disclaimers ' +
+        'longer than one sentence, and never output code unless explicitly asked. If a question is ' +
+        'outside crypto/trading/platform scope, redirect briefly without being preachy.',
+      messages: trimmed,
+    });
+
+    const block = res.content.find((c) => c.type === 'text');
+    if (!block || block.type !== 'text') {
+      return 'Foxy şu an cevap veremedi, bir dakika sonra tekrar dener misin?';
+    }
+    return block.text.trim();
   }
 
   private async loadSetup(id: string): Promise<SetupRow | null> {

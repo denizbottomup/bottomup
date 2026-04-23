@@ -11,6 +11,9 @@ const NAV = [
   { href: '/app', label: 'Grafik' },
   { href: '/app/feed', label: 'Akış' },
   { href: '/app/watchlist', label: 'Watchlist' },
+  { href: '/app/analysts', label: 'Analistler' },
+  { href: '/app/together', label: 'Kopya' },
+  { href: '/app/foxy', label: 'Foxy AI' },
   { href: '/app/news', label: 'Haberler' },
   { href: '/app/notifications', label: 'Bildirimler', badgeKey: 'notifications' as const },
 ] as const;
@@ -91,7 +94,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             </nav>
           </div>
           <div className="flex items-center gap-3">
-            <span className="text-sm text-fg-muted hidden sm:inline">{user.email}</span>
+            <Link
+              href="/app/profile"
+              className="hidden text-sm text-fg-muted transition hover:text-fg sm:inline"
+            >
+              {user.email}
+            </Link>
             <button onClick={() => void signOut()} className="btn-ghost text-sm">
               Çıkış
             </button>
