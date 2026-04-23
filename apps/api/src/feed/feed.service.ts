@@ -187,6 +187,89 @@ export class FeedService {
     }));
   }
 
+  async listByTag(tag: string, limit = 50): Promise<SetupCardRow[]> {
+    const capped = Math.max(1, Math.min(200, Math.floor(limit)));
+    const rows = await this.prisma.$queryRawUnsafe<Array<Record<string, unknown>>>(
+      `SELECT s.id::text                AS id,
+              s.status::text            AS status,
+              s.category::text          AS category,
+              s.position::text          AS position,
+              s.order_type::text        AS order_type,
+              s.coin_name,
+              s.entry_value, s.entry_value_end,
+              s.stop_value, s.profit_taking_1, s.profit_taking_2, s.profit_taking_3,
+              s.r_value, s.activation_date, s.created_at, s.last_acted_at,
+              s.is_tp1, s.is_tp2, s.is_tp3, s.close_price,
+              u.id::text                AS trader_id,
+              u.name                    AS trader_name,
+              u.first_name              AS trader_first_name,
+              u.last_name               AS trader_last_name,
+              u.image                   AS trader_image,
+              tp.cover_image            AS trader_cover_image,
+              c.code                    AS coin_code,
+              c.name                    AS coin_display_name,
+              c.image                   AS coin_image
+         FROM setup s
+         JOIN "user" u ON u.id = s.trader_id AND u.is_deleted = FALSE
+         LEFT JOIN trader_profile tp ON tp.trader_id = s.trader_id AND tp.is_deleted = FALSE
+         LEFT JOIN coin c ON c.code = s.coin_name AND c.is_deleted = FALSE
+        WHERE s.is_deleted = FALSE
+          AND $1 = ANY(s.tags)
+        ORDER BY s.last_acted_at DESC NULLS LAST, s.created_at DESC NULLS LAST
+        LIMIT ${capped}`,
+      tag,
+    );
+    return rows.map((r) => ({
+      id: r.id as string,
+      status: r.status as SetupCardRow['status'],
+      category: r.category as SetupCardRow['category'],
+      position: (r.position ?? null) as SetupCardRow['position'],
+      order_type: r.order_type as string,
+      coin_name: r.coin_name as string,
+      entry_value: Number(r.entry_value),
+      entry_value_end: numOrNull(r.entry_value_end),
+      stop_value: numOrNull(r.stop_value),
+      profit_taking_1: numOrNull(r.profit_taking_1),
+      profit_taking_2: numOrNull(r.profit_taking_2),
+      profit_taking_3: numOrNull(r.profit_taking_3),
+      r_value: numOrNull(r.r_value),
+      activation_date: (r.activation_date ?? null) as Date | null,
+      created_at: (r.created_at ?? null) as Date | null,
+      last_acted_at: (r.last_acted_at ?? null) as Date | null,
+      is_tp1: (r.is_tp1 ?? null) as boolean | null,
+      is_tp2: (r.is_tp2 ?? null) as boolean | null,
+      is_tp3: (r.is_tp3 ?? null) as boolean | null,
+      close_price: numOrNull(r.close_price),
+      trader: {
+        id: r.trader_id as string,
+        name: (r.trader_name ?? null) as string | null,
+        first_name: (r.trader_first_name ?? null) as string | null,
+        last_name: (r.trader_last_name ?? null) as string | null,
+        image: (r.trader_image ?? null) as string | null,
+        cover_image: (r.trader_cover_image ?? null) as string | null,
+      },
+      coin: {
+        code: (r.coin_code as string) ?? (r.coin_name as string),
+        display_name: (r.coin_display_name ?? null) as string | null,
+        image: (r.coin_image ?? null) as string | null,
+      },
+    }));
+  }
+
+  async listTrendingTags(limit = 30): Promise<Array<{ tag: string; count: number }>> {
+    const capped = Math.max(1, Math.min(100, Math.floor(limit)));
+    const rows = await this.prisma.$queryRawUnsafe<Array<{ tag: string; n: number }>>(
+      `SELECT tag, COUNT(*)::int AS n
+         FROM (SELECT unnest(tags) AS tag FROM setup
+                WHERE is_deleted = FALSE
+                  AND status IN ('incoming','active','success')) x
+        GROUP BY tag
+        ORDER BY n DESC
+        LIMIT ${capped}`,
+    );
+    return rows.map((r) => ({ tag: r.tag, count: Number(r.n ?? 0) }));
+  }
+
   async listNews(limit = 50): Promise<NewsRow[]> {
     const capped = Math.max(1, Math.min(200, Math.floor(limit)));
     const rows = await this.prisma.$queryRawUnsafe<Array<Record<string, unknown>>>(

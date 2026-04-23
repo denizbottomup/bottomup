@@ -36,6 +36,23 @@ export class FeedController {
     return { items };
   }
 
+  @Get('/tags')
+  async trendingTags(
+    @Query('limit') limitRaw?: string,
+  ): Promise<{ items: Array<{ tag: string; count: number }> }> {
+    const items = await this.feed.listTrendingTags(clampLimit(limitRaw));
+    return { items };
+  }
+
+  @Get('/tag/:tag')
+  async byTag(
+    @Param('tag') tag: string,
+    @Query('limit') limitRaw?: string,
+  ): Promise<{ items: SetupCardRow[] }> {
+    const items = await this.feed.listByTag(tag, clampLimit(limitRaw));
+    return { items };
+  }
+
   @Get('/setup/:setupId/events')
   async events(
     @Param('setupId') setupId: string,

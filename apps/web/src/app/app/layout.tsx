@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '@/lib/auth-context';
 import { Logo } from '@/components/logo';
+import { SearchBar } from '@/components/search-bar';
 import { api } from '@/lib/api';
 
 const NAV = [
@@ -94,9 +95,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             </nav>
           </div>
           <div className="flex items-center gap-3">
+            <div className="hidden md:block">
+              <SearchBar />
+            </div>
             <Link
               href="/app/profile"
-              className="hidden text-sm text-fg-muted transition hover:text-fg sm:inline"
+              className="hidden text-sm text-fg-muted transition hover:text-fg lg:inline"
             >
               {user.email}
             </Link>
