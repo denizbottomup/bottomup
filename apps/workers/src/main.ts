@@ -4,6 +4,7 @@ import type { ConnectionOptions, Worker } from 'bullmq';
 import { z } from 'zod';
 import { QUEUE_NAMES, makeWorker } from './queues/index.js';
 import { Replicator } from './replicator/replicator.js';
+import { RealtimeBus } from './realtime-bus.js';
 
 /**
  * Workers bootstrap. Each processor is a stub for now — MVP lands with
@@ -52,11 +53,15 @@ async function main(): Promise<void> {
   // dev where only the target is reachable).
   let replicator: Replicator | null = null;
   let replicatorInterval: NodeJS.Timeout | null = null;
+  let realtime: RealtimeBus | null = null;
   if (env.LEGACY_DATABASE_URL) {
+    realtime = new RealtimeBus(env.REDIS_URL, log.child({ component: 'realtime' }));
+    await realtime.start();
     replicator = new Replicator({
       sourceUrl: env.LEGACY_DATABASE_URL,
       targetUrl: env.DATABASE_URL,
       log: log.child({ component: 'replicator' }),
+      realtime,
     });
     await replicator.start();
     const tick = async (): Promise<void> => {
@@ -84,6 +89,7 @@ async function main(): Promise<void> {
     await Promise.all([
       ...workers.map((w) => w.close()),
       replicator?.stop() ?? Promise.resolve(),
+      realtime?.stop() ?? Promise.resolve(),
     ]);
     process.exit(0);
   };

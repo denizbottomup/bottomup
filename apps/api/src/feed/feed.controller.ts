@@ -1,7 +1,7 @@
-import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
 import { FirebaseAuthGuard } from '../common/guards/firebase-auth.guard.js';
 import { CurrentUser, type AuthedUser } from '../common/decorators/current-user.decorator.js';
-import { FeedService, type SetupCardRow } from './feed.service.js';
+import { FeedService, type SetupCardRow, type SetupEventRow } from './feed.service.js';
 
 const MAX_LIMIT = 200;
 
@@ -27,6 +27,15 @@ export class FeedController {
   ): Promise<{ items: SetupCardRow[] }> {
     const limit = clampLimit(limitRaw);
     const items = await this.feed.listByStatus(user, 'active', limit);
+    return { items };
+  }
+
+  @Get('/setup/:setupId/events')
+  async events(
+    @Param('setupId') setupId: string,
+    @Query('limit') limitRaw?: string,
+  ): Promise<{ items: SetupEventRow[] }> {
+    const items = await this.feed.listEvents(setupId, clampLimit(limitRaw));
     return { items };
   }
 }

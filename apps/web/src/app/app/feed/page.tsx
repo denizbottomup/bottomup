@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ApiError, api } from '@/lib/api';
+import { BottomupWs, type WsServerFrame } from '@/lib/ws';
 import type { SetupCard } from '@/components/setup-card';
 import { SetupRow } from '@/components/setup-row';
 
@@ -11,11 +12,18 @@ interface FeedResponse {
   items: SetupCard[];
 }
 
+interface SetupReplicationPayload {
+  table: string;
+  row: Record<string, unknown>;
+}
+
 export default function FeedPage() {
   const [tab, setTab] = useState<Tab>('opportunities');
   const [opp, setOpp] = useState<SetupCard[] | null>(null);
   const [act, setAct] = useState<SetupCard[] | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const [pulses, setPulses] = useState<Record<string, number>>({});
+  const [connected, setConnected] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -40,24 +48,48 @@ export default function FeedPage() {
     };
   }, []);
 
+  const wsRef = useRef<BottomupWs | null>(null);
+  useEffect(() => {
+    const ws = new BottomupWs();
+    wsRef.current = ws;
+    ws.connect();
+    ws.bind('setup', '*');
+    const off = ws.onMessage((frame) => {
+      if (frame.channel === 'system') {
+        setConnected(true);
+        return;
+      }
+      if (frame.channel !== 'setup') return;
+      applyFrame(frame, setOpp, setAct, setPulses);
+    });
+    return () => {
+      off();
+      ws.close();
+      wsRef.current = null;
+    };
+  }, []);
+
   const loading = opp == null || act == null;
   const items = tab === 'opportunities' ? opp ?? [] : act ?? [];
 
   return (
     <div className="mx-auto max-w-6xl px-6 py-6">
-      <div className="flex items-center gap-2">
-        <TabButton
-          active={tab === 'opportunities'}
-          onClick={() => setTab('opportunities')}
-          label="Fırsatlar"
-          count={opp?.length ?? null}
-        />
-        <TabButton
-          active={tab === 'active'}
-          onClick={() => setTab('active')}
-          label="Aktif"
-          count={act?.length ?? null}
-        />
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <TabButton
+            active={tab === 'opportunities'}
+            onClick={() => setTab('opportunities')}
+            label="Fırsatlar"
+            count={opp?.length ?? null}
+          />
+          <TabButton
+            active={tab === 'active'}
+            onClick={() => setTab('active')}
+            label="Aktif"
+            count={act?.length ?? null}
+          />
+        </div>
+        <LiveBadge connected={connected} />
       </div>
 
       <div className="mt-5">
@@ -77,13 +109,84 @@ export default function FeedPage() {
         ) : (
           <div className="flex flex-col gap-2">
             {items.map((s) => (
-              <SetupRow key={s.id} setup={s} />
+              <SetupRow key={s.id} setup={s} pulseKey={pulses[s.id] ?? 0} />
             ))}
           </div>
         )}
       </div>
     </div>
   );
+}
+
+/**
+ * Apply a realtime frame to the local feed state. We expect payloads
+ * shaped as { table: 'setup' | 'setup_events', row: <raw row> }. For
+ * `setup` rows we patch in place; for `setup_events` we just nudge the
+ * pulseKey so the matching row flashes.
+ *
+ * Cross-status transitions (incoming → active) move the item between
+ * tabs.
+ */
+function applyFrame(
+  frame: WsServerFrame,
+  setOpp: React.Dispatch<React.SetStateAction<SetupCard[] | null>>,
+  setAct: React.Dispatch<React.SetStateAction<SetupCard[] | null>>,
+  setPulses: React.Dispatch<React.SetStateAction<Record<string, number>>>,
+): void {
+  const p = frame.data as SetupReplicationPayload | null;
+  if (!p || typeof p !== 'object') return;
+
+  if (p.table === 'setup_events') {
+    const setupId = String((p.row as Record<string, unknown>).setup_id ?? '');
+    if (setupId) bumpPulse(setupId, setPulses);
+    return;
+  }
+
+  if (p.table !== 'setup') return;
+
+  const raw = p.row as Record<string, unknown>;
+  const id = String(raw.id ?? '');
+  if (!id) return;
+
+  bumpPulse(id, setPulses);
+
+  const patch = (prev: SetupCard[] | null): SetupCard[] | null => {
+    if (prev == null) return prev;
+    return prev.map((s) => (s.id === id ? mergeRow(s, raw) : s));
+  };
+  setOpp(patch);
+  setAct(patch);
+}
+
+function mergeRow(prev: SetupCard, raw: Record<string, unknown>): SetupCard {
+  const n = (k: string): number | null => {
+    const v = raw[k];
+    if (v == null) return null;
+    const x = Number(v);
+    return Number.isFinite(x) ? x : null;
+  };
+  return {
+    ...prev,
+    status: ((raw.status as SetupCard['status']) ?? prev.status),
+    position: ((raw.position as SetupCard['position']) ?? prev.position),
+    entry_value: n('entry_value') ?? prev.entry_value,
+    entry_value_end: n('entry_value_end') ?? prev.entry_value_end,
+    stop_value: n('stop_value') ?? prev.stop_value,
+    profit_taking_1: n('profit_taking_1') ?? prev.profit_taking_1,
+    profit_taking_2: n('profit_taking_2') ?? prev.profit_taking_2,
+    profit_taking_3: n('profit_taking_3') ?? prev.profit_taking_3,
+    r_value: n('r_value') ?? prev.r_value,
+    is_tp1: (raw.is_tp1 as boolean | null) ?? prev.is_tp1,
+    is_tp2: (raw.is_tp2 as boolean | null) ?? prev.is_tp2,
+    is_tp3: (raw.is_tp3 as boolean | null) ?? prev.is_tp3,
+  };
+}
+
+function bumpPulse(
+  id: string,
+  setPulses: React.Dispatch<React.SetStateAction<Record<string, number>>>,
+): void {
+  setPulses((prev) => ({ ...prev, [id]: Date.now() }));
 }
 
 function TabButton({
@@ -119,6 +222,25 @@ function TabButton({
         </span>
       ) : null}
     </button>
+  );
+}
+
+function LiveBadge({ connected }: { connected: boolean }) {
+  return (
+    <span
+      className={`flex items-center gap-2 rounded-md px-2 py-1 text-[11px] ring-1 ${
+        connected
+          ? 'bg-emerald-400/10 text-emerald-300 ring-emerald-400/30'
+          : 'bg-white/5 text-fg-dim ring-white/10'
+      }`}
+    >
+      <span
+        className={`h-1.5 w-1.5 rounded-full ${
+          connected ? 'bg-emerald-400 animate-pulse' : 'bg-fg-dim'
+        }`}
+      />
+      {connected ? 'Canlı' : 'Bağlanıyor…'}
+    </span>
   );
 }
 

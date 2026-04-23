@@ -12,15 +12,34 @@ interface FoxyVerdict {
   comment: string;
 }
 
+interface SetupEvent {
+  id: number;
+  event_time: string | null;
+  action: string | null;
+  changed_column: string | null;
+  old_value: string | null;
+  new_value: string | null;
+  trader_name: string | null;
+  trader_image: string | null;
+}
+
 type FoxyState =
   | { kind: 'idle' }
   | { kind: 'loading' }
   | { kind: 'ok'; value: FoxyVerdict }
   | { kind: 'err'; message: string };
 
-export function SetupRow({ setup }: { setup: SetupCard }) {
+type EventsState =
+  | { kind: 'idle' }
+  | { kind: 'loading' }
+  | { kind: 'ok'; value: SetupEvent[] }
+  | { kind: 'err'; message: string };
+
+export function SetupRow({ setup, pulseKey = 0 }: { setup: SetupCard; pulseKey?: number }) {
   const [open, setOpen] = useState(false);
   const [foxy, setFoxy] = useState<FoxyState>({ kind: 'idle' });
+  const [events, setEvents] = useState<EventsState>({ kind: 'idle' });
+  const [pulsing, setPulsing] = useState(false);
   const isLong = setup.position === 'long';
   const isShort = setup.position === 'short';
 
@@ -36,6 +55,26 @@ export function SetupRow({ setup }: { setup: SetupCard }) {
       });
   }, [open, foxy.kind, setup.id]);
 
+  useEffect(() => {
+    if (!open) return;
+    setEvents({ kind: 'loading' });
+    api<{ items: SetupEvent[] }>(`/feed/setup/${setup.id}/events?limit=20`)
+      .then((r) => setEvents({ kind: 'ok', value: r.items }))
+      .catch((x) => {
+        const msg =
+          x instanceof ApiError ? `${x.status} ${x.message}` : (x as Error).message;
+        setEvents({ kind: 'err', message: msg });
+      });
+  }, [open, setup.id, pulseKey]);
+
+  // Flash the row when pulseKey changes (WS update arrived).
+  useEffect(() => {
+    if (!pulseKey) return;
+    setPulsing(true);
+    const t = setTimeout(() => setPulsing(false), 1200);
+    return () => clearTimeout(t);
+  }, [pulseKey]);
+
   const traderName =
     setup.trader.name ||
     [setup.trader.first_name, setup.trader.last_name].filter(Boolean).join(' ').trim() ||
@@ -44,7 +83,11 @@ export function SetupRow({ setup }: { setup: SetupCard }) {
   const coinCode = (setup.coin.code || setup.coin_name || '').toUpperCase();
 
   return (
-    <div className="overflow-hidden rounded-xl border border-white/10 bg-white/[0.02] transition hover:border-white/20">
+    <div
+      className={`overflow-hidden rounded-xl border bg-white/[0.02] transition hover:border-white/20 ${
+        pulsing ? 'border-brand/60 ring-1 ring-brand/30' : 'border-white/10'
+      }`}
+    >
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
@@ -84,24 +127,145 @@ export function SetupRow({ setup }: { setup: SetupCard }) {
       </button>
 
       {open ? (
-        <div className="grid gap-4 border-t border-white/5 bg-black/20 p-4 lg:grid-cols-[1fr_320px]">
-          <SetupChart
-            symbol={setup.coin_name}
-            entry={setup.entry_value}
-            entryHigh={setup.entry_value_end}
-            stop={setup.stop_value}
-            tp1={setup.profit_taking_1}
-            tp2={setup.profit_taking_2}
-            tp3={setup.profit_taking_3}
-            position={isLong ? 'long' : isShort ? 'short' : null}
-            height={280}
-          />
+        <div className="border-t border-white/5 bg-black/20">
+          <div className="grid gap-4 p-4 lg:grid-cols-[1fr_320px]">
+            <SetupChart
+              symbol={setup.coin_name}
+              entry={setup.entry_value}
+              entryHigh={setup.entry_value_end}
+              stop={setup.stop_value}
+              tp1={setup.profit_taking_1}
+              tp2={setup.profit_taking_2}
+              tp3={setup.profit_taking_3}
+              position={isLong ? 'long' : isShort ? 'short' : null}
+              height={280}
+            />
 
-          <FoxyPanel foxy={foxy} traderInitial={traderInitial} traderName={traderName} />
+            <FoxyPanel foxy={foxy} traderInitial={traderInitial} traderName={traderName} />
+          </div>
+
+          <EventsTimeline events={events} />
         </div>
       ) : null}
     </div>
   );
+}
+
+function EventsTimeline({ events }: { events: EventsState }) {
+  if (events.kind === 'idle') return null;
+  return (
+    <div className="border-t border-white/5 px-4 py-3">
+      <div className="mb-2 flex items-center gap-2 text-[11px] uppercase tracking-wider text-fg-dim">
+        <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden>
+          <circle cx="5" cy="5" r="3" fill="currentColor" />
+        </svg>
+        Trader Güncellemeleri
+      </div>
+      {events.kind === 'loading' ? (
+        <div className="space-y-1.5">
+          <div className="h-2 w-1/2 animate-pulse rounded bg-white/10" />
+          <div className="h-2 w-2/3 animate-pulse rounded bg-white/10" />
+          <div className="h-2 w-1/3 animate-pulse rounded bg-white/10" />
+        </div>
+      ) : events.kind === 'err' ? (
+        <p className="text-xs text-rose-300/80">Akış yüklenemedi: {events.message}</p>
+      ) : events.value.length === 0 ? (
+        <p className="text-xs text-fg-dim">Henüz güncelleme yok.</p>
+      ) : (
+        <ol className="space-y-1.5">
+          {events.value.map((e) => (
+            <li key={e.id} className="flex items-start gap-2 text-[12px] leading-relaxed">
+              <span className="mt-1 inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-white/30" />
+              <span className="min-w-0 flex-1">
+                <EventLine e={e} />
+              </span>
+              <span className="shrink-0 font-mono text-[10px] text-fg-dim">
+                {formatAgo(e.event_time)}
+              </span>
+            </li>
+          ))}
+        </ol>
+      )}
+    </div>
+  );
+}
+
+function EventLine({ e }: { e: SetupEvent }) {
+  const col = humanColumn(e.changed_column);
+  if (e.action === 'insert') {
+    return <span className="text-fg">Setup paylaşıldı.</span>;
+  }
+  if (e.action === 'update' && col) {
+    const from = fmtVal(e.old_value);
+    const to = fmtVal(e.new_value);
+    if (from && to && from !== to) {
+      return (
+        <span className="text-fg">
+          <span className="text-fg-muted">{col}</span>{' '}
+          <span className="font-mono text-rose-300/90 line-through decoration-rose-400/40">
+            {from}
+          </span>{' '}
+          →{' '}
+          <span className="font-mono text-emerald-300">{to}</span>
+        </span>
+      );
+    }
+    if (to) {
+      return (
+        <span className="text-fg">
+          <span className="text-fg-muted">{col}</span>{' '}
+          <span className="font-mono text-emerald-300">{to}</span>
+        </span>
+      );
+    }
+    return <span className="text-fg-muted">{col} güncellendi</span>;
+  }
+  return <span className="text-fg-muted">{e.action} {e.changed_column ?? ''}</span>;
+}
+
+function humanColumn(col: string | null): string {
+  if (!col) return '';
+  const map: Record<string, string> = {
+    status: 'Durum',
+    entry_value: 'Giriş',
+    entry_value_end: 'Giriş üst',
+    stop_value: 'Stop',
+    profit_taking_1: 'TP1',
+    profit_taking_2: 'TP2',
+    profit_taking_3: 'TP3',
+    is_tp1: 'TP1 vuruldu',
+    is_tp2: 'TP2 vuruldu',
+    is_tp3: 'TP3 vuruldu',
+    close_price: 'Kapanış',
+    note: 'Not',
+    open_leverage: 'Kaldıraç',
+  };
+  return map[col] ?? col;
+}
+
+function fmtVal(v: string | null): string | null {
+  if (v == null) return null;
+  const n = Number(v);
+  if (Number.isFinite(n)) {
+    const abs = Math.abs(n);
+    const digits = abs >= 1000 ? 2 : abs >= 1 ? 4 : 6;
+    return n.toLocaleString('en-US', { maximumFractionDigits: digits });
+  }
+  return v;
+}
+
+function formatAgo(iso: string | null): string {
+  if (!iso) return '';
+  const t = new Date(iso).getTime();
+  if (!Number.isFinite(t)) return '';
+  const diffS = Math.max(1, Math.round((Date.now() - t) / 1000));
+  if (diffS < 60) return `${diffS}s`;
+  const m = Math.round(diffS / 60);
+  if (m < 60) return `${m}dk`;
+  const h = Math.round(m / 60);
+  if (h < 24) return `${h}sa`;
+  const d = Math.round(h / 24);
+  return `${d}g`;
 }
 
 function DirectionPill({ position }: { position: 'long' | 'short' | null }) {

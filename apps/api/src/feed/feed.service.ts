@@ -3,6 +3,17 @@ import type { PrismaClient } from '@bottomup/db';
 import { PRISMA } from '../common/prisma.module.js';
 import type { AuthedUser } from '../common/decorators/current-user.decorator.js';
 
+export interface SetupEventRow {
+  id: number;
+  event_time: Date | null;
+  action: string | null;
+  changed_column: string | null;
+  old_value: string | null;
+  new_value: string | null;
+  trader_name: string | null;
+  trader_image: string | null;
+}
+
 export interface SetupCardRow {
   id: string;
   status: 'incoming' | 'active' | 'cancelled' | 'stopped' | 'success' | 'closed';
@@ -146,6 +157,37 @@ export class FeedService {
         display_name: (r.coin_display_name ?? null) as string | null,
         image: (r.coin_image ?? null) as string | null,
       },
+    }));
+  }
+
+  async listEvents(setupId: string, limit = 20): Promise<SetupEventRow[]> {
+    const capped = Math.max(1, Math.min(200, Math.floor(limit)));
+    const rows = await this.prisma.$queryRawUnsafe<Array<Record<string, unknown>>>(
+      `SELECT se.id,
+              se.event_time,
+              se.action,
+              se.changed_column,
+              se.old_value,
+              se.new_value,
+              u.name       AS trader_name,
+              u.image      AS trader_image
+         FROM setup_events se
+         LEFT JOIN "user" u ON u.id = se.trader_id
+        WHERE se.setup_id = $1::uuid
+          AND se.event_time IS NOT NULL
+        ORDER BY se.event_time DESC
+        LIMIT ${capped}`,
+      setupId,
+    );
+    return rows.map((r) => ({
+      id: Number(r.id),
+      event_time: (r.event_time as Date | null) ?? null,
+      action: (r.action as string | null) ?? null,
+      changed_column: (r.changed_column as string | null) ?? null,
+      old_value: (r.old_value as string | null) ?? null,
+      new_value: (r.new_value as string | null) ?? null,
+      trader_name: (r.trader_name as string | null) ?? null,
+      trader_image: (r.trader_image as string | null) ?? null,
     }));
   }
 

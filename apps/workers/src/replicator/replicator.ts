@@ -1,14 +1,25 @@
 import { Client, Pool } from 'pg';
 import type { Logger } from 'pino';
 import { REPLICATED_TABLES, type TableReplicationSpec } from './tables.js';
+import type { RealtimeBus } from '../realtime-bus.js';
 
 const CURSOR_SLACK_MS = 2_000;
 const BATCH_SIZE = 500;
+
+// Tables whose per-row changes we push to the ws gateway. Replicator emits
+// AFTER each successful upsert so clients see an atomic, consistent view.
+const REALTIME_TABLES: Record<string, 'setup' | 'trader'> = {
+  setup: 'setup',
+  setup_events: 'setup',
+  trader_profile: 'trader',
+  follow_notify: 'trader',
+};
 
 export interface ReplicatorOpts {
   sourceUrl: string;
   targetUrl: string;
   log: Logger;
+  realtime?: RealtimeBus | null;
 }
 
 /**
@@ -23,6 +34,7 @@ export class Replicator {
   private readonly dst: Pool;
   private readonly log: Logger;
   private readonly cursors = new Map<string, string | null>();
+  private readonly realtime: RealtimeBus | null;
   private ticking = false;
 
   constructor(opts: ReplicatorOpts) {
@@ -30,6 +42,7 @@ export class Replicator {
     this.src = new Pool({ connectionString: opts.sourceUrl, ssl, max: 3, idleTimeoutMillis: 30_000 });
     this.dst = new Pool({ connectionString: opts.targetUrl, ssl, max: 3, idleTimeoutMillis: 30_000 });
     this.log = opts.log;
+    this.realtime = opts.realtime ?? null;
 
     // Swallow idle-client errors so one bad connection doesn't crash the
     // whole process — the pool will reconnect on next checkout.
@@ -143,6 +156,36 @@ export class Replicator {
       const normalized = lastVal instanceof Date ? lastVal.toISOString() : String(lastVal ?? '');
       if (normalized) this.cursors.set(spec.name, normalized);
     }
+
+    const channel = REALTIME_TABLES[spec.name];
+    if (channel && this.realtime) {
+      for (const row of rows) {
+        const setupId =
+          spec.name === 'setup_events'
+            ? (row.setup_id as string | null | undefined)
+            : spec.name === 'setup'
+              ? (row.id as string | null | undefined)
+              : null;
+        if (setupId) {
+          this.realtime.publish(channel, String(setupId), {
+            table: spec.name,
+            row,
+            cursor: spec.cursorCol ? row[spec.cursorCol] : null,
+          });
+        } else if (channel === 'trader') {
+          const traderId =
+            (row.trader_id as string | null | undefined) ??
+            (row.id as string | null | undefined);
+          if (traderId) {
+            this.realtime.publish(channel, String(traderId), {
+              table: spec.name,
+              row,
+            });
+          }
+        }
+      }
+    }
+
     return rows.length;
   }
 

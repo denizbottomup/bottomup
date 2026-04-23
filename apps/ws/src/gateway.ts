@@ -189,13 +189,23 @@ function removeSub(s: Session, channel: WsChannel, id: string): void {
 }
 
 /**
- * Public channels (no auth): spot, futures, crypto-analytics, system.
- * User-scoped channels (auth required): setup, trader.
+ * Public channels (no auth): spot, futures, crypto-analytics, system, setup.
+ * User-scoped channels (auth required): trader.
  *
- * Matches the existing backend's permission model.
+ * `setup` was originally auth-gated in the old C# backend, but the payloads
+ * it carries (published trader orders visible to every follower on the web
+ * feed) are semi-public on purpose. Gating it would force the web client to
+ * acquire our own JWT just to stream feed updates — not worth the plumbing
+ * for MVP. Trader stays auth'd because it can carry private copy-trade state.
  */
 function isChannelPermitted(channel: WsChannel, user: WsAuthedUser | null): boolean {
   if (user) return WS_CHANNELS.includes(channel);
-  return channel === 'spot' || channel === 'futures' || channel === 'crypto-analytics' || channel === 'system';
+  return (
+    channel === 'spot' ||
+    channel === 'futures' ||
+    channel === 'crypto-analytics' ||
+    channel === 'system' ||
+    channel === 'setup'
+  );
 }
 
