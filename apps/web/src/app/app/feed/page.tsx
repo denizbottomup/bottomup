@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { ApiError, api } from '@/lib/api';
 import { BottomupWs, type WsServerFrame } from '@/lib/ws';
@@ -24,6 +25,7 @@ export default function FeedPage() {
   const [err, setErr] = useState<string | null>(null);
   const [pulses, setPulses] = useState<Record<string, number>>({});
   const [connected, setConnected] = useState(false);
+  const [tags, setTags] = useState<Array<{ tag: string; count: number }> | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -31,11 +33,15 @@ export default function FeedPage() {
     Promise.all([
       api<FeedResponse>('/feed/opportunities'),
       api<FeedResponse>('/feed/active'),
+      api<{ items: Array<{ tag: string; count: number }> }>('/feed/tags?limit=12').catch(() => ({
+        items: [],
+      })),
     ])
-      .then(([o, a]) => {
+      .then(([o, a, t]) => {
         if (!alive) return;
         setOpp(o.items);
         setAct(a.items);
+        setTags(t.items);
       })
       .catch((x) => {
         if (!alive) return;
@@ -91,6 +97,21 @@ export default function FeedPage() {
         </div>
         <LiveBadge connected={connected} />
       </div>
+
+      {tags && tags.length > 0 ? (
+        <div className="mt-4 flex flex-wrap gap-1.5">
+          {tags.map((t) => (
+            <Link
+              key={t.tag}
+              href={`/app/tag/${encodeURIComponent(t.tag)}`}
+              className="flex items-center gap-1 rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-1 text-[11px] text-fg-muted transition hover:border-brand/40 hover:text-fg"
+            >
+              <span className="font-mono">#{t.tag}</span>
+              <span className="text-fg-dim">{t.count}</span>
+            </Link>
+          ))}
+        </div>
+      ) : null}
 
       <div className="mt-5">
         {err ? (
