@@ -100,6 +100,8 @@ export default function SetupDetailPage() {
   const [foxy, setFoxy] = useState<FoxyVerdict | null>(null);
   const [events, setEvents] = useState<SetupEvent[] | null>(null);
   const [history, setHistory] = useState<HistoryPoint[] | null>(null);
+  const [watched, setWatched] = useState<boolean | null>(null);
+  const [watchPending, setWatchPending] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [clapPending, setClapPending] = useState(false);
   const [shareToast, setShareToast] = useState(false);
@@ -114,13 +116,15 @@ export default function SetupDetailPage() {
       api<FoxyVerdict>(`/feed/foxy/${setupId}`).catch(() => null),
       api<{ items: SetupEvent[] }>(`/feed/setup/${setupId}/events?limit=40`).catch(() => ({ items: [] })),
       api<{ items: HistoryPoint[] }>(`/setup/${setupId}/previous_values?limit=60`).catch(() => ({ items: [] })),
+      api<{ watched: boolean }>(`/watch_list/status/${setupId}`).catch(() => ({ watched: false })),
     ])
-      .then(([d, f, e, h]) => {
+      .then(([d, f, e, h, w]) => {
         if (!alive) return;
         setDetail(d);
         setFoxy(f);
         setEvents(e.items);
         setHistory(h.items);
+        setWatched(w.watched);
       })
       .catch((x) => {
         if (!alive) return;
@@ -131,6 +135,22 @@ export default function SetupDetailPage() {
       alive = false;
     };
   }, [setupId]);
+
+  const onToggleWatch = useCallback(async () => {
+    if (!detail || watched == null) return;
+    setWatchPending(true);
+    const next = !watched;
+    try {
+      await api<{ ok: true }>(`/watch_list/${detail.id}`, {
+        method: next ? 'PUT' : 'DELETE',
+      });
+      setWatched(next);
+    } catch (x) {
+      setErr((x as Error).message);
+    } finally {
+      setWatchPending(false);
+    }
+  }, [detail, watched]);
 
   const onToggleClap = useCallback(async () => {
     if (!detail) return;
@@ -200,6 +220,18 @@ export default function SetupDetailPage() {
           ← Akış
         </Link>
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => void onToggleWatch()}
+            disabled={watched == null || watchPending}
+            className={`rounded-md px-3 py-1.5 text-xs ring-1 transition ${
+              watched
+                ? 'bg-brand/15 text-brand ring-brand/30'
+                : 'bg-white/5 text-fg-muted ring-white/10 hover:text-fg'
+            } disabled:opacity-60`}
+            title={watched ? "Watchlist'ten çıkar" : "Watchlist'e ekle"}
+          >
+            {watched ? '★ Watchlist' : '☆ Watchlist'}
+          </button>
           <button
             onClick={() => void onShare()}
             className="rounded-md bg-white/5 px-3 py-1.5 text-xs text-fg-muted ring-1 ring-white/10 hover:text-fg"

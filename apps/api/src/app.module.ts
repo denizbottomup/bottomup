@@ -6,6 +6,7 @@ import { FeedModule } from './feed/feed.module.js';
 import { FoxyModule } from './foxy/foxy.module.js';
 import { TraderModule } from './trader/trader.module.js';
 import { SetupModule } from './setup/setup.module.js';
+import { WatchlistModule } from './watchlist/watchlist.module.js';
 import { PrismaModule } from './common/prisma.module.js';
 
 @Module({
@@ -18,6 +19,7 @@ import { PrismaModule } from './common/prisma.module.js';
     FoxyModule,
     TraderModule,
     SetupModule,
+    WatchlistModule,
   ],
 })
 export class AppModule implements NestModule {

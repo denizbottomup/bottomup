@@ -9,6 +9,7 @@ import { Logo } from '@/components/logo';
 const NAV = [
   { href: '/app', label: 'Grafik' },
   { href: '/app/feed', label: 'Akış' },
+  { href: '/app/watchlist', label: 'Watchlist' },
 ] as const;
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
