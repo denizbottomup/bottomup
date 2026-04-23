@@ -236,6 +236,8 @@ export default function ProfilePage() {
           <QuickLink href="/app/notifications" label="Bildirimler" />
           <QuickLink href="/app/analysts?tab=following" label="Takip ettiklerim" />
           <QuickLink href="/app/together" label="Kopya trade" />
+          <QuickLink href="/app/settings" label="Ayarlar" />
+          <QuickLink href="/app/settings/help" label="Yardım" />
         </div>
       </section>
     </div>

@@ -94,6 +94,61 @@ export class UserService {
     return this.findMe({ kind: viewer.kind, id: viewer.kind === 'jwt' ? viewer.sub : viewer.uid });
   }
 
+  async listBlocked(viewer: AuthedUser): Promise<
+    Array<{
+      id: string;
+      name: string | null;
+      first_name: string | null;
+      last_name: string | null;
+      image: string | null;
+    }>
+  > {
+    const viewerId = await this.resolveViewerId(viewer);
+    const rows = await this.prisma.$queryRawUnsafe<Array<Record<string, unknown>>>(
+      `SELECT u.id::text AS id, u.name, u.first_name, u.last_name, u.image
+         FROM follow_notify f
+         JOIN "user" u ON u.id = f.trader_id
+        WHERE f.user_id = $1::uuid
+          AND f.block = TRUE
+          AND f.is_deleted = FALSE
+        ORDER BY f.updated_at DESC NULLS LAST`,
+      viewerId,
+    );
+    return rows.map((r) => ({
+      id: r.id as string,
+      name: (r.name as string | null) ?? null,
+      first_name: (r.first_name as string | null) ?? null,
+      last_name: (r.last_name as string | null) ?? null,
+      image: (r.image as string | null) ?? null,
+    }));
+  }
+
+  async blockTrader(viewer: AuthedUser, traderId: string): Promise<{ ok: true }> {
+    const viewerId = await this.resolveViewerId(viewer);
+    if (viewerId === traderId) return { ok: true };
+    await this.prisma.$executeRawUnsafe(
+      `INSERT INTO follow_notify (id, created_at, updated_at, is_deleted, user_id, trader_id, follow, block)
+       VALUES (gen_random_uuid(), NOW(), NOW(), FALSE, $1::uuid, $2::uuid, FALSE, TRUE)
+       ON CONFLICT (user_id, trader_id)
+       DO UPDATE SET block = TRUE, follow = FALSE, is_deleted = FALSE, updated_at = NOW()`,
+      viewerId,
+      traderId,
+    );
+    return { ok: true };
+  }
+
+  async unblockTrader(viewer: AuthedUser, traderId: string): Promise<{ ok: true }> {
+    const viewerId = await this.resolveViewerId(viewer);
+    await this.prisma.$executeRawUnsafe(
+      `UPDATE follow_notify
+          SET block = FALSE, updated_at = NOW()
+        WHERE user_id = $1::uuid AND trader_id = $2::uuid`,
+      viewerId,
+      traderId,
+    );
+    return { ok: true };
+  }
+
   async listNotifications(
     viewer: AuthedUser,
     limit = 100,

@@ -20,12 +20,17 @@ export class FirebaseAuthGuard implements CanActivate {
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const req = context.switchToHttp().getRequest<FastifyRequest & { user?: unknown }>();
     const header = req.headers['authorization'];
-    if (!header || typeof header !== 'string' || !header.startsWith('Bearer ')) {
-      throw new UnauthorizedException('Missing bearer token');
+    if (!header || typeof header !== 'string') {
+      throw new UnauthorizedException('Missing authorization header');
     }
-    const token = header.slice('Bearer '.length).trim();
+    // Mobile 2.2.1 sends the bare token (`Authorization: <token>`); web
+    // sends `Authorization: Bearer <token>`. Accept both — strip the
+    // Bearer prefix only when it's present.
+    const token = header.startsWith('Bearer ')
+      ? header.slice('Bearer '.length).trim()
+      : header.trim();
     if (!token) {
-      throw new UnauthorizedException('Empty bearer token');
+      throw new UnauthorizedException('Empty token');
     }
 
     // Try our JWT first (fast path, no network call)

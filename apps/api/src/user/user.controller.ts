@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Put, Query, UseGuards } from '@nestjs/common';
 import { FirebaseAuthGuard } from '../common/guards/firebase-auth.guard.js';
 import { CurrentUser, type AuthedUser } from '../common/decorators/current-user.decorator.js';
 import { UserService, type NotificationRow } from './user.service.js';
@@ -42,5 +42,28 @@ export class UserController {
     @Param('id') id: string,
   ): Promise<{ ok: true }> {
     return this.users.markNotificationRead(user, id);
+  }
+
+  @Get('/me/blocks')
+  blocks(
+    @CurrentUser() user: AuthedUser,
+  ): ReturnType<UserService['listBlocked']> {
+    return this.users.listBlocked(user);
+  }
+
+  @Put('/traders/:traderId/block')
+  block(
+    @CurrentUser() user: AuthedUser,
+    @Param('traderId') traderId: string,
+  ): Promise<{ ok: true }> {
+    return this.users.blockTrader(user, traderId);
+  }
+
+  @Delete('/traders/:traderId/block')
+  unblock(
+    @CurrentUser() user: AuthedUser,
+    @Param('traderId') traderId: string,
+  ): Promise<{ ok: true }> {
+    return this.users.unblockTrader(user, traderId);
   }
 }
