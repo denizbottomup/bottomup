@@ -11,6 +11,7 @@ import { api } from '@/lib/api';
 const NAV = [
   { href: '/app', label: 'Grafik' },
   { href: '/app/feed', label: 'Akış' },
+  { href: '/app/analytics', label: 'Analitik' },
   { href: '/app/watchlist', label: 'Watchlist' },
   { href: '/app/analysts', label: 'Analistler' },
   { href: '/app/together', label: 'Kopya' },

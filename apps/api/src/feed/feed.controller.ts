@@ -36,6 +36,15 @@ export class FeedController {
     return { items };
   }
 
+  @Get('/coin/:coin')
+  async byCoin(
+    @Param('coin') coin: string,
+    @Query('limit') limitRaw?: string,
+  ): Promise<{ items: SetupCardRow[] }> {
+    const items = await this.feed.listByCoin(coin, clampLimit(limitRaw));
+    return { items };
+  }
+
   @Get('/tags')
   async trendingTags(
     @Query('limit') limitRaw?: string,
