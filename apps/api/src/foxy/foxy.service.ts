@@ -131,12 +131,8 @@ export class FoxyService {
     const prompt = buildPrompt(setup, market);
     const res = await this.client.messages.create({
       model: 'claude-haiku-4-5-20251001',
-      max_tokens: 400,
-      system:
-        'You are Foxy AI — a concise crypto trade risk evaluator inside the bottomUP app. ' +
-        'Given a setup (entry/stop/TP) and a current market snapshot, you judge how likely ' +
-        'the first TP is hit before the stop. Respond ONLY with strict JSON matching the schema. ' +
-        'Comment is in Turkish, 1-2 sentences, no emojis, no markdown.',
+      max_tokens: 500,
+      system: FOXY_SYSTEM_PROMPT,
       messages: [{ role: 'user', content: prompt }],
     });
 
@@ -162,8 +158,18 @@ export class FoxyService {
   }
 
   private fallback(setup: SetupRow, market: MarketSnapshot | null): FoxyVerdict {
-    // Deterministic, explainable fallback when Anthropic is unavailable.
-    // Scores risk from distance-to-stop vs distance-to-TP and the 24h trend.
+    const derived = computeDerived(setup, market);
+
+    if (derived.breakeven_stop) {
+      return {
+        risk_score: 15,
+        verdict: 'TP_LIKELY',
+        confidence: 70,
+        comment:
+          'Stop girişe çekilmiş, pozisyon şu an risksiz — kaybetmeden TP1 hedefine gidiyor.',
+      };
+    }
+
     const price = market?.current_price ?? setup.entry_value;
     const isLong = setup.position === 'long';
     const stop = setup.stop_value ?? (isLong ? setup.entry_value * 0.97 : setup.entry_value * 1.03);
@@ -195,11 +201,93 @@ export class FoxyService {
   }
 }
 
+/**
+ * Pre-compute structured signals that Claude consistently mishandles when left
+ * to raw numbers alone (breakeven stop being the big one). Passed both into
+ * the prompt and into the fallback heuristic.
+ */
+function computeDerived(setup: SetupRow, market: MarketSnapshot | null): {
+  is_active: boolean;
+  breakeven_stop: boolean;
+  in_profit: boolean | null;
+  stop_distance_pct: number | null;
+  tp1_distance_pct: number | null;
+  current_vs_entry_pct: number | null;
+} {
+  const isLong = setup.position === 'long';
+  const entry = setup.entry_value;
+  const stop = setup.stop_value;
+  const tp1 = setup.profit_taking_1;
+  const price = market?.current_price ?? null;
+
+  // Stop within ±0.5% of entry while position is live → breakeven move.
+  const breakevenStop =
+    setup.status === 'active' &&
+    stop != null &&
+    entry > 0 &&
+    Math.abs(stop - entry) / entry < 0.005;
+
+  const pct = (from: number, to: number): number =>
+    Math.round(((to - from) / from) * 10_000) / 100;
+
+  const currentVsEntry = price != null ? pct(entry, price) : null;
+  const inProfit =
+    price != null
+      ? isLong
+        ? price > entry
+        : price < entry
+      : null;
+  const stopDistPct =
+    price != null && stop != null ? Math.abs(pct(price, stop)) : null;
+  const tp1DistPct =
+    price != null && tp1 != null ? Math.abs(pct(price, tp1)) : null;
+
+  return {
+    is_active: setup.status === 'active',
+    breakeven_stop: breakevenStop,
+    in_profit: inProfit,
+    stop_distance_pct: stopDistPct,
+    tp1_distance_pct: tp1DistPct,
+    current_vs_entry_pct: currentVsEntry,
+  };
+}
+
 interface MarketSnapshot {
   current_price: number;
   rsi_14_1h: number | null;
   change_24h_pct: number;
 }
+
+const FOXY_SYSTEM_PROMPT = [
+  'You are Foxy AI — a concise crypto trade risk evaluator inside the bottomUP app.',
+  'You are given a trader-published setup (entry, stop, TPs), its current status, and',
+  'a live market snapshot. You judge how likely the first TP will be hit before the stop.',
+  '',
+  'Conventions you MUST respect (they matter for the score and comment):',
+  '',
+  "1. status='incoming' means the entry has NOT been filled yet — the order is waiting.",
+  "   status='active' means entry was filled, a real position is open right now.",
+  '',
+  "2. BREAKEVEN STOP. When status='active' AND stop is within ±0.5% of entry, the trader",
+  '   has already moved the stop to breakeven. This is RISK REMOVAL, not risk — from the',
+  '   current moment downside is ~0 and the remaining question is whether TP1 gets hit or',
+  '   the position flatlines out at breakeven. Score this LOW risk (typically ≤25) and',
+  '   say so in the comment (e.g. "Stop girişe çekilmiş, pozisyon risksiz — TP1 hedefte").',
+  "   Do NOT call a breakeven setup 'risky' just because current price is close to stop.",
+  '',
+  '3. An active position whose current price has already moved in the setup direction',
+  "   is 'in profit' and should bias toward TP_LIKELY with lower risk, regardless of how",
+  '   much the stop has been moved.',
+  '',
+  '4. r_value is the original published R-multiple; after a stop move it overestimates',
+  '   remaining risk. Trust the live distances to stop/TP over r_value.',
+  '',
+  '5. When ambiguous, stay NEUTRAL. Do not invent patterns.',
+  '',
+  'Output STRICT JSON only. No markdown, no code fences, no preamble.',
+  'Schema: { "risk_score": 0-100 (lower=TP likely), "verdict": "TP_LIKELY" | "NEUTRAL" | "STOP_LIKELY",',
+  '          "confidence": 0-100, "comment": Turkish 1-2 sentences, no emojis, no markdown }',
+].join('\n');
 
 function buildPrompt(setup: SetupRow, market: MarketSnapshot | null): string {
   const setupFmt = {
@@ -219,12 +307,17 @@ function buildPrompt(setup: SetupRow, market: MarketSnapshot | null): string {
     trader: setup.trader_name,
   };
 
+  const derived = computeDerived(setup, market);
+
   return [
     'Setup:',
     JSON.stringify(setupFmt, null, 2),
     '',
     'Market snapshot (Binance, 1h):',
     market ? JSON.stringify(market, null, 2) : '(unavailable)',
+    '',
+    'Derived signals (already pre-computed; treat as authoritative):',
+    JSON.stringify(derived, null, 2),
     '',
     'Respond with JSON only:',
     '{',

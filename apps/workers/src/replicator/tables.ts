@@ -22,6 +22,7 @@ export const REPLICATED_TABLES: TableReplicationSpec[] = [
 
   // ─── Setups & social ──────────────────────────────────────────────
   { name: 'setup', pkCols: ['id'], cursorCol: 'updated_at' },
+  { name: 'setup_events', pkCols: ['id'], cursorCol: 'event_time' },
   { name: 'setup_value_history', pkCols: ['id'], cursorCol: 'created_at' },
   { name: 'clap', pkCols: ['id'], cursorCol: 'created_at' },
   { name: 'report', pkCols: ['id'], cursorCol: 'created_at' },
