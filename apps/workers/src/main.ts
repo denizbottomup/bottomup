@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { QUEUE_NAMES, makeWorker } from './queues/index.js';
 import { Replicator } from './replicator/replicator.js';
 import { RealtimeBus } from './realtime-bus.js';
+import { BinanceTicker } from './ticker/binance-ticker.js';
 
 /**
  * Workers bootstrap. Each processor is a stub for now — MVP lands with
@@ -54,9 +55,12 @@ async function main(): Promise<void> {
   let replicator: Replicator | null = null;
   let replicatorInterval: NodeJS.Timeout | null = null;
   let realtime: RealtimeBus | null = null;
+  let ticker: BinanceTicker | null = null;
   if (env.LEGACY_DATABASE_URL) {
     realtime = new RealtimeBus(env.REDIS_URL, log.child({ component: 'realtime' }));
     await realtime.start();
+    ticker = new BinanceTicker(realtime, log.child({ component: 'ticker' }));
+    ticker.start();
     replicator = new Replicator({
       sourceUrl: env.LEGACY_DATABASE_URL,
       targetUrl: env.DATABASE_URL,
@@ -86,6 +90,7 @@ async function main(): Promise<void> {
   const shutdown = async (signal: string): Promise<void> => {
     log.info({ signal }, 'workers: shutting down');
     if (replicatorInterval) clearInterval(replicatorInterval);
+    ticker?.stop();
     await Promise.all([
       ...workers.map((w) => w.close()),
       replicator?.stop() ?? Promise.resolve(),

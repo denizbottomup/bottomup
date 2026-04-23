@@ -33,6 +33,9 @@ export const REPLICATED_TABLES: TableReplicationSpec[] = [
   { name: 'copy_trade_order', pkCols: ['id'], cursorCol: 'updated_at' },
   { name: 'team_traders', pkCols: ['team_id', 'trader_id'], cursorCol: 'updated_at' },
 
+  // ─── Trader performance & stats ──────────────────────────────────
+  { name: 'trader_setup_pnl_performance', pkCols: ['id'], cursorCol: 'updated_at' },
+
   // ─── Market / watchlist ───────────────────────────────────────────
   { name: 'coin', pkCols: ['id'], cursorCol: 'updated_at' },
   { name: 'watch_list', pkCols: ['id'], cursorCol: 'updated_at' },

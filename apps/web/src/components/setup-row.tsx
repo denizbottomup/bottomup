@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { ApiError, api } from '@/lib/api';
+import { useTicker } from '@/lib/ticker';
 import { SetupChart } from './setup-chart';
 import type { SetupCard } from './setup-card';
 
@@ -82,6 +83,7 @@ export function SetupRow({ setup, pulseKey = 0 }: { setup: SetupCard; pulseKey?:
     'Trader';
   const traderInitial = traderName[0]?.toUpperCase() ?? '?';
   const coinCode = (setup.coin.code || setup.coin_name || '').toUpperCase();
+  const ticker = useTicker(setup.coin_name);
 
   return (
     <div
@@ -137,9 +139,28 @@ export function SetupRow({ setup, pulseKey = 0 }: { setup: SetupCard; pulseKey?:
           ) : null}
         </div>
 
-        {/* R */}
-        <div className="hidden text-right font-mono text-[11px] text-fg-muted md:block">
-          {setup.r_value != null ? `R ${setup.r_value.toFixed(1)}` : '—'}
+        {/* Live price + R */}
+        <div className="hidden text-right font-mono text-[11px] md:block">
+          {ticker ? (
+            <>
+              <div
+                className={ticker.color === 'g' ? 'text-emerald-300' : 'text-rose-300'}
+              >
+                {formatNum(Number(ticker.close))}
+              </div>
+              <div className="text-[10px] text-fg-dim">
+                {setup.r_value != null ? `R ${setup.r_value.toFixed(1)}` : ''}
+                {setup.r_value != null && ticker.change ? ' · ' : ''}
+                {ticker.change
+                  ? `${Number(ticker.change) >= 0 ? '+' : ''}${Number(ticker.change).toFixed(2)}%`
+                  : ''}
+              </div>
+            </>
+          ) : (
+            <span className="text-fg-muted">
+              {setup.r_value != null ? `R ${setup.r_value.toFixed(1)}` : '—'}
+            </span>
+          )}
         </div>
 
         {/* Foxy chip */}
