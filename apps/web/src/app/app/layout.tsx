@@ -10,6 +10,7 @@ const NAV = [
   { href: '/app', label: 'Grafik' },
   { href: '/app/feed', label: 'Akış' },
   { href: '/app/watchlist', label: 'Watchlist' },
+  { href: '/app/news', label: 'Haberler' },
 ] as const;
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {

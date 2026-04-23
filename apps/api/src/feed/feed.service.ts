@@ -14,6 +14,33 @@ export interface SetupEventRow {
   trader_image: string | null;
 }
 
+export interface NewsRow {
+  id: string;
+  title: string | null;
+  text: string | null;
+  source_name: string | null;
+  image_url: string | null;
+  thumbnail_url: string | null;
+  news_url: string | null;
+  date: Date | null;
+  sentiment: string | null;
+  tickers: string[];
+  topics: string[];
+}
+
+export interface CalendarRow {
+  id: string;
+  date: Date | null;
+  time: string | null;
+  impact: string | null;
+  title: string | null;
+  source: string | null;
+  forecast: string | null;
+  previous: string | null;
+  actual: string | null;
+  description: string | null;
+}
+
 export interface SetupCardRow {
   id: string;
   status: 'incoming' | 'active' | 'cancelled' | 'stopped' | 'success' | 'closed';
@@ -160,6 +187,91 @@ export class FeedService {
     }));
   }
 
+  async listNews(limit = 50): Promise<NewsRow[]> {
+    const capped = Math.max(1, Math.min(200, Math.floor(limit)));
+    const rows = await this.prisma.$queryRawUnsafe<Array<Record<string, unknown>>>(
+      `SELECT id::text AS id, title, text, source_name, image_url, thumbnail_url,
+              news_url, date, sentiment, tickers, topics
+         FROM news
+        WHERE is_deleted = FALSE
+        ORDER BY date DESC NULLS LAST, created_at DESC NULLS LAST
+        LIMIT ${capped}`,
+    );
+    return rows.map((r) => ({
+      id: r.id as string,
+      title: (r.title as string | null) ?? null,
+      text: (r.text as string | null) ?? null,
+      source_name: (r.source_name as string | null) ?? null,
+      image_url: (r.image_url as string | null) ?? null,
+      thumbnail_url: (r.thumbnail_url as string | null) ?? null,
+      news_url: (r.news_url as string | null) ?? null,
+      date: (r.date as Date | null) ?? null,
+      sentiment: (r.sentiment as string | null) ?? null,
+      tickers: Array.isArray(r.tickers) ? (r.tickers as string[]) : [],
+      topics: Array.isArray(r.topics) ? (r.topics as string[]) : [],
+    }));
+  }
+
+  async getNews(id: string): Promise<NewsRow | null> {
+    const rows = await this.prisma.$queryRawUnsafe<Array<Record<string, unknown>>>(
+      `SELECT id::text AS id, title, text, source_name, image_url, thumbnail_url,
+              news_url, date, sentiment, tickers, topics, full_text
+         FROM news
+        WHERE id = $1::uuid AND is_deleted = FALSE
+        LIMIT 1`,
+      id,
+    );
+    const r = rows[0];
+    if (!r) return null;
+    return {
+      id: r.id as string,
+      title: (r.title as string | null) ?? null,
+      text: ((r.full_text as string | null) ?? (r.text as string | null)) ?? null,
+      source_name: (r.source_name as string | null) ?? null,
+      image_url: (r.image_url as string | null) ?? null,
+      thumbnail_url: (r.thumbnail_url as string | null) ?? null,
+      news_url: (r.news_url as string | null) ?? null,
+      date: (r.date as Date | null) ?? null,
+      sentiment: (r.sentiment as string | null) ?? null,
+      tickers: Array.isArray(r.tickers) ? (r.tickers as string[]) : [],
+      topics: Array.isArray(r.topics) ? (r.topics as string[]) : [],
+    };
+  }
+
+  /**
+   * Calendar slice. `interval` accepts `today`, `week`, `month`, or an ISO
+   * date range. Matching the mobile contract's crypto-calendar surface,
+   * we widen "today" to ±1 day of server local so Europe-based clients
+   * see their full day regardless of UTC crossover.
+   */
+  async listCalendar(interval = 'week', limit = 300): Promise<CalendarRow[]> {
+    const capped = Math.max(1, Math.min(500, Math.floor(limit)));
+    const { from, to } = parseInterval(interval);
+    const rows = await this.prisma.$queryRawUnsafe<Array<Record<string, unknown>>>(
+      `SELECT id::text AS id, date, time, impact, title, source,
+              forecast, previous, actual, description
+         FROM calendar
+        WHERE is_deleted = FALSE
+          AND date BETWEEN $1::date AND $2::date
+        ORDER BY date ASC, time ASC NULLS LAST
+        LIMIT ${capped}`,
+      from,
+      to,
+    );
+    return rows.map((r) => ({
+      id: r.id as string,
+      date: (r.date as Date | null) ?? null,
+      time: (r.time as string | null) ?? null,
+      impact: (r.impact as string | null) ?? null,
+      title: (r.title as string | null) ?? null,
+      source: (r.source as string | null) ?? null,
+      forecast: (r.forecast as string | null) ?? null,
+      previous: (r.previous as string | null) ?? null,
+      actual: (r.actual as string | null) ?? null,
+      description: (r.description as string | null) ?? null,
+    }));
+  }
+
   async listEvents(setupId: string, limit = 20): Promise<SetupEventRow[]> {
     const capped = Math.max(1, Math.min(200, Math.floor(limit)));
     const rows = await this.prisma.$queryRawUnsafe<Array<Record<string, unknown>>>(
@@ -209,4 +321,26 @@ function numOrNull(v: unknown): number | null {
   if (v === null || v === undefined) return null;
   const n = Number(v);
   return Number.isFinite(n) ? n : null;
+}
+
+function parseInterval(raw: string): { from: string; to: string } {
+  const today = new Date();
+  const pad = (n: number): string => String(n).padStart(2, '0');
+  const iso = (d: Date): string => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  const add = (d: Date, days: number): Date => {
+    const c = new Date(d);
+    c.setDate(c.getDate() + days);
+    return c;
+  };
+  const lower = raw.trim().toLowerCase();
+  if (lower === 'today') return { from: iso(add(today, -1)), to: iso(add(today, 1)) };
+  if (lower === 'week' || lower === '') return { from: iso(add(today, -1)), to: iso(add(today, 7)) };
+  if (lower === 'month') return { from: iso(add(today, -1)), to: iso(add(today, 30)) };
+  if (lower === 'past_week') return { from: iso(add(today, -7)), to: iso(today) };
+  if (lower === 'past_month') return { from: iso(add(today, -30)), to: iso(today) };
+  // Accept explicit ISO range `2026-04-01..2026-04-10`
+  const range = /^(\d{4}-\d{2}-\d{2})\.\.(\d{4}-\d{2}-\d{2})$/.exec(lower);
+  if (range) return { from: range[1]!, to: range[2]! };
+  // Fallback: week
+  return { from: iso(add(today, -1)), to: iso(add(today, 7)) };
 }
