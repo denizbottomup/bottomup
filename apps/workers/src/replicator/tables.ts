@@ -38,6 +38,9 @@ export const REPLICATED_TABLES: TableReplicationSpec[] = [
   // occasionally recycles ids for the same setup, so upsert must target
   // setup_id to avoid "duplicate key" conflicts on the UNIQUE index.
   { name: 'trader_setup_pnl_performance', pkCols: ['setup_id'], cursorCol: 'updated_at' },
+  // Aggregated per-trader stats (win rate, monthly ROI/PnL, risk score).
+  // trader_id is UNIQUE; upsert by that column.
+  { name: 'trader_stats', pkCols: ['trader_id'], cursorCol: 'stat_at' },
 
   // ─── Market / watchlist ───────────────────────────────────────────
   { name: 'coin', pkCols: ['id'], cursorCol: 'updated_at' },

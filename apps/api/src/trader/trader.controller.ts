@@ -43,6 +43,15 @@ export class TraderController {
     return this.traders.profile(viewer, traderId);
   }
 
+  @Get('/trader/:traderId/analytics')
+  analytics(
+    @Param('traderId') traderId: string,
+    @Query('days') daysRaw?: string,
+  ): ReturnType<TraderService['analytics']> {
+    const days = Number.parseInt(daysRaw ?? '180', 10);
+    return this.traders.analytics(traderId, Number.isFinite(days) ? days : 180);
+  }
+
   @Get('/trader/:traderId/setups')
   async setups(
     @Param('traderId') traderId: string,

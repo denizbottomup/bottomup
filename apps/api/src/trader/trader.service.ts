@@ -84,6 +84,75 @@ type TraderStatus = (typeof ALLOWED_STATUSES)[number];
 export class TraderService {
   constructor(@Inject(PRISMA) private readonly prisma: PrismaClient) {}
 
+  /**
+   * Daily PnL timeseries for a trader's closed/successful setups over
+   * the requested range (defaults to 180 days). Returns one row per
+   * day with the day's realised PnL and a running cumulative total —
+   * enough to render a trader PnL area chart without a second request.
+   */
+  async analytics(
+    traderId: string,
+    days: number,
+  ): Promise<{
+    points: Array<{ date: string; pnl: number; pnl_rate: number | null; cumulative: number; trades: number }>;
+    stats: { total_pnl: number; avg_pnl_rate: number | null; win_rate: number | null; monthly_pnl: number | null; monthly_roi: number | null; risk_score: number | null };
+  }> {
+    const clamped = Math.max(7, Math.min(365, Math.floor(days)));
+    const dayRows = await this.prisma.$queryRawUnsafe<
+      Array<{ d: Date; pnl: number | null; pnl_rate_avg: number | null; n: number }>
+    >(
+      `SELECT DATE_TRUNC('day', COALESCE(s.close_date, s.tp1_date, p.updated_at, p.created_at))::date AS d,
+              COALESCE(SUM(p.pnl), 0) AS pnl,
+              AVG(p.pnl_rate)          AS pnl_rate_avg,
+              COUNT(*)::int            AS n
+         FROM trader_setup_pnl_performance p
+         JOIN setup s ON s.id = p.setup_id
+        WHERE p.trader_id = $1::uuid
+          AND COALESCE(s.close_date, s.tp1_date, p.updated_at, p.created_at) >= NOW() - ($2::int || ' days')::interval
+          AND s.is_deleted = FALSE
+        GROUP BY 1
+        ORDER BY 1 ASC`,
+      traderId,
+      clamped,
+    );
+
+    let cumulative = 0;
+    const points = dayRows.map((r) => {
+      const pnl = r.pnl != null ? Number(r.pnl) : 0;
+      cumulative += pnl;
+      const iso = r.d instanceof Date ? r.d.toISOString().slice(0, 10) : String(r.d).slice(0, 10);
+      return {
+        date: iso,
+        pnl,
+        pnl_rate:
+          r.pnl_rate_avg != null && Number.isFinite(Number(r.pnl_rate_avg))
+            ? Number(r.pnl_rate_avg)
+            : null,
+        cumulative,
+        trades: Number(r.n ?? 0),
+      };
+    });
+
+    const statsRows = await this.prisma.$queryRawUnsafe<Array<Record<string, unknown>>>(
+      `SELECT pnl, pnl_rate, win_rate, monthly_pnl, monthly_roi, risk_score
+         FROM trader_stats
+        WHERE trader_id = $1::uuid
+        LIMIT 1`,
+      traderId,
+    );
+    const s = statsRows[0] ?? {};
+    const stats = {
+      total_pnl: Number(s.pnl ?? 0),
+      avg_pnl_rate: numOrNull(s.pnl_rate),
+      win_rate: numOrNull(s.win_rate),
+      monthly_pnl: numOrNull(s.monthly_pnl),
+      monthly_roi: numOrNull(s.monthly_roi),
+      risk_score: numOrNull(s.risk_score),
+    };
+
+    return { points, stats };
+  }
+
   async search(
     viewer: AuthedUser,
     opts: { sort?: 'trending' | 'followers' | 'new'; limit?: number; onlyFollowed?: boolean },
@@ -335,6 +404,10 @@ function num(v: unknown): number | null {
   if (v === null || v === undefined) return null;
   const n = Number(v);
   return Number.isFinite(n) ? n : null;
+}
+
+function numOrNull(v: unknown): number | null {
+  return num(v);
 }
 
 function intOr(v: unknown, fallback: number): number {

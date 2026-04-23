@@ -6,6 +6,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { ApiError, api } from '@/lib/api';
 import { SetupRow } from '@/components/setup-row';
 import type { SetupCard } from '@/components/setup-card';
+import { TraderPnlChart, type PnlPoint } from '@/components/trader-pnl-chart';
 
 interface TraderProfile {
   id: string;
@@ -69,6 +70,7 @@ export default function TraderProfilePage() {
 
   const [profile, setProfile] = useState<TraderProfile | null>(null);
   const [setups, setSetups] = useState<SetupCard[] | null>(null);
+  const [analytics, setAnalytics] = useState<{ points: PnlPoint[] } | null>(null);
   const [tab, setTab] = useState<Tab>('active');
   const [err, setErr] = useState<string | null>(null);
   const [followPending, setFollowPending] = useState(false);
@@ -88,6 +90,23 @@ export default function TraderProfilePage() {
   useEffect(() => {
     void fetchProfile();
   }, [fetchProfile]);
+
+  useEffect(() => {
+    if (!traderId) return;
+    let alive = true;
+    api<{ points: PnlPoint[] }>(`/trader/${traderId}/analytics?days=180`)
+      .then((r) => {
+        if (!alive) return;
+        setAnalytics(r);
+      })
+      .catch(() => {
+        if (!alive) return;
+        setAnalytics({ points: [] });
+      });
+    return () => {
+      alive = false;
+    };
+  }, [traderId]);
 
   useEffect(() => {
     if (!traderId) return;
@@ -218,6 +237,18 @@ export default function TraderProfilePage() {
       </header>
 
       <StatsRow stats={profile.stats} monthlyRoi={profile.monthly_roi} />
+
+      {analytics && analytics.points.length > 0 ? (
+        <section className="mt-4 rounded-2xl border border-white/10 bg-white/[0.02] p-4">
+          <div className="mb-2 flex items-baseline justify-between">
+            <div className="text-[11px] uppercase tracking-wider text-fg-dim">Kümülatif PnL (son 180g)</div>
+            <div className="font-mono text-sm text-fg">
+              <PnlBadge points={analytics.points} />
+            </div>
+          </div>
+          <TraderPnlChart points={analytics.points} height={200} />
+        </section>
+      ) : null}
 
       <div className="mt-6 flex items-center gap-2">
         <TabButton active={tab === 'active'} onClick={() => setTab('active')} label="Açık + Fırsat" count={profile.stats.active_setups} />
@@ -397,4 +428,16 @@ function SkeletonList() {
 
 function stripAt(s: string): string {
   return s.trim().replace(/^@+/, '');
+}
+
+function PnlBadge({ points }: { points: PnlPoint[] }) {
+  const last = points[points.length - 1]?.cumulative ?? 0;
+  const tone = last > 0 ? 'text-emerald-300' : last < 0 ? 'text-rose-300' : 'text-fg';
+  const sign = last > 0 ? '+' : '';
+  return (
+    <span className={tone}>
+      {sign}
+      {last.toLocaleString('en-US', { maximumFractionDigits: 2 })}
+    </span>
+  );
 }
