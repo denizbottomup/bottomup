@@ -91,6 +91,9 @@ export default function TogetherPage() {
             </p>
           </div>
           <div className="flex items-center gap-3">
+            <Link href="/app/together/connect" className="text-xs text-fg-muted hover:text-fg">
+              OKX bağlantısı
+            </Link>
             <Link href="/app/together/team" className="text-xs text-fg-muted hover:text-fg">
               Takımı yönet
             </Link>
