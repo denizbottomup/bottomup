@@ -31,12 +31,27 @@ interface LongShortRow {
   short_ratio: number;
 }
 
+interface LiquidationRow {
+  symbol: string;
+  long_24h_usd: number;
+  short_24h_usd: number;
+  total_24h_usd: number;
+}
+
+interface OpenInterestRow {
+  symbol: string;
+  oi_usd: number;
+  oi_change_24h_pct: number | null;
+}
+
 interface Pulse {
   fear_greed: FearGreedPoint | null;
   fear_greed_history: FearGreedPoint[];
   dominance: DominanceSnapshot | null;
   top_funding: FundingRateRow[];
   top_long_short: LongShortRow[];
+  liquidation: LiquidationRow[];
+  open_interest: OpenInterestRow[];
 }
 
 export function MarketPulse() {
@@ -74,11 +89,96 @@ export function MarketPulse() {
   }
 
   return (
-    <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
-      <FearGreedCard point={pulse.fear_greed} history={pulse.fear_greed_history} />
-      <DominanceCard dom={pulse.dominance} />
-      <FundingCard rows={pulse.top_funding} />
-      <LongShortCard rows={pulse.top_long_short} />
+    <div className="flex flex-col gap-3">
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+        <FearGreedCard point={pulse.fear_greed} history={pulse.fear_greed_history} />
+        <DominanceCard dom={pulse.dominance} />
+        <FundingCard rows={pulse.top_funding} />
+        <LongShortCard rows={pulse.top_long_short} />
+      </div>
+      {(pulse.liquidation?.length ?? 0) > 0 || (pulse.open_interest?.length ?? 0) > 0 ? (
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+          <LiquidationCard rows={pulse.liquidation ?? []} />
+          <OpenInterestCard rows={pulse.open_interest ?? []} />
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function LiquidationCard({ rows }: { rows: LiquidationRow[] }) {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-4">
+      <div className="text-[10px] uppercase tracking-wider text-fg-dim">
+        Son 24s likidasyon
+      </div>
+      {rows.length === 0 ? (
+        <div className="mt-2 text-xs text-fg-dim">Veri yok</div>
+      ) : (
+        <div className="mt-3 flex flex-col gap-2">
+          {rows.slice(0, 6).map((r) => {
+            const total = r.long_24h_usd + r.short_24h_usd;
+            const longPct = total > 0 ? Math.round((r.long_24h_usd / total) * 100) : 50;
+            return (
+              <div key={r.symbol} className="space-y-0.5 text-[11px]">
+                <div className="flex items-center justify-between font-mono">
+                  <span className="text-fg-muted">{r.symbol}</span>
+                  <span className="text-fg-dim">{formatUsd(total)}</span>
+                </div>
+                <div className="flex h-1 overflow-hidden rounded-full bg-white/5">
+                  <div
+                    className="bg-emerald-400"
+                    style={{ width: `${longPct}%` }}
+                    title={`Long ${formatUsd(r.long_24h_usd)}`}
+                  />
+                  <div
+                    className="bg-rose-400"
+                    style={{ width: `${100 - longPct}%` }}
+                    title={`Short ${formatUsd(r.short_24h_usd)}`}
+                  />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function OpenInterestCard({ rows }: { rows: OpenInterestRow[] }) {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-4">
+      <div className="text-[10px] uppercase tracking-wider text-fg-dim">
+        Açık Pozisyon (24s değişim)
+      </div>
+      {rows.length === 0 ? (
+        <div className="mt-2 text-xs text-fg-dim">Veri yok</div>
+      ) : (
+        <div className="mt-3 flex flex-col gap-1.5">
+          {rows.map((r) => {
+            const chg = r.oi_change_24h_pct;
+            const tone =
+              chg == null
+                ? 'text-fg-dim'
+                : chg >= 0
+                  ? 'text-emerald-300'
+                  : 'text-rose-300';
+            return (
+              <div
+                key={r.symbol}
+                className="flex items-center justify-between font-mono text-[11px]"
+              >
+                <span className="text-fg-muted">{r.symbol}</span>
+                <span className="text-fg">{formatUsd(r.oi_usd)}</span>
+                <span className={`w-12 text-right ${tone}`}>
+                  {chg == null ? '—' : `${chg >= 0 ? '+' : ''}${chg.toFixed(2)}%`}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

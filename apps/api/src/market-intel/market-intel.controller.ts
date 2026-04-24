@@ -5,8 +5,10 @@ import {
   type DominanceSnapshot,
   type FearGreedPoint,
   type FundingRateRow,
+  type LiquidationSummary,
   type LongShortRow,
   type MarketPulse,
+  type OpenInterestRow,
 } from './market-intel.service.js';
 
 @Controller('/analytic')
@@ -52,6 +54,30 @@ export class MarketIntelController {
     const items = await this.intel.longShort(
       Number.isFinite(limit) ? limit : 8,
     );
+    return { items };
+  }
+
+  @Get('/liquidation')
+  async liquidation(
+    @Query('limit') limitRaw?: string,
+  ): Promise<{ items: LiquidationSummary[] }> {
+    const limit = Number.parseInt(limitRaw ?? '10', 10);
+    const items = await this.intel.liquidationSummary(
+      Number.isFinite(limit) ? limit : 10,
+    );
+    return { items };
+  }
+
+  @Get('/open-interest')
+  async openInterest(
+    @Query('symbols') symbolsRaw?: string,
+  ): Promise<{ items: OpenInterestRow[] }> {
+    const symbols = (symbolsRaw ?? 'BTC,ETH,SOL')
+      .split(',')
+      .map((s) => s.trim().toUpperCase())
+      .filter(Boolean)
+      .slice(0, 10);
+    const items = await this.intel.openInterest(symbols);
     return { items };
   }
 }
