@@ -190,7 +190,7 @@ function NewsModal({ item, onClose }: { item: NewsItem; onClose: () => void }) {
           ) : null}
 
           {item.text ? (
-            <div className="mt-5 max-h-80 overflow-y-auto whitespace-pre-line text-sm leading-relaxed text-fg-muted">
+            <div className="mt-5 max-h-[60vh] overflow-y-auto whitespace-pre-line text-sm leading-relaxed text-fg-muted">
               {item.text}
             </div>
           ) : (
@@ -198,17 +198,6 @@ function NewsModal({ item, onClose }: { item: NewsItem; onClose: () => void }) {
               No additional summary available for this article.
             </p>
           )}
-
-          {item.url ? (
-            <a
-              href={item.url}
-              target="_blank"
-              rel="noreferrer"
-              className="mt-6 inline-flex items-center gap-1.5 rounded-md bg-white/5 px-3 py-1.5 text-xs text-fg-muted ring-1 ring-white/10 hover:text-fg"
-            >
-              Read the full article at the source ↗
-            </a>
-          ) : null}
         </div>
       </div>
     </div>
