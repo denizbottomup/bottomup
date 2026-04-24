@@ -1,4 +1,9 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Inject,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import type { PrismaClient } from '@bottomup/db';
 import { PRISMA } from '../common/prisma.module.js';
 import type { AuthedUser } from '../common/decorators/current-user.decorator.js';
@@ -26,6 +31,7 @@ export interface TraderProfileDetail {
   image: string | null;
   cover_image: string | null;
   content: string | null;
+  links: Array<{ label: string; url: string }>;
   instagram: string | null;
   telegram: string | null;
   twitter: string | null;
@@ -218,7 +224,7 @@ export class TraderService {
          SELECT u.id::text AS id, u.name, u.first_name, u.last_name, u.image,
                 u.instagram, u.telegram, u.twitter,
                 u.is_trader, u.is_trending, u.monthly_roi, u.referral_code, u.rate,
-                tp.cover_image AS cover_image, tp.content AS content,
+                tp.cover_image AS cover_image, tp.content AS content, tp.links AS links,
                 (SELECT COUNT(*)::int FROM follow_notify f
                    WHERE f.trader_id = u.id AND f.follow = TRUE AND f.is_deleted = FALSE) AS followers,
                 (SELECT COUNT(*)::int FROM setup s
@@ -267,6 +273,7 @@ export class TraderService {
       image: (r.image as string | null) ?? null,
       cover_image: (r.cover_image as string | null) ?? null,
       content: (r.content as string | null) ?? null,
+      links: parseLinksJson(r.links),
       instagram: (r.instagram as string | null) ?? null,
       telegram: (r.telegram as string | null) ?? null,
       twitter: (r.twitter as string | null) ?? null,
@@ -292,6 +299,75 @@ export class TraderService {
         is_self: traderId === viewerId,
       },
     };
+  }
+
+  /**
+   * Upsert the viewer's own trader_profile row. Mobile PATCH /trader/me
+   * semantics: cover_image, content, and a JSON links array are the
+   * editable surface; unknown keys are silently ignored. Non-traders get
+   * a 403 so we don't create stray rows.
+   */
+  async updateMyProfile(
+    viewer: AuthedUser,
+    body: {
+      cover_image?: string | null;
+      content?: string | null;
+      links?: Array<{ label?: string; url?: string }> | null;
+    },
+  ): Promise<TraderProfileDetail> {
+    const viewerId = await this.resolveViewerId(viewer);
+    const gate = await this.prisma.$queryRawUnsafe<Array<{ is_trader: boolean }>>(
+      `SELECT COALESCE(is_trader, FALSE) AS is_trader FROM "user" WHERE id = $1::uuid LIMIT 1`,
+      viewerId,
+    );
+    if (!gate[0]?.is_trader) {
+      throw new ForbiddenException('Only traders can edit the trader profile');
+    }
+
+    const cover =
+      'cover_image' in body
+        ? body.cover_image == null || body.cover_image === ''
+          ? null
+          : String(body.cover_image).slice(0, 2000)
+        : undefined;
+    const content =
+      'content' in body
+        ? body.content == null || body.content === ''
+          ? null
+          : String(body.content).slice(0, 4000)
+        : undefined;
+    const linksJson =
+      'links' in body
+        ? sanitizeLinks(body.links)
+        : undefined;
+
+    const setClauses: string[] = [];
+    const values: unknown[] = [viewerId];
+    const bind = (v: unknown): string => {
+      values.push(v);
+      return `$${values.length}`;
+    };
+    if (cover !== undefined) setClauses.push(`cover_image = ${bind(cover)}`);
+    if (content !== undefined) setClauses.push(`content = ${bind(content)}`);
+    if (linksJson !== undefined)
+      setClauses.push(`links = ${bind(linksJson)}::json`);
+
+    if (setClauses.length > 0) {
+      setClauses.push(`updated_at = NOW()`);
+      await this.prisma.$executeRawUnsafe(
+        `INSERT INTO trader_profile
+           (id, created_at, updated_at, is_deleted, trader_id, cover_image, content, links)
+         VALUES (gen_random_uuid(), NOW(), NOW(), FALSE, $1::uuid,
+                 ${cover === undefined ? 'NULL' : bind(cover)},
+                 ${content === undefined ? 'NULL' : bind(content)},
+                 ${linksJson === undefined ? 'NULL' : `${bind(linksJson)}::json`})
+         ON CONFLICT (trader_id) DO UPDATE
+           SET ${setClauses.join(', ')}`,
+        ...values,
+      );
+    }
+
+    return this.profile(viewer, viewerId);
   }
 
   async setups(traderId: string, statusRaw: string | undefined, limit: number): Promise<TraderSetupRow[]> {
@@ -414,4 +490,42 @@ function intOr(v: unknown, fallback: number): number {
   if (v === null || v === undefined) return fallback;
   const n = Number(v);
   return Number.isFinite(n) ? Math.trunc(n) : fallback;
+}
+
+function parseLinksJson(raw: unknown): Array<{ label: string; url: string }> {
+  if (raw == null) return [];
+  try {
+    const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .map((e: unknown) => {
+        if (!e || typeof e !== 'object') return null;
+        const rec = e as Record<string, unknown>;
+        const label = typeof rec.label === 'string' ? rec.label : '';
+        const url = typeof rec.url === 'string' ? rec.url : '';
+        if (!url) return null;
+        return { label: label || url, url };
+      })
+      .filter((x): x is { label: string; url: string } => x != null);
+  } catch {
+    return [];
+  }
+}
+
+function sanitizeLinks(
+  raw: Array<{ label?: string; url?: string }> | null | undefined,
+): string | null {
+  if (raw == null) return null;
+  if (!Array.isArray(raw)) return null;
+  const cleaned = raw
+    .slice(0, 12)
+    .map((entry) => {
+      const label = typeof entry?.label === 'string' ? entry.label.trim().slice(0, 40) : '';
+      const url = typeof entry?.url === 'string' ? entry.url.trim().slice(0, 500) : '';
+      if (!url) return null;
+      if (!/^https?:\/\//i.test(url)) return null;
+      return { label: label || url, url };
+    })
+    .filter((x): x is { label: string; url: string } => x != null);
+  return JSON.stringify(cleaned);
 }

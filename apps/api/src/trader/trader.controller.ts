@@ -1,4 +1,4 @@
-import { Controller, Delete, Get, Param, Put, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Put, Query, UseGuards } from '@nestjs/common';
 import { FirebaseAuthGuard } from '../common/guards/firebase-auth.guard.js';
 import { CurrentUser, type AuthedUser } from '../common/decorators/current-user.decorator.js';
 import {
@@ -33,6 +33,14 @@ export class TraderController {
       onlyFollowed: onlyFollowed === 'true' || onlyFollowed === '1',
     });
     return { items };
+  }
+
+  @Patch('/trader/me')
+  updateMyProfile(
+    @CurrentUser() viewer: AuthedUser,
+    @Body() body: Parameters<TraderService['updateMyProfile']>[1],
+  ): Promise<TraderProfileDetail> {
+    return this.traders.updateMyProfile(viewer, body ?? {});
   }
 
   @Get('/trader/:traderId')

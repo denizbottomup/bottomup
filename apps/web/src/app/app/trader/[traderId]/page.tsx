@@ -16,6 +16,7 @@ interface TraderProfile {
   image: string | null;
   cover_image: string | null;
   content: string | null;
+  links: Array<{ label: string; url: string }>;
   instagram: string | null;
   telegram: string | null;
   twitter: string | null;
@@ -237,6 +238,31 @@ export default function TraderProfilePage() {
                 <p className="mt-1 max-w-xl text-sm text-fg-muted">{profile.content}</p>
               ) : null}
               <SocialLinks p={profile} />
+              {profile.links && profile.links.length > 0 ? (
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {profile.links.map((l, i) => (
+                    <a
+                      key={`${l.url}-${i}`}
+                      href={l.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="rounded-full bg-white/5 px-2.5 py-1 text-[11px] text-fg-muted ring-1 ring-white/10 transition hover:border-brand/40 hover:text-fg"
+                    >
+                      {l.label}
+                    </a>
+                  ))}
+                </div>
+              ) : null}
+              {profile.viewer.is_self ? (
+                <div className="mt-3">
+                  <Link
+                    href="/app/profile/trader"
+                    className="inline-flex items-center gap-1 rounded-md bg-brand/15 px-2 py-1 text-[11px] text-brand ring-1 ring-brand/30 hover:bg-brand/20"
+                  >
+                    Trader profilini düzenle →
+                  </Link>
+                </div>
+              ) : null}
             </div>
           </div>
 

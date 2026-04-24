@@ -238,7 +238,10 @@ export default function ProfilePage() {
           <QuickLink href="/app/together" label="Kopya trade" />
           <QuickLink href="/app/profile/subscription" label="Aboneliklerim" />
           {me.is_trader ? (
-            <QuickLink href="/app/profile/earnings" label="Trader kazançlarım" />
+            <>
+              <QuickLink href="/app/profile/trader" label="Trader profili" />
+              <QuickLink href="/app/profile/earnings" label="Trader kazançlarım" />
+            </>
           ) : null}
           <QuickLink href="/app/settings" label="Ayarlar" />
           <QuickLink href="/app/settings/help" label="Yardım" />
