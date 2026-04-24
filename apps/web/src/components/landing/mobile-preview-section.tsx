@@ -1,6 +1,7 @@
 'use client';
 
 import { useT } from '@/lib/i18n';
+import { StoreBadges } from './store-badges';
 
 export function MobilePreviewSection() {
   const { t } = useT();
@@ -41,6 +42,8 @@ export function MobilePreviewSection() {
               <span>{t.mobile.bullet_sim}</span>
             </li>
           </ul>
+
+          <StoreBadges className="mt-7" />
         </div>
 
         <div className="order-1 flex items-center justify-center lg:order-2">

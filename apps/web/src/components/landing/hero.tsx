@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useT } from '@/lib/i18n';
 import type { LandingPayload } from './landing-data';
+import { StoreBadges } from './store-badges';
 
 export function Hero({ data }: { data: LandingPayload | null }) {
   const { t } = useT();
@@ -39,6 +40,10 @@ export function Hero({ data }: { data: LandingPayload | null }) {
             >
               {t.hero.cta_secondary}
             </a>
+          </div>
+
+          <div className="mt-6 flex justify-center">
+            <StoreBadges size="sm" />
           </div>
 
           <div className="mt-10 flex flex-wrap items-center justify-center gap-2">
