@@ -8,10 +8,8 @@ export function Hero({ data }: { data: LandingPayload | null }) {
     <section className="relative overflow-hidden">
       <div className="pointer-events-none absolute inset-0 -z-10 grid-pattern" />
       <div className="pointer-events-none absolute inset-0 -z-10">
-        <div className="absolute left-1/2 top-[-220px] h-[720px] w-[1200px] -translate-x-1/2 rounded-full bg-brand/15 blur-[150px]" />
-        <div className="absolute right-[-160px] top-[80px] h-[480px] w-[480px] rounded-full bg-violet/20 blur-[120px]" />
-        <div className="absolute left-[-140px] top-[260px] h-[440px] w-[440px] rounded-full bg-sky/15 blur-[130px]" />
-        <div className="absolute bottom-[-200px] right-[25%] h-[360px] w-[360px] rounded-full bg-mint/15 blur-[120px]" />
+        <div className="absolute left-1/2 top-[-240px] h-[780px] w-[1200px] -translate-x-1/2 rounded-full bg-brand/18 blur-[160px]" />
+        <div className="absolute right-[-160px] top-[120px] h-[420px] w-[420px] rounded-full bg-violet/12 blur-[130px]" />
       </div>
 
       <div className="mx-auto max-w-[1400px] px-4 pb-16 pt-14 md:px-8 md:pb-24 md:pt-24">

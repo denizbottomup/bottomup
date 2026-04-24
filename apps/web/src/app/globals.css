@@ -131,28 +131,17 @@
   color: transparent;
 }
 
-/* 4-color logo gradient — violet → orange → mint → sky */
+/* Brand gradient — orange into violet. Two stops, bold and calm. */
 .logo-gradient {
-  background: linear-gradient(
-    110deg,
-    #7c5cff 0%,
-    #ff8a4c 38%,
-    #2bc18b 70%,
-    #3b5bff 100%
-  );
+  background: linear-gradient(100deg, #ff8a4c 0%, #ff7a3a 45%, #7c5cff 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
 }
 
+/* Warm-only variant for places where violet would clash. */
 .cyber-gradient {
-  background: linear-gradient(
-    110deg,
-    #ff8a4c 0%,
-    #ffb88a 30%,
-    #a994ff 65%,
-    #7c5cff 100%
-  );
+  background: linear-gradient(100deg, #ff8a4c 0%, #ffb88a 60%, #ff7a3a 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
