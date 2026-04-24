@@ -10,7 +10,6 @@ import { PricingSection } from '@/components/landing/pricing-section';
 import { PulseSection } from '@/components/landing/pulse-section';
 import { TickerStrip } from '@/components/landing/ticker-strip';
 import { VirtualPortfolioSection } from '@/components/landing/virtual-portfolio-section';
-import { WaitlistProvider } from '@/components/landing/waitlist';
 import { fetchLanding } from '@/components/landing/landing-data';
 
 export const revalidate = 60;
@@ -19,36 +18,34 @@ export default async function LandingPage() {
   const data = await fetchLanding();
 
   return (
-    <WaitlistProvider>
-      <div className="min-h-screen">
-        <LandingNav />
-        {data ? <TickerStrip pulse={data.pulse} /> : null}
+    <div className="min-h-screen">
+      <LandingNav />
+      {data ? <TickerStrip pulse={data.pulse} /> : null}
 
-        <Hero data={data} />
+      <Hero data={data} />
 
-        {data ? <PulseSection pulse={data.pulse} /> : null}
+      {data ? <PulseSection pulse={data.pulse} /> : null}
 
-        {data ? (
-          <LeaderboardSection
-            traders={data.top_traders}
-            setups={data.latest_setups}
-          />
-        ) : null}
+      {data ? (
+        <LeaderboardSection
+          traders={data.top_traders}
+          setups={data.latest_setups}
+        />
+      ) : null}
 
-        <FeaturesSection />
+      <FeaturesSection />
 
-        <VirtualPortfolioSection />
+      <VirtualPortfolioSection />
 
-        {data && data.news.length > 0 ? <NewsSection news={data.news} /> : null}
+      {data && data.news.length > 0 ? <NewsSection news={data.news} /> : null}
 
-        <PricingSection />
+      <PricingSection />
 
-        <FaqSection />
+      <FaqSection />
 
-        <FinalCta />
+      <FinalCta />
 
-        <LandingFooter />
-      </div>
-    </WaitlistProvider>
+      <LandingFooter />
+    </div>
   );
 }

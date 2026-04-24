@@ -1,5 +1,5 @@
 import { displayName, type LandingPayload } from './landing-data';
-import { WaitlistButton } from './waitlist';
+import { storeUrls } from './store-links';
 
 export function LeaderboardSection({
   traders,
@@ -25,12 +25,14 @@ export function LeaderboardSection({
               denersin.
             </p>
           </div>
-          <WaitlistButton
-            source="leaderboard"
+          <a
+            href={storeUrls.ios}
+            target="_blank"
+            rel="noreferrer"
             className="btn-ghost whitespace-nowrap"
           >
             Tüm liderleri gör →
-          </WaitlistButton>
+          </a>
         </header>
 
         <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-[1fr_1fr]">

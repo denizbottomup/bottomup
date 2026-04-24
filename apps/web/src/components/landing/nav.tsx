@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Logo } from '@/components/logo';
-import { WaitlistButton } from './waitlist';
+import { storeUrls } from './store-links';
 
 export function LandingNav() {
   const [scrolled, setScrolled] = useState(false);
@@ -46,9 +46,9 @@ export function LandingNav() {
         </div>
 
         <div className="hidden items-center gap-2 md:flex">
-          <WaitlistButton source="nav" className="btn-primary">
-            Bekleme listesine katıl
-          </WaitlistButton>
+          <a href={storeUrls.ios} target="_blank" rel="noreferrer" className="btn-primary">
+            Uygulamayı indir
+          </a>
         </div>
 
         <button
@@ -91,13 +91,23 @@ export function LandingNav() {
             <a href="#faq" className="py-2 text-fg-muted" onClick={() => setMobileOpen(false)}>
               SSS
             </a>
-            <div className="mt-3 border-t border-border pt-3">
-              <WaitlistButton
-                source="nav-mobile"
+            <div className="mt-3 flex flex-col gap-2 border-t border-border pt-3">
+              <a
+                href={storeUrls.ios}
+                target="_blank"
+                rel="noreferrer"
                 className="btn-primary w-full justify-center"
               >
-                Bekleme listesine katıl
-              </WaitlistButton>
+                App Store'dan indir
+              </a>
+              <a
+                href={storeUrls.android}
+                target="_blank"
+                rel="noreferrer"
+                className="btn-ghost w-full justify-center"
+              >
+                Google Play'den indir
+              </a>
             </div>
           </nav>
         </div>

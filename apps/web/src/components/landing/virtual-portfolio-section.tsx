@@ -1,4 +1,4 @@
-import { WaitlistButton } from './waitlist';
+import { StoreBadges } from './store-links';
 
 export function VirtualPortfolioSection() {
   return (
@@ -47,15 +47,13 @@ export function VirtualPortfolioSection() {
               />
             </ol>
 
-            <div className="mt-8 flex flex-wrap gap-3">
-              <WaitlistButton
-                source="virtual-portfolio"
-                className="btn-primary px-5 py-3 text-base"
+            <div className="mt-8 flex flex-col gap-3">
+              <StoreBadges variant="primary" />
+              <a
+                href="#pricing"
+                className="w-fit text-xs text-fg-muted hover:text-fg"
               >
-                Waitlist'e katıl — ücretsiz
-              </WaitlistButton>
-              <a href="#pricing" className="btn-ghost px-5 py-3 text-base">
-                Fiyatları gör
+                Fiyatlara bak →
               </a>
             </div>
           </div>

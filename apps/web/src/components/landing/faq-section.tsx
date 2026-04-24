@@ -4,8 +4,8 @@ import { useState } from 'react';
 
 const QA: Array<{ q: string; a: string }> = [
   {
-    q: 'Hesap açmadan deneyebilir miyim?',
-    a: 'Hesap açmak gerekli ama ücretsiz. Üye olduğun anda 10.000$ sanal kasa yüklenir ve hiçbir ödeme bilgisi istenmez. İstediğin zaman silebilirsin.',
+    q: 'Bottomup nasıl başlıyor?',
+    a: 'App Store veya Google Play\'den ücretsiz indir, telefon numaranla kayıt ol. Hesabın açılır açılmaz 10.000$ sanal kasa yüklenir, hiçbir ödeme bilgisi istenmez.',
   },
   {
     q: '10.000$ sanal kasa nasıl çalışıyor?',
@@ -13,7 +13,7 @@ const QA: Array<{ q: string; a: string }> = [
   },
   {
     q: 'OKX kopya trade güvenli mi?',
-    a: 'API anahtarlarını sunucuda şifreli tutuyoruz, tarayıcına asla geri dönmez. Sadece Read + Trade izni yeterli; çekim (Withdraw) izni istemiyoruz. İstersen IP kısıtlaması da ekleyebilirsin. Anahtarı istediğin zaman OKX\'ten iptal edebilir, bizden de silebilirsin.',
+    a: 'API anahtarlarını sunucuda şifreli tutuyoruz, uygulamaya asla geri dönmez. Sadece Read + Trade izni yeterli; çekim (Withdraw) izni istemiyoruz. İstersen IP kısıtlaması da ekleyebilirsin. Anahtarı istediğin zaman OKX\'ten iptal edebilir, bizden de silebilirsin.',
   },
   {
     q: 'Trader\'lar nasıl seçiliyor?',
@@ -32,8 +32,8 @@ const QA: Array<{ q: string; a: string }> = [
     a: 'Şu an OKX destekleniyor. 2026 içinde Binance ve Bybit geliyor. Setup\'ları borsadan bağımsız olarak her yerde görebilirsin; sadece kopya trade OKX üzerinden.',
   },
   {
-    q: 'Mobil uygulamada var mı?',
-    a: 'Evet. iOS ve Android için Bottomup uygulaması App Store ve Google Play\'de mevcut. Tüm hesap bilgilerin web ve mobil arasında senkron.',
+    q: 'Web uygulaması var mı?',
+    a: 'Şu an iOS ve Android\'de yayında. Web uygulaması aktif geliştirme aşamasında — yakında bu sayfadan giriş yapıp tarayıcıdan da kullanabileceksin. Hesabın otomatik senkronlanacak.',
   },
 ];
 

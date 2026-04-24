@@ -1,4 +1,4 @@
-import { WaitlistButton } from './waitlist';
+import { storeUrls } from './store-links';
 
 const PLANS = [
   {
@@ -70,8 +70,9 @@ export function PricingSection() {
             Bir setup, bir kopya trade — kendini amorti eder
           </h2>
           <p className="mt-3 text-sm text-fg-muted">
-            Önce 10.000$ sanal kasayla dene. İşin memnun edince üyelikle canlıya
-            geç. İstediğin zaman iptal et — tarafından başka bir şey çekilmez.
+            App Store ve Google Play üzerinden satın alırsın. 10.000$ sanal
+            kasa üyelikle birlikte gelir. İstediğin zaman mağaza üzerinden
+            iptal edersin.
           </p>
         </header>
 
@@ -143,8 +144,10 @@ function PlanCard({ plan }: { plan: (typeof PLANS)[number] }) {
         ))}
       </ul>
 
-      <WaitlistButton
-        source={`pricing-${plan.code}`}
+      <a
+        href={storeUrls.ios}
+        target="_blank"
+        rel="noreferrer"
         className={`mt-6 inline-flex items-center justify-center rounded-lg px-4 py-3 text-sm font-semibold transition ${
           plan.highlight
             ? 'bg-brand text-white hover:bg-brand-dark'
@@ -152,7 +155,7 @@ function PlanCard({ plan }: { plan: (typeof PLANS)[number] }) {
         }`}
       >
         {plan.cta}
-      </WaitlistButton>
+      </a>
     </div>
   );
 }

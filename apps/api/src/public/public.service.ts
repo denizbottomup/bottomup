@@ -1,4 +1,4 @@
-import { BadRequestException, Inject, Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import type { PrismaClient } from '@bottomup/db';
 import { PRISMA } from '../common/prisma.module.js';
 import { MarketIntelService } from '../market-intel/market-intel.service.js';
@@ -50,58 +50,10 @@ export interface LandingStats {
 
 @Injectable()
 export class PublicService {
-  private readonly log = new Logger(PublicService.name);
-  private waitlistReady = false;
-
   constructor(
     @Inject(PRISMA) private readonly prisma: PrismaClient,
     private readonly intel: MarketIntelService,
   ) {}
-
-  /**
-   * Lazily ensures the `landing_waitlist` table exists. We don't manage
-   * this schema via Prisma migrations (DB is introspected from the
-   * legacy FastAPI service), so a CREATE IF NOT EXISTS on first call
-   * keeps things self-bootstrapping without a manual DBA step.
-   */
-  private async ensureWaitlistTable(): Promise<void> {
-    if (this.waitlistReady) return;
-    await this.prisma.$executeRawUnsafe(
-      `CREATE TABLE IF NOT EXISTS landing_waitlist (
-         id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-         email       VARCHAR(256) NOT NULL UNIQUE,
-         source      VARCHAR(64),
-         created_at  TIMESTAMP(6) NOT NULL DEFAULT NOW(),
-         notified_at TIMESTAMP(6)
-       )`,
-    );
-    this.waitlistReady = true;
-  }
-
-  async joinWaitlist(
-    email: string,
-    source: string | undefined,
-  ): Promise<{ ok: true; already: boolean }> {
-    const clean = String(email ?? '').trim().toLowerCase();
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clean) || clean.length > 256) {
-      throw new BadRequestException('Geçerli bir e-posta gerekli');
-    }
-    const src = source
-      ? String(source).replace(/[^a-zA-Z0-9_\-]/g, '').slice(0, 64) || null
-      : null;
-    await this.ensureWaitlistTable();
-    const result = await this.prisma.$queryRawUnsafe<Array<{ id: string }>>(
-      `INSERT INTO landing_waitlist (email, source)
-       VALUES ($1, $2)
-       ON CONFLICT (email) DO NOTHING
-       RETURNING id::text`,
-      clean,
-      src,
-    );
-    const already = result.length === 0;
-    this.log.log(`waitlist ${already ? 'dup' : 'new'} email=${clean} source=${src ?? '-'}`);
-    return { ok: true, already };
-  }
 
   async landing(): Promise<{
     stats: LandingStats;

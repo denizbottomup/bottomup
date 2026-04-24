@@ -1,4 +1,4 @@
-import { WaitlistButton } from './waitlist';
+import { StoreBadges } from './store-links';
 
 export function FinalCta() {
   return (
@@ -9,7 +9,7 @@ export function FinalCta() {
       <div className="mx-auto max-w-[1100px] px-4 py-16 text-center md:px-8 md:py-24">
         <div className="inline-flex items-center gap-2 rounded-full border border-brand/40 bg-brand/10 px-3 py-1 text-xs text-brand">
           <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-brand" />
-          10.000$ sanal kasa — üye olanlara anında
+          iOS + Android'de canlı
         </div>
         <h2 className="mt-5 text-3xl font-semibold leading-tight md:text-5xl">
           Bir sonraki kazanan setup'ı{' '}
@@ -20,17 +20,12 @@ export function FinalCta() {
           kur, kasada performansını gör. Hazır olduğunda OKX'e geç.
         </p>
         <div className="mt-8 flex justify-center">
-          <WaitlistButton
-            source="final-cta"
-            className="btn-primary px-6 py-3 text-base"
-          >
-            Waitlist'e katıl →
-          </WaitlistButton>
+          <StoreBadges variant="primary" />
         </div>
         <div className="mt-6 flex flex-wrap items-center justify-center gap-5 text-[11px] text-fg-dim">
-          <span>✓ Kredi kartı istemez</span>
-          <span>✓ Açılışta ilk sen haber al</span>
-          <span>✓ İstediğin zaman listeden çık</span>
+          <span>✓ 5 dakikada kurulum</span>
+          <span>✓ 10.000$ sanal kasa hediye</span>
+          <span>✓ İstediğin zaman iptal</span>
         </div>
       </div>
     </section>

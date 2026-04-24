@@ -1,5 +1,5 @@
 import { Logo } from '@/components/logo';
-import { WaitlistButton } from './waitlist';
+import { storeUrls } from './store-links';
 
 export function LandingFooter() {
   const year = new Date().getFullYear();
@@ -70,13 +70,28 @@ export function LandingFooter() {
 
           <div>
             <div className="text-[11px] font-semibold uppercase tracking-wider text-fg">
-              Hesap
+              Uygulamalar
             </div>
             <ul className="mt-3 space-y-2 text-sm text-fg-muted">
               <li>
-                <WaitlistButton source="footer" className="hover:text-fg">
-                  Bekleme listesine katıl
-                </WaitlistButton>
+                <a
+                  href={storeUrls.ios}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="hover:text-fg"
+                >
+                  App Store
+                </a>
+              </li>
+              <li>
+                <a
+                  href={storeUrls.android}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="hover:text-fg"
+                >
+                  Google Play
+                </a>
               </li>
               <li>
                 <a href="#faq" className="hover:text-fg">
