@@ -277,15 +277,20 @@ export class MarketIntelService {
             }>
           >(`/futures/funding-rate/exchange-list`);
           const rows: FundingRateRow[] = [];
+          // Reject obvious data errors — anything over 5% per funding
+          // interval is either a dying token or a broken exchange feed.
+          const SANE_MAX = 0.05;
           for (const coin of data) {
             const binance = coin.stablecoin_margin_list?.find(
               (x) => String(x.exchange).toLowerCase() === 'binance',
             );
             const first = binance ?? coin.stablecoin_margin_list?.[0];
             if (!first) continue;
+            const rate = Number(first.funding_rate ?? 0);
+            if (!Number.isFinite(rate) || Math.abs(rate) > SANE_MAX) continue;
             rows.push({
               symbol: `${coin.symbol}USDT`,
-              funding_rate: Number(first.funding_rate ?? 0),
+              funding_rate: rate,
               mark_price: 0,
               next_funding_ts: Number(first.next_funding_time ?? 0),
             });
