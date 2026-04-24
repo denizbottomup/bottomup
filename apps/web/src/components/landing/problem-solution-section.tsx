@@ -54,10 +54,10 @@ export function ProblemSolutionSection() {
         <div className="mt-12 overflow-hidden rounded-3xl border border-border bg-bg-card/50">
           <div className="grid grid-cols-1 md:grid-cols-2">
             <div className="border-b border-border bg-rose-500/[0.06] px-5 py-3 md:border-b-0 md:border-r">
-              <div className="mono-label !text-rose-300">Before bupcore</div>
+              <div className="mono-label !text-rose-300">Before BottomUP</div>
             </div>
             <div className="bg-mint/[0.08] px-5 py-3">
-              <div className="mono-label !text-mint">With bupcore</div>
+              <div className="mono-label !text-mint">With BottomUP</div>
             </div>
           </div>
 

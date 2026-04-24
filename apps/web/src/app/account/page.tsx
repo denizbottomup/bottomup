@@ -71,7 +71,7 @@ export default function AccountPage() {
             Your account is ready. Continue on mobile for now.
           </h2>
           <p className="mt-2 text-sm text-fg-muted">
-            The bupcore.ai web app is under active development. In the meantime
+            The BottomUP web app is under active development. In the meantime
             you can access all setups, Foxy AI notes, and your team from the
             iOS and Android apps using this same account.
           </p>

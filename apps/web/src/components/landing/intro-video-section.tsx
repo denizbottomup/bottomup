@@ -6,7 +6,7 @@ export function IntroVideoSection() {
           <div className="mono-label">Watch the intro</div>
           <h2 className="mt-2 text-3xl font-extrabold tracking-[-0.02em] md:text-5xl">
             60 seconds on{' '}
-            <span className="logo-gradient">how bupcore works.</span>
+            <span className="logo-gradient">how BottomUP works.</span>
           </h2>
         </header>
 
@@ -19,7 +19,7 @@ export function IntroVideoSection() {
             <div className="relative aspect-video w-full overflow-hidden rounded-[calc(1rem-1px)]">
               <iframe
                 src="https://www.youtube.com/embed/2qUBtGgj_WQ?rel=0&modestbranding=1"
-                title="bupcore — product intro"
+                title="BottomUP — product intro"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                 referrerPolicy="strict-origin-when-cross-origin"
                 allowFullScreen

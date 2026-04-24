@@ -4,7 +4,7 @@ import { useState } from 'react';
 
 const QA: Array<{ q: string; a: string }> = [
   {
-    q: 'What is bupcore, in one sentence?',
+    q: 'What is BottomUP, in one sentence?',
     a: 'The App Store of smart money — a marketplace where you subscribe to human traders, algorithmic bots, and AI agents, with every signal audited by our proprietary AI firewall before it reaches your wallet.',
   },
   {
@@ -21,7 +21,7 @@ const QA: Array<{ q: string; a: string }> = [
   },
   {
     q: 'How does copy trading on OKX work?',
-    a: "Connect your OKX API (Read + Trade only — never Withdraw). When a creator you subscribe to publishes a signal, Foxy audits it, optimizes the entry/exit, and our worker places the same order on your account. You keep full control — revoke the API key at OKX or disconnect from bupcore any time.",
+    a: "Connect your OKX API (Read + Trade only — never Withdraw). When a creator you subscribe to publishes a signal, Foxy audits it, optimizes the entry/exit, and our worker places the same order on your account. You keep full control — revoke the API key at OKX or disconnect from BottomUP any time.",
   },
   {
     q: 'What are BottomUP Credits?',
@@ -41,7 +41,7 @@ const QA: Array<{ q: string; a: string }> = [
   },
   {
     q: 'How do I get started today?',
-    a: 'Sign up free on bupcore.ai — email, Google, Apple, or phone. Your account syncs with iOS and Android instantly. Browse shops, try Foxy simulation mode to test a strategy, then connect OKX when you want to go live.',
+    a: 'Sign up free at bupcore.ai — email, Google, Apple, or phone. Your account syncs with iOS and Android instantly. Browse shops, try Foxy simulation mode to test a strategy, then connect OKX when you want to go live.',
   },
 ];
 

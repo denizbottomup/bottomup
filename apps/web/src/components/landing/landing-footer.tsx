@@ -131,9 +131,9 @@ export function LandingFooter() {
         </div>
 
         <div className="mt-10 flex flex-col items-center justify-between gap-3 border-t border-border pt-6 text-[11px] text-fg-dim md:flex-row">
-          <div>© {year} bupcore · All rights reserved.</div>
+          <div>© {year} BottomUP · All rights reserved.</div>
           <div className="text-center md:text-right">
-            Bupcore does not provide financial advice. Trading decisions are
+            BottomUP does not provide financial advice. Trading decisions are
             yours alone.
           </div>
         </div>
