@@ -90,9 +90,14 @@ export default function TogetherPage() {
               {team?.name ? `Takım: ${team.name}` : 'Takip ettiklerinin pozisyonlarını kopyala.'}
             </p>
           </div>
-          <Link href="/app/analysts" className="text-xs text-brand hover:underline">
-            Trader ekle →
-          </Link>
+          <div className="flex items-center gap-3">
+            <Link href="/app/together/team" className="text-xs text-fg-muted hover:text-fg">
+              Takımı yönet
+            </Link>
+            <Link href="/app/analysts" className="text-xs text-brand hover:underline">
+              Trader ekle →
+            </Link>
+          </div>
         </div>
 
         {stats ? (

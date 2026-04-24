@@ -88,6 +88,33 @@ export default function SubscriptionHistoryPage() {
         items={past}
         muted
       />
+
+      {active.length > 0 ? (
+        <section className="mt-6 rounded-2xl border border-white/10 bg-white/[0.02] p-4">
+          <h2 className="text-sm font-semibold text-fg">Aboneliği yönet</h2>
+          <p className="mt-1 text-xs text-fg-muted">
+            Aboneliğini satın aldığın mağaza üzerinden yönetmelisin. Web tarafından iptal edilemez.
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <a
+              href="https://apps.apple.com/account/subscriptions"
+              target="_blank"
+              rel="noreferrer"
+              className="rounded-md bg-white/5 px-3 py-1.5 text-xs text-fg-muted ring-1 ring-white/10 hover:text-fg"
+            >
+              App Store · Aboneliklerim
+            </a>
+            <a
+              href="https://play.google.com/store/account/subscriptions"
+              target="_blank"
+              rel="noreferrer"
+              className="rounded-md bg-white/5 px-3 py-1.5 text-xs text-fg-muted ring-1 ring-white/10 hover:text-fg"
+            >
+              Google Play · Aboneliklerim
+            </a>
+          </div>
+        </section>
+      ) : null}
     </div>
   );
 }

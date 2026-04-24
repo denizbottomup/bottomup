@@ -500,6 +500,24 @@ export class UserService {
    * flips is_deleted + is_active, nukes follows, and schedules hard-delete
    * server-side (out-of-scope for MVP; the row is just hidden).
    */
+  async updateRegistrationToken(
+    viewer: AuthedUser,
+    token: string | null,
+  ): Promise<{ ok: true }> {
+    const viewerId = await this.resolveViewerId(viewer);
+    const clean = token ? String(token).slice(0, 512) : null;
+    await this.prisma.$executeRawUnsafe(
+      `UPDATE "user"
+          SET registration_token = $2,
+              last_login_at = NOW(),
+              updated_at = NOW()
+        WHERE id = $1::uuid`,
+      viewerId,
+      clean,
+    );
+    return { ok: true };
+  }
+
   async deleteMe(viewer: AuthedUser): Promise<{ ok: true }> {
     const viewerId = await this.resolveViewerId(viewer);
     await this.prisma.$executeRawUnsafe(

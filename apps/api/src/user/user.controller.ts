@@ -57,6 +57,20 @@ export class UserController {
     return this.users.deleteMe(user);
   }
 
+  @Patch('/me/registration-token')
+  registrationToken(
+    @CurrentUser() user: AuthedUser,
+    @Body() body: { token?: string | null; registration_token?: string | null },
+  ): Promise<{ ok: true }> {
+    const token =
+      body?.token != null
+        ? String(body.token)
+        : body?.registration_token != null
+          ? String(body.registration_token)
+          : null;
+    return this.users.updateRegistrationToken(user, token);
+  }
+
   @Get('/me/follows')
   follows(@CurrentUser() user: AuthedUser): Promise<{ items: FollowedTrader[] }> {
     return this.users.listFollowing(user);

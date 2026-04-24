@@ -16,6 +16,7 @@ const NAV = [
   { href: '/app/analysts', label: 'Analistler' },
   { href: '/app/together', label: 'Kopya' },
   { href: '/app/foxy', label: 'Foxy AI' },
+  { href: '/app/chat', label: 'Sohbet' },
   { href: '/app/news', label: 'Haberler' },
   { href: '/app/notifications', label: 'Bildirimler', badgeKey: 'notifications' as const },
 ] as const;

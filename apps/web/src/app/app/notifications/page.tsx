@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import { ApiError, api } from '@/lib/api';
+import { onForegroundMessage, requestFcmToken } from '@/lib/firebase';
 
 interface NotificationItem {
   id: string;
@@ -28,6 +29,61 @@ export default function NotificationsPage() {
   const [items, setItems] = useState<NotificationItem[] | null>(null);
   const [unread, setUnread] = useState(0);
   const [err, setErr] = useState<string | null>(null);
+  const [pushState, setPushState] = useState<'idle' | 'requesting' | 'enabled' | 'blocked'>(
+    typeof Notification !== 'undefined' && Notification.permission === 'granted'
+      ? 'enabled'
+      : typeof Notification !== 'undefined' && Notification.permission === 'denied'
+        ? 'blocked'
+        : 'idle',
+  );
+
+  const enablePush = useCallback(async () => {
+    setPushState('requesting');
+    const token = await requestFcmToken();
+    if (!token) {
+      setPushState(
+        typeof Notification !== 'undefined' && Notification.permission === 'denied'
+          ? 'blocked'
+          : 'idle',
+      );
+      return;
+    }
+    try {
+      await api<{ ok: true }>('/user/me/registration-token', {
+        method: 'PATCH',
+        body: JSON.stringify({ token }),
+      });
+      setPushState('enabled');
+    } catch {
+      setPushState('idle');
+    }
+  }, []);
+
+  useEffect(() => {
+    if (pushState !== 'enabled') return;
+    const off = onForegroundMessage((payload) => {
+      // Surface inline toast by prepending a local "just arrived" entry.
+      const notif = payload.notification;
+      if (!notif) return;
+      const synthetic: NotificationItem = {
+        id: `fcm-${Date.now()}`,
+        is_read: false,
+        type: 0,
+        message: notif.body ?? notif.title ?? null,
+        updated_column: null,
+        column_value: null,
+        created_at: new Date().toISOString(),
+        setup_id: (payload.data?.setup_id as string | undefined) ?? null,
+        setup_coin: null,
+        trader_id: (payload.data?.trader_id as string | undefined) ?? null,
+        trader_name: null,
+        trader_image: null,
+      };
+      setItems((prev) => (prev ? [synthetic, ...prev] : [synthetic]));
+      setUnread((u) => u + 1);
+    });
+    return () => off();
+  }, [pushState]);
 
   useEffect(() => {
     let alive = true;
@@ -83,13 +139,32 @@ export default function NotificationsPage() {
             </span>
           ) : null}
         </h1>
-        <button
-          disabled={unread === 0}
-          onClick={() => void markAllRead()}
-          className="rounded-md bg-white/5 px-3 py-1.5 text-xs text-fg-muted ring-1 ring-white/10 transition hover:text-fg disabled:opacity-40"
-        >
-          Tümünü okundu işaretle
-        </button>
+        <div className="flex items-center gap-2">
+          {pushState === 'enabled' ? (
+            <span className="rounded-md bg-emerald-400/10 px-2 py-1 text-[11px] text-emerald-300 ring-1 ring-emerald-400/30">
+              Web push açık ✓
+            </span>
+          ) : pushState === 'blocked' ? (
+            <span className="rounded-md bg-rose-400/10 px-2 py-1 text-[11px] text-rose-300 ring-1 ring-rose-400/30">
+              Tarayıcıda engellenmiş
+            </span>
+          ) : (
+            <button
+              onClick={() => void enablePush()}
+              disabled={pushState === 'requesting'}
+              className="rounded-md bg-brand/15 px-3 py-1.5 text-xs text-brand ring-1 ring-brand/30 transition hover:bg-brand/20 disabled:opacity-60"
+            >
+              {pushState === 'requesting' ? 'İstek gönderiliyor…' : 'Web push\'u aç'}
+            </button>
+          )}
+          <button
+            disabled={unread === 0}
+            onClick={() => void markAllRead()}
+            className="rounded-md bg-white/5 px-3 py-1.5 text-xs text-fg-muted ring-1 ring-white/10 transition hover:text-fg disabled:opacity-40"
+          >
+            Tümünü okundu işaretle
+          </button>
+        </div>
       </div>
 
       <div className="mt-5">

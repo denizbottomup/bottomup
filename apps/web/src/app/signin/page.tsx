@@ -2,17 +2,30 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
-import { signInWithEmailAndPassword } from 'firebase/auth';
+import { useEffect, useRef, useState } from 'react';
+import {
+  RecaptchaVerifier,
+  signInWithEmailAndPassword,
+  signInWithPhoneNumber,
+  type ConfirmationResult,
+} from 'firebase/auth';
 import { useAuth } from '@/lib/auth-context';
 import { getFirebaseAuth, signInWithGoogle, signInWithApple } from '@/lib/firebase';
 import { AuthCard } from '@/components/auth-card';
 
+type Mode = 'email' | 'phone';
+
 export default function SignInPage() {
   const router = useRouter();
   const { user, loading } = useAuth();
+  const [mode, setMode] = useState<Mode>('email');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [phone, setPhone] = useState('+90');
+  const [otp, setOtp] = useState('');
+  const [confirmer, setConfirmer] = useState<ConfirmationResult | null>(null);
+  const recaptchaRef = useRef<HTMLDivElement | null>(null);
+  const recaptchaVerifierRef = useRef<RecaptchaVerifier | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -26,6 +39,45 @@ export default function SignInPage() {
     setBusy(true);
     try {
       await signInWithEmailAndPassword(getFirebaseAuth(), email, password);
+    } catch (x) {
+      setErr((x as Error).message.replace('Firebase: ', ''));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const ensureRecaptcha = (): RecaptchaVerifier => {
+    if (recaptchaVerifierRef.current) return recaptchaVerifierRef.current;
+    const auth = getFirebaseAuth();
+    const verifier = new RecaptchaVerifier(auth, recaptchaRef.current!, {
+      size: 'invisible',
+    });
+    recaptchaVerifierRef.current = verifier;
+    return verifier;
+  };
+
+  const onPhoneSend = async (e: React.FormEvent): Promise<void> => {
+    e.preventDefault();
+    setErr(null);
+    setBusy(true);
+    try {
+      const verifier = ensureRecaptcha();
+      const c = await signInWithPhoneNumber(getFirebaseAuth(), phone.trim(), verifier);
+      setConfirmer(c);
+    } catch (x) {
+      setErr((x as Error).message.replace('Firebase: ', ''));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const onPhoneVerify = async (e: React.FormEvent): Promise<void> => {
+    e.preventDefault();
+    if (!confirmer) return;
+    setErr(null);
+    setBusy(true);
+    try {
+      await confirmer.confirm(otp.trim());
     } catch (x) {
       setErr((x as Error).message.replace('Firebase: ', ''));
     } finally {
@@ -83,34 +135,115 @@ export default function SignInPage() {
           <div className="w-full border-t border-border" />
         </div>
         <div className="relative flex justify-center text-xs text-fg-dim">
-          <span className="px-2 bg-bg-card">veya e-posta ile</span>
+          <span className="px-2 bg-bg-card">veya</span>
         </div>
       </div>
 
-      <form onSubmit={onEmailSignIn} className="space-y-3">
-        <input
-          type="email"
-          placeholder="E-posta"
-          className="input"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          autoComplete="email"
-          required
-        />
-        <input
-          type="password"
-          placeholder="Şifre"
-          className="input"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          autoComplete="current-password"
-          required
-        />
-        {err ? <p className="text-sm text-red-400">{err}</p> : null}
-        <button type="submit" className="btn-primary w-full py-3" disabled={busy}>
-          {busy ? 'Giriş yapılıyor…' : 'Giriş yap'}
+      <div className="mb-3 flex items-center gap-1 rounded-lg bg-white/5 p-1 ring-1 ring-white/10">
+        <button
+          type="button"
+          onClick={() => {
+            setMode('email');
+            setConfirmer(null);
+            setErr(null);
+          }}
+          className={`flex-1 rounded-md px-3 py-1.5 text-xs font-medium transition ${
+            mode === 'email' ? 'bg-bg-card text-fg ring-1 ring-white/10' : 'text-fg-muted'
+          }`}
+        >
+          E-posta
         </button>
-      </form>
+        <button
+          type="button"
+          onClick={() => {
+            setMode('phone');
+            setErr(null);
+          }}
+          className={`flex-1 rounded-md px-3 py-1.5 text-xs font-medium transition ${
+            mode === 'phone' ? 'bg-bg-card text-fg ring-1 ring-white/10' : 'text-fg-muted'
+          }`}
+        >
+          Telefon
+        </button>
+      </div>
+
+      {mode === 'email' ? (
+        <form onSubmit={onEmailSignIn} className="space-y-3">
+          <input
+            type="email"
+            placeholder="E-posta"
+            className="input"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            autoComplete="email"
+            required
+          />
+          <input
+            type="password"
+            placeholder="Şifre"
+            className="input"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            autoComplete="current-password"
+            required
+          />
+          {err ? <p className="text-sm text-red-400">{err}</p> : null}
+          <button type="submit" className="btn-primary w-full py-3" disabled={busy}>
+            {busy ? 'Giriş yapılıyor…' : 'Giriş yap'}
+          </button>
+        </form>
+      ) : !confirmer ? (
+        <form onSubmit={onPhoneSend} className="space-y-3">
+          <input
+            type="tel"
+            placeholder="+90 555 123 4567"
+            className="input"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            autoComplete="tel"
+            required
+          />
+          <p className="text-[11px] text-fg-dim">
+            Ülke koduyla birlikte yaz (örn. +90).
+          </p>
+          {err ? <p className="text-sm text-red-400">{err}</p> : null}
+          <button type="submit" className="btn-primary w-full py-3" disabled={busy}>
+            {busy ? 'Kod gönderiliyor…' : 'Kod gönder'}
+          </button>
+        </form>
+      ) : (
+        <form onSubmit={onPhoneVerify} className="space-y-3">
+          <input
+            type="text"
+            inputMode="numeric"
+            placeholder="SMS kodu"
+            className="input font-mono tracking-widest"
+            value={otp}
+            onChange={(e) => setOtp(e.target.value)}
+            maxLength={6}
+            required
+          />
+          <p className="text-[11px] text-fg-dim">
+            {phone} numarasına gönderilen 6 haneli kodu gir.
+          </p>
+          {err ? <p className="text-sm text-red-400">{err}</p> : null}
+          <button type="submit" className="btn-primary w-full py-3" disabled={busy}>
+            {busy ? 'Doğrulanıyor…' : 'Doğrula'}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setConfirmer(null);
+              setOtp('');
+            }}
+            className="w-full text-xs text-fg-muted hover:text-fg"
+          >
+            Numarayı değiştir
+          </button>
+        </form>
+      )}
+
+      <div ref={recaptchaRef} className="mt-3" />
     </AuthCard>
   );
 }

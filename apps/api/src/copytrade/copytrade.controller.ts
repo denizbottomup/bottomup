@@ -1,4 +1,14 @@
-import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Put,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { FirebaseAuthGuard } from '../common/guards/firebase-auth.guard.js';
 import { CurrentUser, type AuthedUser } from '../common/decorators/current-user.decorator.js';
 import {
@@ -6,6 +16,7 @@ import {
   type CopyTradeRow,
   type CopyTradeStats,
   type TeamInfo,
+  type TeamMember,
 } from './copytrade.service.js';
 
 @Controller('/copy_trade')
@@ -16,6 +27,42 @@ export class CopyTradeController {
   @Get('/team')
   team(@CurrentUser() viewer: AuthedUser): Promise<TeamInfo> {
     return this.ct.team(viewer);
+  }
+
+  @Patch('/team')
+  renameTeam(
+    @CurrentUser() viewer: AuthedUser,
+    @Body() body: { name?: string },
+  ): Promise<TeamInfo> {
+    return this.ct.renameTeam(viewer, String(body?.name ?? ''));
+  }
+
+  @Delete('/team')
+  deleteTeam(@CurrentUser() viewer: AuthedUser): Promise<{ ok: true }> {
+    return this.ct.deleteTeam(viewer);
+  }
+
+  @Get('/team/members')
+  members(
+    @CurrentUser() viewer: AuthedUser,
+  ): Promise<{ items: TeamMember[] }> {
+    return this.ct.listMembers(viewer);
+  }
+
+  @Put('/team/trader/:traderId')
+  addTrader(
+    @CurrentUser() viewer: AuthedUser,
+    @Param('traderId') traderId: string,
+  ): Promise<{ ok: true }> {
+    return this.ct.addTeamTrader(viewer, traderId);
+  }
+
+  @Delete('/team/trader/:traderId')
+  removeTrader(
+    @CurrentUser() viewer: AuthedUser,
+    @Param('traderId') traderId: string,
+  ): Promise<{ ok: true }> {
+    return this.ct.removeTeamTrader(viewer, traderId);
   }
 
   @Get('/team/stats')

@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { ApiError, api } from '@/lib/api';
 import { useTicker } from '@/lib/ticker';
+import { MarketPulse } from '@/components/market-pulse';
 
 interface LeaderboardRow {
   trader_id: string;
@@ -112,6 +113,15 @@ export default function AnalyticsPage() {
       </div>
 
       {err ? <p className="mt-3 text-xs text-rose-300">{err}</p> : null}
+
+      <section className="mt-5">
+        <h2 className="text-xs font-semibold uppercase tracking-wider text-fg-muted">
+          Pazar pulsu
+        </h2>
+        <div className="mt-2">
+          <MarketPulse />
+        </div>
+      </section>
 
       <section className="mt-5">
         <h2 className="text-xs font-semibold uppercase tracking-wider text-fg-muted">Hot Coin</h2>

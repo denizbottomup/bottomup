@@ -10,6 +10,7 @@ import { WatchlistModule } from './watchlist/watchlist.module.js';
 import { CopyTradeModule } from './copytrade/copytrade.module.js';
 import { SearchModule } from './search/search.module.js';
 import { AnalyticsModule } from './analytics/analytics.module.js';
+import { MarketIntelModule } from './market-intel/market-intel.module.js';
 import { MiscModule } from './misc/misc.module.js';
 import { PrismaModule } from './common/prisma.module.js';
 
@@ -27,6 +28,7 @@ import { PrismaModule } from './common/prisma.module.js';
     CopyTradeModule,
     SearchModule,
     AnalyticsModule,
+    MarketIntelModule,
     MiscModule,
   ],
 })
