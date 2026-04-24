@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 import { ApiError, api } from '@/lib/api';
 import { SetupChart } from '@/components/setup-chart';
@@ -95,6 +95,7 @@ interface HistoryPoint {
 export default function SetupDetailPage() {
   const params = useParams<{ setupId: string }>();
   const setupId = params?.setupId;
+  const router = useRouter();
 
   const [detail, setDetail] = useState<SetupDetail | null>(null);
   const [foxy, setFoxy] = useState<FoxyVerdict | null>(null);
@@ -106,6 +107,9 @@ export default function SetupDetailPage() {
   const [clapPending, setClapPending] = useState(false);
   const [shareToast, setShareToast] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
+  const [meId, setMeId] = useState<string | null>(null);
+  const [manageOpen, setManageOpen] = useState(false);
+  const [managePending, setManagePending] = useState(false);
 
   useEffect(() => {
     if (!setupId) return;
@@ -117,14 +121,16 @@ export default function SetupDetailPage() {
       api<{ items: SetupEvent[] }>(`/feed/setup/${setupId}/events?limit=40`).catch(() => ({ items: [] })),
       api<{ items: HistoryPoint[] }>(`/setup/${setupId}/previous_values?limit=60`).catch(() => ({ items: [] })),
       api<{ watched: boolean }>(`/watch_list/status/${setupId}`).catch(() => ({ watched: false })),
+      api<{ id: string }>(`/user/me`).catch(() => null),
     ])
-      .then(([d, f, e, h, w]) => {
+      .then(([d, f, e, h, w, m]) => {
         if (!alive) return;
         setDetail(d);
         setFoxy(f);
         setEvents(e.items);
         setHistory(h.items);
         setWatched(w.watched);
+        setMeId(m?.id ?? null);
       })
       .catch((x) => {
         if (!alive) return;
@@ -175,6 +181,45 @@ export default function SetupDetailPage() {
       setClapPending(false);
     }
   }, [detail]);
+
+  const onClose = useCallback(
+    async (reason: 'success' | 'stop' | 'cancel') => {
+      if (!detail) return;
+      const labels: Record<typeof reason, string> = {
+        success: 'Setup başarılı olarak kapatılsın mı?',
+        stop: 'Setup stop ile kapatılsın mı?',
+        cancel: 'Setup iptal edilsin mi?',
+      };
+      if (!window.confirm(labels[reason])) return;
+      setManagePending(true);
+      try {
+        const res = await api<{ ok: true; status: SetupDetail['status'] }>(
+          `/setup/${detail.id}/close`,
+          { method: 'PATCH', body: JSON.stringify({ reason }) },
+        );
+        setDetail((prev) => (prev ? { ...prev, status: res.status } : prev));
+        setManageOpen(false);
+      } catch (x) {
+        setErr(x instanceof ApiError ? `${x.status} ${x.message}` : (x as Error).message);
+      } finally {
+        setManagePending(false);
+      }
+    },
+    [detail],
+  );
+
+  const onDelete = useCallback(async () => {
+    if (!detail) return;
+    if (!window.confirm('Setup kalıcı olarak silinecek. Emin misin?')) return;
+    setManagePending(true);
+    try {
+      await api<{ ok: true }>(`/setup/${detail.id}`, { method: 'DELETE' });
+      router.push('/app/feed');
+    } catch (x) {
+      setErr(x instanceof ApiError ? `${x.status} ${x.message}` : (x as Error).message);
+      setManagePending(false);
+    }
+  }, [detail, router]);
 
   const onShare = useCallback(async () => {
     try {
@@ -244,6 +289,45 @@ export default function SetupDetailPage() {
           >
             Bildir
           </button>
+          {meId && meId === detail.trader.id ? (
+            <div className="relative">
+              <button
+                onClick={() => setManageOpen((v) => !v)}
+                disabled={managePending}
+                className="rounded-md bg-amber-400/10 px-3 py-1.5 text-xs text-amber-300 ring-1 ring-amber-400/30 hover:bg-amber-400/15 disabled:opacity-60"
+              >
+                {managePending ? 'İşleniyor…' : 'Yönet ▾'}
+              </button>
+              {manageOpen ? (
+                <div className="absolute right-0 z-20 mt-1 w-44 overflow-hidden rounded-lg border border-white/10 bg-bg-card shadow-xl">
+                  <ManageItem
+                    label="Başarıyla kapat"
+                    tone="emerald"
+                    disabled={managePending}
+                    onClick={() => void onClose('success')}
+                  />
+                  <ManageItem
+                    label="Stop ile kapat"
+                    tone="rose"
+                    disabled={managePending}
+                    onClick={() => void onClose('stop')}
+                  />
+                  <ManageItem
+                    label="İptal et"
+                    tone="dim"
+                    disabled={managePending}
+                    onClick={() => void onClose('cancel')}
+                  />
+                  <ManageItem
+                    label="Sil"
+                    tone="danger"
+                    disabled={managePending}
+                    onClick={() => void onDelete()}
+                  />
+                </div>
+              ) : null}
+            </div>
+          ) : null}
         </div>
       </div>
 
@@ -453,6 +537,36 @@ function CoinIcon({ src, code, size }: { src: string | null; code: string; size:
     >
       {initial}
     </div>
+  );
+}
+
+function ManageItem({
+  label,
+  tone,
+  disabled,
+  onClick,
+}: {
+  label: string;
+  tone: 'emerald' | 'rose' | 'dim' | 'danger';
+  disabled?: boolean;
+  onClick: () => void;
+}) {
+  const toneClass =
+    tone === 'emerald'
+      ? 'text-emerald-300 hover:bg-emerald-400/10'
+      : tone === 'rose'
+        ? 'text-rose-300 hover:bg-rose-400/10'
+        : tone === 'danger'
+          ? 'text-rose-400 hover:bg-rose-500/15'
+          : 'text-fg-muted hover:bg-white/5';
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className={`block w-full px-3 py-2 text-left text-xs transition disabled:opacity-50 ${toneClass}`}
+    >
+      {label}
+    </button>
   );
 }
 

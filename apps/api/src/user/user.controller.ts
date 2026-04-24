@@ -1,7 +1,13 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Put, Query, UseGuards } from '@nestjs/common';
 import { FirebaseAuthGuard } from '../common/guards/firebase-auth.guard.js';
 import { CurrentUser, type AuthedUser } from '../common/decorators/current-user.decorator.js';
-import { UserService, type NotificationRow } from './user.service.js';
+import {
+  UserService,
+  type NotificationRow,
+  type SubscriptionRow,
+  type TraderEarningRow,
+  type TraderEarningSummary,
+} from './user.service.js';
 
 @Controller('/user')
 @UseGuards(FirebaseAuthGuard)
@@ -42,6 +48,20 @@ export class UserController {
     @Param('id') id: string,
   ): Promise<{ ok: true }> {
     return this.users.markNotificationRead(user, id);
+  }
+
+  @Get('/me/subscriptions')
+  subscriptions(
+    @CurrentUser() user: AuthedUser,
+  ): Promise<{ items: SubscriptionRow[] }> {
+    return this.users.listMySubscriptions(user);
+  }
+
+  @Get('/me/trader-earnings')
+  traderEarnings(
+    @CurrentUser() user: AuthedUser,
+  ): Promise<{ items: TraderEarningRow[]; summary: TraderEarningSummary }> {
+    return this.users.listMyEarnings(user);
   }
 
   @Get('/me/blocks')

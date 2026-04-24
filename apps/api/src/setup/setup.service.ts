@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Inject,
   Injectable,
   NotFoundException,
@@ -409,6 +410,98 @@ export class SetupService {
       content,
     );
     return { ok: true };
+  }
+
+  /**
+   * Trader closes their own setup. The body's `reason` steers the final
+   * status: 'cancel' → 'cancelled', 'stop' → 'stopped', anything else
+   * falls through to 'closed'. An explicit `close_price` is optional; if
+   * not supplied the setup just gets its status bumped with close_date.
+   */
+  async close(
+    viewer: AuthedUser,
+    setupId: string,
+    body: { reason?: string; close_price?: number | null; note?: string | null },
+  ): Promise<{ ok: true; status: string }> {
+    await this.assertOwner(viewer, setupId);
+    const reason = String(body?.reason ?? '').toLowerCase();
+    const status =
+      reason === 'cancel' || reason === 'cancelled'
+        ? 'cancelled'
+        : reason === 'stop' || reason === 'stopped'
+          ? 'stopped'
+          : 'closed';
+    const closePrice =
+      body?.close_price == null ? null : Number(body.close_price);
+    if (closePrice != null && !Number.isFinite(closePrice)) {
+      throw new BadRequestException('close_price invalid');
+    }
+    const note = body?.note ? String(body.note).slice(0, 500) : null;
+
+    await this.prisma.$executeRawUnsafe(
+      `UPDATE setup
+          SET status = $2::statuses_type,
+              is_active = FALSE,
+              close_price = COALESCE($3, close_price),
+              close_date = NOW(),
+              last_acted_at = NOW(),
+              updated_at = NOW()
+        WHERE id = $1::uuid`,
+      setupId,
+      status,
+      closePrice,
+    );
+
+    await this.prisma.$executeRawUnsafe(
+      `INSERT INTO setup_events
+         (setup_id, trader_id, event_time, changed_column, old_value, new_value, action)
+       SELECT s.id, s.trader_id, NOW(), 'status', NULL, $2, 'update'
+         FROM setup s WHERE s.id = $1::uuid`,
+      setupId,
+      status,
+    );
+    void note;
+    return { ok: true, status };
+  }
+
+  /**
+   * Trader soft-deletes their own setup. Sets is_deleted = TRUE and
+   * status = 'cancelled' so it drops out of feeds and stats immediately.
+   */
+  async remove(viewer: AuthedUser, setupId: string): Promise<{ ok: true }> {
+    await this.assertOwner(viewer, setupId);
+    await this.prisma.$executeRawUnsafe(
+      `UPDATE setup
+          SET is_deleted = TRUE,
+              is_active = FALSE,
+              status = 'cancelled'::statuses_type,
+              close_date = COALESCE(close_date, NOW()),
+              last_acted_at = NOW(),
+              updated_at = NOW()
+        WHERE id = $1::uuid`,
+      setupId,
+    );
+    await this.prisma.$executeRawUnsafe(
+      `INSERT INTO setup_events
+         (setup_id, trader_id, event_time, changed_column, old_value, new_value, action)
+       SELECT s.id, s.trader_id, NOW(), 'is_deleted', 'FALSE', 'TRUE', 'delete'
+         FROM setup s WHERE s.id = $1::uuid`,
+      setupId,
+    );
+    return { ok: true };
+  }
+
+  private async assertOwner(viewer: AuthedUser, setupId: string): Promise<void> {
+    const viewerId = await this.resolveViewerId(viewer);
+    const rows = await this.prisma.$queryRawUnsafe<Array<{ trader_id: string | null }>>(
+      `SELECT trader_id::text AS trader_id FROM setup WHERE id = $1::uuid LIMIT 1`,
+      setupId,
+    );
+    const row = rows[0];
+    if (!row) throw new NotFoundException('Setup not found');
+    if (!row.trader_id || row.trader_id !== viewerId) {
+      throw new ForbiddenException('Only the setup owner can perform this action');
+    }
   }
 
   /** Refresh setup.clap_count approximately from the clap table. */

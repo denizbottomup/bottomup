@@ -4,6 +4,7 @@ import {
   Delete,
   Get,
   Param,
+  Patch,
   Post,
   Put,
   Query,
@@ -74,6 +75,23 @@ export class SetupController {
     @Param('setupId') setupId: string,
   ): Promise<{ ok: true; clap_count: number }> {
     return this.setups.unclap(viewer, setupId);
+  }
+
+  @Patch(':setupId/close')
+  close(
+    @CurrentUser() viewer: AuthedUser,
+    @Param('setupId') setupId: string,
+    @Body() body: { reason?: string; close_price?: number | null; note?: string | null },
+  ): Promise<{ ok: true; status: string }> {
+    return this.setups.close(viewer, setupId, body ?? {});
+  }
+
+  @Delete(':setupId')
+  remove(
+    @CurrentUser() viewer: AuthedUser,
+    @Param('setupId') setupId: string,
+  ): Promise<{ ok: true }> {
+    return this.setups.remove(viewer, setupId);
   }
 
   @Post(':setupId/report')
