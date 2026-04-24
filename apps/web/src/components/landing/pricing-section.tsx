@@ -1,104 +1,110 @@
-import Link from 'next/link';
+'use client';
 
-const PLANS = [
+import Link from 'next/link';
+import { useT } from '@/lib/i18n';
+
+const PLAN_META = [
   {
     code: 'monthly',
-    name: 'Monthly',
     price: 30,
     priceLabel: '$30',
-    periodLabel: 'mo',
-    total: null,
-    save: null,
-    features: [
-      'Full marketplace access — traders, bots, AI agents',
-      'Foxy AI firewall on every signal',
-      'Live market dashboard (CoinGlass + Binance)',
-      'Portfolio simulation against live prices',
-      'Community chat · 7 channels',
-      'Web + push notifications',
-    ],
-    cta: 'Start monthly',
+    total: null as number | null,
     highlight: false,
+    saveKey: null as 'save_17' | 'save_25' | null,
   },
   {
     code: 'quarter',
-    name: '3 Months',
     price: 25,
     priceLabel: '$25',
-    periodLabel: 'mo',
     total: 75,
-    save: 'Save 17%',
-    features: [
-      'Everything in Monthly',
-      'OKX copy trading — one-click execution',
-      'MCP Suite — all 9 AI agents',
-      'Quarterly performance report',
-      'Priority support',
-    ],
-    cta: 'Start quarterly',
     highlight: true,
+    saveKey: 'save_17' as const,
   },
   {
     code: 'half',
-    name: '6 Months',
     price: 22.5,
     priceLabel: '$22.50',
-    periodLabel: 'mo',
     total: 135,
-    save: 'Save 25%',
-    features: [
-      'Everything in Quarterly',
-      '$BUP token rewards on trade volume',
-      'Early access to TradFi markets (Q1 2027)',
-      '1:1 strategy consult',
-      'Founders community badge',
-    ],
-    cta: 'Start 6 months',
     highlight: false,
+    saveKey: 'save_25' as const,
   },
 ];
 
 export function PricingSection() {
+  const { t } = useT();
+  const plans = PLAN_META.map((m, i) => ({
+    ...m,
+    name: t.pr.plans[i]?.name ?? '',
+    cta: t.pr.plans[i]?.cta ?? '',
+    features: t.pr.plans[i]?.features ?? [],
+  }));
   return (
     <section id="pricing" className="border-y border-border bg-bg-card/30">
       <div className="mx-auto max-w-[1400px] px-4 py-14 md:px-8 md:py-20">
         <header className="mx-auto max-w-2xl text-center">
           <div className="text-[11px] uppercase tracking-[0.2em] text-brand">
-            Pricing
+            {t.pr.label}
           </div>
           <h2 className="mt-1 text-4xl font-extrabold tracking-[-0.02em] md:text-6xl">
-            One blocked bad trade{' '}
-            <span className="logo-gradient">covers the year.</span>
+            {t.pr.headline_1}{' '}
+            <span className="logo-gradient">{t.pr.headline_2}</span>
           </h2>
           <p className="mt-3 text-sm text-fg-muted">
-            Subscriptions unlock the marketplace, Foxy firewall, and the full
-            MCP Suite. Individual shops subscribe via BottomUP Credits —
-            creators earn 25% of revenue they generate.
+            {t.pr.subtitle}
           </p>
         </header>
 
         <div className="mx-auto mt-10 grid max-w-6xl grid-cols-1 gap-4 md:grid-cols-3">
-          {PLANS.map((p) => (
-            <PlanCard key={p.code} plan={p} />
+          {plans.map((p) => (
+            <PlanCard
+              key={p.code}
+              plan={p}
+              mostPopular={t.pr.most_popular}
+              billedMonthly={t.pr.billed_monthly}
+              billedUpfront={t.pr.billed_upfront}
+              saveLabel={
+                p.saveKey === 'save_17'
+                  ? t.pr.save_17
+                  : p.saveKey === 'save_25'
+                    ? t.pr.save_25
+                    : null
+              }
+            />
           ))}
         </div>
 
         <p className="mt-8 text-center text-[11px] text-fg-dim">
-          All plans billed in USD and auto-renew at the end of each period
-          unless cancelled. Cancel anytime from your account or via your app
-          store. Partial periods are not pro-rated. Not a substitute for
-          investment advice — see the{' '}
-          <a href="/risk-disclosure" className="underline hover:text-fg">
-            Risk Disclosure
-          </a>
-          . Copy-trading is not offered to U.S. persons.
+          {t.pr.footer}
         </p>
       </div>
     </section>
   );
 }
 
-function PlanCard({ plan }: { plan: (typeof PLANS)[number] }) {
+interface Plan {
+  code: string;
+  name: string;
+  price: number;
+  priceLabel: string;
+  total: number | null;
+  highlight: boolean;
+  features: string[];
+  cta: string;
+}
+
+function PlanCard({
+  plan,
+  mostPopular,
+  billedMonthly,
+  billedUpfront,
+  saveLabel,
+}: {
+  plan: Plan;
+  mostPopular: string;
+  billedMonthly: string;
+  billedUpfront: string;
+  saveLabel: string | null;
+}) {
   return (
     <div
       className={`relative flex flex-col rounded-2xl border p-6 transition ${
@@ -109,7 +115,7 @@ function PlanCard({ plan }: { plan: (typeof PLANS)[number] }) {
     >
       {plan.highlight ? (
         <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-brand px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-white">
-          Most popular
+          {mostPopular}
         </div>
       ) : null}
       <div className="text-[11px] uppercase tracking-wider text-fg-muted">
@@ -117,19 +123,19 @@ function PlanCard({ plan }: { plan: (typeof PLANS)[number] }) {
       </div>
       <div className="mt-2 flex items-baseline gap-1">
         <span className="text-4xl font-semibold text-fg">{plan.priceLabel}</span>
-        <span className="text-sm text-fg-muted">/ {plan.periodLabel}</span>
+        <span className="text-sm text-fg-muted">/ mo</span>
       </div>
       {plan.total != null ? (
         <div className="mt-1 text-[11px] text-fg-dim">
-          ${plan.total} billed upfront{' '}
-          {plan.save ? (
+          {billedUpfront.replace('{total}', `$${plan.total}`)}{' '}
+          {saveLabel ? (
             <span className="ml-1 rounded-md bg-emerald-400/10 px-1.5 py-0.5 text-emerald-300 ring-1 ring-emerald-400/30">
-              {plan.save}
+              {saveLabel}
             </span>
           ) : null}
         </div>
       ) : (
-        <div className="mt-1 text-[11px] text-fg-dim">Billed monthly, renews</div>
+        <div className="mt-1 text-[11px] text-fg-dim">{billedMonthly}</div>
       )}
 
       <ul className="mt-6 flex flex-1 flex-col gap-2 text-sm text-fg">

@@ -1,12 +1,17 @@
+'use client';
+
+import { useT } from '@/lib/i18n';
+
 export function IntroVideoSection() {
+  const { t } = useT();
   return (
     <section id="intro" className="relative">
       <div className="mx-auto max-w-[1100px] px-4 py-10 md:px-8 md:py-16">
         <header className="text-center">
-          <div className="mono-label">Watch the intro</div>
+          <div className="mono-label">{t.intro.label}</div>
           <h2 className="mt-2 text-3xl font-extrabold tracking-[-0.02em] md:text-5xl">
-            60 seconds on{' '}
-            <span className="logo-gradient">how BottomUP works.</span>
+            {t.intro.headline_1}{' '}
+            <span className="logo-gradient">{t.intro.headline_2}</span>
           </h2>
         </header>
 

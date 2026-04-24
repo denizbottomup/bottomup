@@ -1,0 +1,351 @@
+import type { Dict } from './schema';
+
+export const zh: Dict = {
+  nav: {
+    foxy: 'Foxy AI',
+    marketplace: '市场',
+    mcp: 'MCP 套件',
+    traders: '交易员',
+    pricing: '价格',
+    signin: '登录',
+    signup: '免费开始',
+  },
+  hero: {
+    headline_1: '聪明钱的',
+    headline_2: 'App Store。',
+    subtitle:
+      '自动化投资组合管理,让任何人都能通过去中心化市场跟随顶级交易员和 AI agent。',
+    cta_primary: '免费开始 →',
+    cta_secondary: 'Foxy 如何保护你',
+    kpi_volume: '交易额',
+    kpi_downloads: '下载量',
+    kpi_mau: 'MAU',
+    kpi_trustpilot: 'Trustpilot',
+    kpi_volume_sub: '累计',
+    kpi_downloads_sub: '$0 CAC',
+    kpi_mau_sub: 'DAU/MAU 24%',
+    kpi_trustpilot_sub: '优秀',
+  },
+  partners: {
+    exchanges: '交易所与生态合作伙伴',
+    backed_by: '投资方',
+  },
+  intro: {
+    label: '观看介绍',
+    headline_1: '60 秒了解',
+    headline_2: 'BottomUP 如何运作。',
+  },
+  mobile: {
+    label: '尽在掌中',
+    headline_1: '信号、模拟和',
+    headline_2: '实时跟单',
+    headline_3: '— 全在一个 app。',
+    body: '关注你选择的交易员,在每个 setup 旁看到 Foxy 的评估,市场有新动作第一时间推送给你。无需来回切换,不错过任何机会。',
+    bullet_push: '每个新 setup 都有实时推送',
+    bullet_score: '每张卡片都有 Foxy AI 风险评分',
+    bullet_copy: '已连接 OKX 时一键跟单',
+    bullet_sim: '$10,000 虚拟资金的投资组合模拟器',
+  },
+  ps: {
+    label: '我们的论点',
+    headline_1: '散户交易已经坏掉。',
+    headline_2: '我们重建了它。',
+    subtitle:
+      '自动化投资组合管理,让任何人都可以通过去中心化市场跟随顶级交易员和 AI agent — 由我们的风险防火墙端到端审计。',
+    before: '使用 BottomUP 之前',
+    with: '使用 BottomUP',
+    rows: [
+      {
+        problem_title: '你复制糟糕的交易',
+        problem_body:
+          '你的交易员用 50 倍杠杆报复性交易 — 你也一样。没有过滤,没有第二意见,没有止损。',
+        solution_title: 'AI 风险总监',
+        solution_body:
+          'Foxy AI 通过 225 个数据源审计每个信号并拦截未通过的 — 即使是你的交易员发送的。',
+      },
+      {
+        problem_title: '你的 alpha 分散',
+        problem_body:
+          '顶级交易员在 Telegram。机器人开发者在 Discord。信号在三个交易所。切换标签比下单花更多时间。',
+        solution_title: '一个 app,所有策略',
+        solution_body:
+          '人类交易员、算法机器人和 AI agent — 全部在一个市场。用 Credits 订阅,订单 24/7 在你的钱包执行。',
+      },
+      {
+        problem_title: '市场孤立,你也孤立',
+        problem_body:
+          '加密在一个 app,股票在另一个,外汇在别处。没有五次登录就无法构建跨资产论点。',
+        solution_title: '一个终端,多种资产',
+        solution_body:
+          '加密今天就有。股票、外汇和大宗商品将于 2027 年 Q1 到达相同轨道 — 一个账户,一个投资组合视图。',
+      },
+    ],
+  },
+  foxy: {
+    label: 'Foxy AI · 风险防火墙',
+    headline_1: '每笔交易',
+    headline_2: '都经过审计',
+    headline_3: '才能到达你的钱包。',
+    subtitle:
+      'Foxy 是我们自研的 AI,用 225 个数据源训练。当交易员、机器人或 agent 发布信号时,Foxy 根据技术面、基本面、新闻、订单簿深度和作者的风险模式打 0–100 分。分数为红色,交易被拦截 — 即使你已订阅。',
+    pillars: [
+      { title: '审计', body: '每个进入的信号在执行前都被拦截并在 225 个来源中打分。' },
+      { title: '拦截', body: '超出你的风险承受能力的交易在防火墙处停止 — 而非损失之后。' },
+      { title: '优化', body: '入场/离场订单经过调整以减少滑点并提高净 P&L。' },
+      { title: '模拟', body: '建立投资组合,在实时价格下模拟团队表现,再承担真实资本风险。' },
+    ],
+    signal_flow: '信号流',
+    trader_node: '交易员 / 机器人 / AI agent',
+    trader_node_sub: '发布信号',
+    foxy_node: 'Foxy AI 防火墙',
+    foxy_node_sub: '风险评分 0–100 · 225 数据源',
+    decision_bad: '风险 > 阈值',
+    decision_bad_body: '已拦截 ✕',
+    decision_ok: '风险正常',
+    decision_ok_body: '已优化 ✓',
+    wallet_node: '你的钱包',
+    wallet_node_sub: '仅在 Foxy 批准时执行',
+    stat: '✓ Foxy 在过去 30 天的市场上拦截了 1,247 个风险信号。',
+  },
+  mkt: {
+    label: '市场',
+    headline_1: '三种策略。',
+    headline_2: '一个市场。',
+    subtitle:
+      '创作者开店。用户用 BottomUP Credits 订阅。策略 24/7 在你连接的钱包中执行 — 每笔订单先经过 Foxy。',
+    golive: '市场上线 · 2026 年 5 月',
+    shops: [
+      {
+        kind: '人类交易员',
+        tagline: '关注为每个呼叫署名的分析师。',
+        bullets: [
+          '已验证的 P&L 曲线、胜率和风险画像',
+          '带 entry / stop / TP 的实时发布 setup',
+          '创作者获得 25% 订阅 + 交易量分成',
+        ],
+      },
+      {
+        kind: '算法机器人',
+        tagline: '经审核、回测的策略 24/7 运行。',
+        bullets: [
+          '策略来源透明,非黑盒',
+          '订阅一次,在你睡觉时执行',
+          'Foxy 立即停用行为异常的机器人',
+        ],
+      },
+      {
+        kind: 'AI agent',
+        tagline: '拥有专门任务的自主 agent。',
+        bullets: [
+          'Alpha 侦察、再平衡、对冲、airdrop 猎人',
+          '每 2 个月新增 agent 类型',
+          '由 MCP Suite 支持',
+        ],
+      },
+    ],
+    credits_label: 'BottomUP Credits · 微观经济如何运作',
+    steps: [
+      { title: '购买 Credits', body: '信用卡或加密货币。Credits 是所有店铺的通用货币。' },
+      { title: '订阅店铺', body: '选择你信任的交易员、机器人或 agent。随时取消。' },
+      { title: 'Foxy 审计信号', body: '每笔订单在离开防火墙前都被打 0–100 分。' },
+      { title: '钱包执行', body: '批准的订单直接到你连接的钱包,24/7。' },
+    ],
+  },
+  lb: {
+    label: '实时排行榜',
+    headline_1: '第一天 $10,000。',
+    headline_2: '他们现在在哪?',
+    subtitle:
+      '每位交易员以虚拟 $10,000 开始本月。点击卡片查看完整分析面板 — 净值曲线、R 分布、月度 P&L、币种细分。',
+    disclaimer:
+      '模拟结果。假设性业绩有其固有局限。过往表现不代表未来结果。',
+    cta: '浏览市场 →',
+    empty: '本月暂无已关闭的交易 — 稍后再来。',
+    balance_label: '虚拟余额',
+    from_label: '从本月 $10,000 起',
+    trades: '交易',
+    wins: '获胜',
+    win_rate: '胜率',
+    live: '运行中',
+    drawdown: '回撤',
+    view_full: '查看完整分析 →',
+    followers: '粉丝',
+  },
+  mcp: {
+    label: 'MCP Suite',
+    headline_1: '九个',
+    headline_2: 'Modular Crypto Processors,协同工作。',
+    subtitle:
+      '每个 MCP 都是专业的 AI agent,把信息混乱转化为可操作的洞察。与 Foxy 同步运行 — 你的交易到达时已经过审计、时机优化,并与你的策略匹配。',
+    cards: [
+      { title: '风险缓解', body: '实时标记你关注的每位交易员的报复性交易、过高杠杆和不安全仓位规模。' },
+      { title: '交易时机', body: '观察订单簿深度、宏观事件(FOMC、CPI、ETF)和历史滑点,推荐最佳入场和离场窗口。' },
+      { title: '匹配', body: '为你的风险偏好建模,并配对相容的交易风格 — scalper、动量或长期 swing。' },
+      { title: '代币研究', body: '检查合约健康度、开发者活动、巨鲸钱包行为和社交激增。产生投资假设,而非原始噪音。' },
+      { title: '新币与空投侦察', body: '监控新部署、testnet 活动和 Telegram 热度。提前告知 alpha 并识别符合空投资格的钱包。' },
+      { title: '投资组合再平衡', body: '当市场移动时检测过度暴露和行业相关性风险。在回撤到来前建议对冲或轮换。' },
+      { title: '监管扫描', body: '拉取新闻、交易所政策更新和地区法律信号。在合规风险 — 下架、制裁 — 发生前提醒你。' },
+      { title: '情绪背离', body: '在链上看涨但 Twitter/Reddit 看跌时捕捉隐藏 alpha。完美适合在人群醒来前提前布局。' },
+      { title: '操纵监视', body: '跟踪意见领袖钱包活动、推广时机和放大模式。标记协调 pump 和付费病毒炒作。' },
+    ],
+  },
+  pulse: {
+    label: '实时市场背景',
+    headline_1: 'Foxy 使用的',
+    headline_2: '同一组数据。',
+    headline_3: '',
+    subtitle:
+      'CoinGlass、CoinGecko 和 Binance 期货实时喂给 Foxy 防火墙。你看到完全相同的面板:Fear & Greed、BTC dominance、跨交易所资金费率、long/short 偏向、24h 爆仓和未平仓变化。',
+    auto: '自动刷新 · 5 分钟缓存',
+    fg: 'Fear & Greed 指数',
+    dom: 'BTC Dominance',
+    funding: '顶级资金费率(绝对值)',
+    liq_24h: '24h 爆仓',
+    ls: 'Long / Short 比率',
+    ls_sub: 'Binance · 1h',
+    oi: '未平仓 (24h)',
+    no_data: '无数据',
+    liq_table: '按币种爆仓 · 过去 24h',
+    table_coin: '币种',
+    table_long: 'Long',
+    table_short: 'Short',
+    table_total: '总计',
+    table_split: 'Long/Short',
+  },
+  news: {
+    label: '新闻流',
+    headline_1: '加密新闻,附',
+    headline_2: '情绪标签。',
+    subtitle:
+      '每条新闻标注积极/消极,并链接到受其影响的币种。直接在这里打开 — 无新标签页,无上下文切换。',
+    no_summary: '此文章没有额外摘要。',
+  },
+  pr: {
+    label: '价格',
+    headline_1: '一笔被拦截的糟糕交易',
+    headline_2: '就能覆盖一整年。',
+    subtitle:
+      '订阅解锁市场、Foxy 防火墙和整个 MCP Suite。单个店铺通过 BottomUP Credits 订阅 — 创作者获得其产生收入的 25%。',
+    most_popular: '最受欢迎',
+    billed_monthly: '按月计费,续订',
+    billed_upfront: '{total} 预付',
+    save_17: '节省 17%',
+    save_25: '节省 25%',
+    plans: [
+      {
+        name: '月度',
+        cta: '开始月度',
+        features: [
+          '完整市场访问 — 交易员、机器人、AI agent',
+          '每个信号的 Foxy AI 防火墙',
+          '实时市场仪表板 (CoinGlass + Binance)',
+          '实时价格下的投资组合模拟',
+          '社区聊天 · 7 个频道',
+          'Web + push 通知',
+        ],
+      },
+      {
+        name: '3 个月',
+        cta: '开始季度',
+        features: [
+          '月度计划的一切',
+          'OKX 跟单 — 一键执行',
+          'MCP Suite — 全部 9 个 AI agent',
+          '季度业绩报告',
+          '优先支持',
+        ],
+      },
+      {
+        name: '6 个月',
+        cta: '开始 6 个月',
+        features: [
+          '季度计划的一切',
+          '交易量的 $BUP 代币奖励',
+          '抢先访问 TradFi 市场 (Q1 2027)',
+          '1:1 策略咨询',
+          '创始社区徽章',
+        ],
+      },
+    ],
+    footer:
+      '所有计划以 USD 计费,在每个周期结束时自动续订,除非取消。随时从账户或应用商店取消。部分周期不按比例计算。不可替代投资咨询 — 查看风险披露。跟单功能不向美国居民开放。',
+  },
+  faq: {
+    label: '常见问题',
+    headline_1: '投资者和',
+    headline_2: '交易员',
+    headline_3: '问我们的一切。',
+    items: [
+      {
+        q: 'BottomUP 是投资建议吗?',
+        a: '不是。BottomUP 不是注册投资顾问、broker-dealer 或货币服务企业。平台上的一切 — 信号、Foxy AI 判决、MCP 输出、排行榜余额 — 仅供信息和教育用途。过去的表现(真实或模拟)不代表未来结果。每个交易决策和每次损失都是你自己的。请查看风险披露。',
+      },
+      {
+        q: '跟单对美国居民开放吗?',
+        a: '目前不。OKX 交易所不为美国零售账户服务,因此 BottomUP 无法为美国居民路由实时跟单订单。你可以继续使用社交、分析和模拟功能。当我们推出符合美国合规的经纪人集成时会宣布。',
+      },
+      {
+        q: '一句话概括 BottomUP?',
+        a: '聪明钱的 App Store — 一个你订阅人类交易员、算法机器人和 AI agent 的市场,每个信号在到达你的钱包前都由我们的专有 AI 防火墙审计。',
+      },
+      {
+        q: 'Foxy AI 与常规跟单有何不同?',
+        a: '传统跟单只是镜像交易员(或机器人)发送的任何东西。如果他们用 50 倍杠杆报复性交易,你也会。Foxy 拦截每个信号,在 225 个来源中打 0–100 分,如果风险太高就在防火墙处拦截 — 即使你订阅了。是审计,不是镜像。',
+      },
+      {
+        q: '什么是 MCPs?',
+        a: 'Modular Crypto Processors — 与 Foxy 同步运行的九个专业 AI agent:风险缓解、交易时机、交易员匹配、代币研究、空投侦察、投资组合再平衡、监管扫描、情绪背离和操纵监视。每个都把不同的噪音流转化为可操作信号。',
+      },
+      {
+        q: '市场上可以订阅什么?',
+        a: '三种店铺:发布实时 setup 的人类交易员、24/7 运行的经审核算法机器人,以及具有专门任务的自主 AI agent(alpha 侦察、再平衡、对冲)。Credits 让你订阅所有三种。',
+      },
+      {
+        q: 'OKX 跟单如何工作?',
+        a: '连接你的 OKX API(仅 Read + Trade — 绝不 Withdraw)。当你订阅的创作者发布信号时,Foxy 审计,优化入场/离场,我们的 worker 在你的账户上下同样的单。控制权完全在你 — 随时在 OKX 撤销 API 或与 BottomUP 断开连接。',
+      },
+      {
+        q: '什么是 BottomUP Credits?',
+        a: '市场的通用货币。用信用卡或加密货币购买,订阅任何店铺。创作者获得其产生 Credit 收入的 25% 加上推荐的 10%。平台收取 30%;其余资助基础设施和交易量返利。',
+      },
+      {
+        q: '$BUP 代币已上线吗?',
+        a: '还没有。$BUP 将于 2026 年与市场一起推出,采用 trade-to-earn 机制 — 效用涵盖市场购买、回测访问、完整 Foxy 功能和交易量奖励。更多信息在路演资料和白皮书中。',
+      },
+      {
+        q: '如何今天开始?',
+        a: '在 bupcore.ai 免费注册 — 电子邮件、Google、Apple 或电话。你的账户立即与 iOS 和 Android 同步。浏览店铺,试用 Foxy 模拟模式,准备好时连接 OKX。',
+      },
+    ],
+  },
+  final: {
+    headline_1: '跟随聪明钱。',
+    headline_2: '其余的交给 Foxy。',
+    sub: '交易员、机器人和 AI agent 此刻正在市场上运行。每个信号都被审计。30 秒完成注册。',
+    cta_primary: '免费开始 →',
+    cta_secondary: '登录',
+    disclaimer:
+      '不构成投资建议。加密货币交易存在高损失风险。跟单功能不向美国居民开放。',
+  },
+  ft: {
+    tagline:
+      '聪明钱的 App Store。顶级交易员、AI agent 和算法机器人 — 一个市场,由 Foxy AI 保护。',
+    product: '产品',
+    account: '账户',
+    legal: '法律',
+    nav_foxy: 'Foxy AI',
+    nav_marketplace: '市场',
+    nav_mcp: 'MCP Suite',
+    nav_pricing: '价格',
+    signup: '免费开始',
+    signin: '登录',
+    faq: 'FAQ',
+    terms: '服务条款',
+    privacy: '隐私',
+    risk: '风险披露',
+    disclosure:
+      'BottomUP, Inc. 是特拉华州公司。BottomUP 不是注册投资顾问、broker-dealer、commodity pool operator、commodity trading advisor 或 money services business。服务上的所有内容 — 包括信号、Foxy AI 判决和创作者策略 — 仅供信息和教育目的,不构成个性化的投资、法律或税务建议。过去的表现、模拟表现和假设性结果(包括任何"$10,000 虚拟投资组合"数字)不代表未来结果。交易加密资产,特别是使用杠杆或衍生品,涉及高全损风险。跟单功能目前不向美国居民提供。OFAC 制裁地区的居民不符合资格。',
+    copy: '© {year} BottomUP, Inc. · 保留所有权利。',
+    address: '1209 Orange St, Wilmington, DE 19801, USA',
+  },
+};

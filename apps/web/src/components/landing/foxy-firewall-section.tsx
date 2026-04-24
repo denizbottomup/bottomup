@@ -1,4 +1,11 @@
+'use client';
+
+import { useT } from '@/lib/i18n';
+
+const PILLAR_ICONS = ['🔍', '🚫', '⚙', '🧪'];
+
 export function FoxyFirewallSection() {
+  const { t } = useT();
   return (
     <section id="foxy" className="relative overflow-hidden">
       <div className="pointer-events-none absolute inset-0 -z-10">
@@ -9,42 +16,26 @@ export function FoxyFirewallSection() {
         <div className="grid grid-cols-1 items-start gap-10 lg:grid-cols-[1fr_560px] lg:gap-14">
           <div>
             <div className="inline-flex items-center gap-2 rounded-full border border-emerald-400/40 bg-emerald-400/10 px-3 py-1 text-xs text-emerald-300">
-              Foxy AI · Risk Firewall
+              {t.foxy.label}
             </div>
             <h2 className="mt-4 text-4xl font-extrabold leading-[1.02] tracking-[-0.02em] md:text-5xl lg:text-6xl">
-              Every trade{' '}
-              <span className="logo-gradient">audited</span> before it reaches
-              your wallet.
+              {t.foxy.headline_1}{' '}
+              <span className="logo-gradient">{t.foxy.headline_2}</span>{' '}
+              {t.foxy.headline_3}
             </h2>
             <p className="mt-5 max-w-xl text-base text-fg-muted">
-              Foxy is a proprietary AI trained on 225 data sources. When a
-              trader, bot, or agent publishes a signal, Foxy scores it 0–100
-              against technicals, fundamentals, news, order book depth, and
-              the creator's own risk pattern. If the score is red, the trade
-              is blocked — even if you're subscribed.
+              {t.foxy.subtitle}
             </p>
 
             <div className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <Pillar
-                icon="🔍"
-                title="Audit"
-                body="Every incoming signal is intercepted and scored across 225 sources before execution."
-              />
-              <Pillar
-                icon="🚫"
-                title="Block"
-                body="Trades that breach your risk envelope are stopped at the firewall — not after the loss."
-              />
-              <Pillar
-                icon="⚙"
-                title="Optimize"
-                body="Entry/exit orders are tuned to reduce slippage and increase net P&L inside your wallet."
-              />
-              <Pillar
-                icon="🧪"
-                title="Simulate"
-                body="Build a portfolio, simulate team performance at live prices before committing real capital."
-              />
+              {t.foxy.pillars.map((p, i) => (
+                <Pillar
+                  key={p.title}
+                  icon={PILLAR_ICONS[i] ?? '•'}
+                  title={p.title}
+                  body={p.body}
+                />
+              ))}
             </div>
           </div>
 
@@ -76,49 +67,49 @@ function Pillar({
 }
 
 function FoxyDiagram() {
+  const { t } = useT();
   return (
     <div className="relative rounded-2xl border border-border bg-bg-card/80 p-5 shadow-2xl">
       <div className="text-[10px] uppercase tracking-wider text-fg-dim">
-        Signal flow
+        {t.foxy.signal_flow}
       </div>
       <div className="mt-4 space-y-3">
         <Node
           icon="👤"
-          label="Trader / Bot / AI agent"
-          sub="publishes a signal"
+          label={t.foxy.trader_node}
+          sub={t.foxy.trader_node_sub}
           tone="neutral"
         />
         <Arrow />
         <Node
           icon="🛡"
-          label="Foxy AI firewall"
-          sub="scores risk 0–100 · 225 data sources"
+          label={t.foxy.foxy_node}
+          sub={t.foxy.foxy_node_sub}
           tone="shield"
         />
         <div className="grid grid-cols-2 gap-3">
           <DecisionCard
-            label="Risk > threshold"
-            body="Blocked ✕"
+            label={t.foxy.decision_bad}
+            body={t.foxy.decision_bad_body}
             tone="danger"
           />
           <DecisionCard
-            label="Risk OK"
-            body="Optimized ✓"
+            label={t.foxy.decision_ok}
+            body={t.foxy.decision_ok_body}
             tone="success"
           />
         </div>
         <Arrow />
         <Node
           icon="💼"
-          label="Your wallet"
-          sub="execution, only if Foxy approves"
+          label={t.foxy.wallet_node}
+          sub={t.foxy.wallet_node_sub}
           tone="success"
         />
       </div>
 
       <div className="mt-5 rounded-xl border border-emerald-400/30 bg-emerald-400/[0.08] p-3 text-[11px] text-emerald-200">
-        ✓ Foxy blocked 1,247 risky signals in the last 30 days across the
-        marketplace.
+        {t.foxy.stat}
       </div>
     </div>
   );

@@ -1,86 +1,58 @@
+'use client';
+
+import { useT } from '@/lib/i18n';
+
+const SHOP_EMOJI = ['👤', '🤖', '🧠'];
+
 export function MarketplaceSection() {
+  const { t } = useT();
   return (
     <section id="marketplace" className="border-y border-border bg-bg-card/30">
       <div className="mx-auto max-w-[1400px] px-4 py-14 md:px-8 md:py-20">
         <header className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <div className="text-[11px] uppercase tracking-[0.2em] text-brand">
-              The marketplace
+              {t.mkt.label}
             </div>
             <h2 className="mt-1 text-3xl font-extrabold tracking-[-0.02em] md:text-5xl">
-              Three kinds of strategy.{' '}
-              <span className="logo-gradient">One marketplace.</span>
+              {t.mkt.headline_1}{' '}
+              <span className="logo-gradient">{t.mkt.headline_2}</span>
             </h2>
             <p className="mt-2 max-w-2xl text-sm text-fg-muted">
-              Creators open shops. Users subscribe with BottomUP Credits.
-              Strategies execute 24/7 directly in your connected wallet —
-              every order first audited by Foxy.
+              {t.mkt.subtitle}
             </p>
           </div>
           <span className="rounded-full border border-brand/30 bg-brand/10 px-3 py-1 text-[11px] text-brand">
-            Marketplace go-live · May 2026
+            {t.mkt.golive}
           </span>
         </header>
 
         <div className="mt-10 grid grid-cols-1 gap-4 md:grid-cols-3">
-          <ShopCard
-            emoji="👤"
-            kind="Human traders"
-            tagline="Follow the analysts who put their names on every call."
-            bullets={[
-              'Verified P&L curve, win rate, and risk profile',
-              'Live published setups with entry / stop / TP',
-              'Creator earns 25% of subscription + volume',
-            ]}
-          />
-          <ShopCard
-            emoji="🤖"
-            kind="Algorithmic bots"
-            tagline="Vetted, back-tested strategies running 24/7."
-            bullets={[
-              'Strategy source transparent, not a black box',
-              'Subscribe once, executes while you sleep',
-              'Foxy kills misbehaving bots the moment they drift',
-            ]}
-            highlight
-          />
-          <ShopCard
-            emoji="🧠"
-            kind="AI agents"
-            tagline="Autonomous agents with specialized mandates."
-            bullets={[
-              'Alpha scout, rebalancer, hedger, airdrop hunter',
-              'New agent types every 2 months',
-              'Backed by the MCP Suite for context',
-            ]}
-          />
+          {t.mkt.shops.map((s, i) => (
+            <ShopCard
+              key={s.kind}
+              emoji={SHOP_EMOJI[i] ?? '•'}
+              kind={s.kind}
+              tagline={s.tagline}
+              bullets={s.bullets}
+              highlight={i === 1}
+            />
+          ))}
         </div>
 
         <div className="mt-8 rounded-2xl border border-border bg-bg-card p-5">
           <div className="text-[11px] uppercase tracking-wider text-fg-dim">
-            BottomUP Credits · how the micro-economy works
+            {t.mkt.credits_label}
           </div>
           <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-4">
-            <FlowStep
-              n="1"
-              title="Buy Credits"
-              body="Credit card or crypto. Credits are the universal currency across every shop."
-            />
-            <FlowStep
-              n="2"
-              title="Subscribe to shops"
-              body="Pick the traders, bots, or agents you trust. Cancel any time."
-            />
-            <FlowStep
-              n="3"
-              title="Foxy audits signals"
-              body="Every order is scored 0–100 before it leaves the firewall."
-            />
-            <FlowStep
-              n="4"
-              title="Wallet executes"
-              body="Approved orders route straight to your connected wallet, 24/7."
-            />
+            {t.mkt.steps.map((s, i) => (
+              <FlowStep
+                key={s.title}
+                n={String(i + 1)}
+                title={s.title}
+                body={s.body}
+              />
+            ))}
           </div>
         </div>
       </div>

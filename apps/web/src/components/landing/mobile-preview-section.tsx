@@ -6,57 +6,46 @@ import { StoreBadges } from './store-badges';
 export function MobilePreviewSection() {
   const { t } = useT();
   return (
-    <section className="relative overflow-hidden bg-black">
+    <section className="relative overflow-hidden">
       <div className="pointer-events-none absolute inset-0 -z-10">
         <div className="absolute right-[5%] top-1/2 h-[460px] w-[460px] -translate-y-1/2 rounded-full bg-brand/10 blur-[140px]" />
         <div className="absolute right-[20%] top-[30%] h-[260px] w-[260px] rounded-full bg-violet/10 blur-[120px]" />
       </div>
 
-      <div className="mx-auto grid max-w-[1400px] grid-cols-1 items-center gap-8 px-4 pb-8 pt-8 md:px-8 md:pb-14 md:pt-14 lg:grid-cols-[1fr_620px] lg:gap-14">
-        <div className="order-2 lg:order-1">
+      <div className="mx-auto max-w-[1100px] px-4 py-14 md:px-8 md:py-20">
+        <div className="mx-auto max-w-3xl text-center">
           <div className="mono-label">{t.mobile.label}</div>
           <h2 className="mt-2 text-3xl font-extrabold tracking-[-0.02em] md:text-5xl">
             {t.mobile.headline_1}{' '}
             <span className="logo-gradient">{t.mobile.headline_2}</span>{' '}
             {t.mobile.headline_3}
           </h2>
-          <p className="mt-4 max-w-xl text-sm text-fg-muted md:text-base">
+          <p className="mx-auto mt-4 max-w-2xl text-sm text-fg-muted md:text-base">
             {t.mobile.body}
           </p>
-
-          <ul className="mt-6 grid grid-cols-1 gap-2 text-sm text-fg md:grid-cols-2">
-            <li className="flex items-start gap-2">
-              <Tick />
-              <span>{t.mobile.bullet_push}</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <Tick />
-              <span>{t.mobile.bullet_score}</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <Tick />
-              <span>{t.mobile.bullet_copy}</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <Tick />
-              <span>{t.mobile.bullet_sim}</span>
-            </li>
-          </ul>
-
-          <StoreBadges className="mt-7" />
         </div>
 
-        <div className="order-1 flex items-center justify-center lg:order-2">
-          <video
-            src="https://statics.bottomup.app/www/main.mp4"
-            autoPlay
-            loop
-            muted
-            playsInline
-            preload="auto"
-            aria-hidden
-            className="mix-blend-lighten w-full max-w-[560px] drop-shadow-[0_20px_60px_rgba(124,92,255,0.25)]"
-          />
+        <ul className="mx-auto mt-10 grid max-w-3xl grid-cols-1 gap-3 text-sm text-fg md:grid-cols-2">
+          <li className="flex items-start gap-2 rounded-xl border border-border bg-bg-card/40 p-4">
+            <Tick />
+            <span>{t.mobile.bullet_push}</span>
+          </li>
+          <li className="flex items-start gap-2 rounded-xl border border-border bg-bg-card/40 p-4">
+            <Tick />
+            <span>{t.mobile.bullet_score}</span>
+          </li>
+          <li className="flex items-start gap-2 rounded-xl border border-border bg-bg-card/40 p-4">
+            <Tick />
+            <span>{t.mobile.bullet_copy}</span>
+          </li>
+          <li className="flex items-start gap-2 rounded-xl border border-border bg-bg-card/40 p-4">
+            <Tick />
+            <span>{t.mobile.bullet_sim}</span>
+          </li>
+        </ul>
+
+        <div className="mt-8 flex justify-center">
+          <StoreBadges />
         </div>
       </div>
     </section>

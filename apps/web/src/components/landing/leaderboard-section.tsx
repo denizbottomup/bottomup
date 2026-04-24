@@ -4,13 +4,15 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { displayName, type LandingPayload } from './landing-data';
 import { TraderDetailModal } from './trader-detail-modal';
+import { useT } from '@/lib/i18n';
 
 export function LeaderboardSection({
   traders,
 }: {
   traders: LandingPayload['top_traders'];
 }) {
-  const shown = traders.filter((t) => t.monthly_trades > 0).slice(0, 6);
+  const { t } = useT();
+  const shown = traders.filter((tr) => tr.monthly_trades > 0).slice(0, 6);
   const [active, setActive] = useState<
     | { analyst: string; displayName: string }
     | null
@@ -22,43 +24,39 @@ export function LeaderboardSection({
       <div className="mx-auto max-w-[1400px] px-4 py-14 md:px-8 md:py-20">
         <header className="flex flex-wrap items-end justify-between gap-4">
           <div>
-            <div className="mono-label">Live leaderboard</div>
+            <div className="mono-label">{t.lb.label}</div>
             <h2 className="mt-2 text-4xl font-extrabold tracking-[-0.02em] md:text-6xl">
-              $10,000 on day one.{' '}
-              <span className="logo-gradient">Where are they now?</span>
+              {t.lb.headline_1}{' '}
+              <span className="logo-gradient">{t.lb.headline_2}</span>
             </h2>
             <p className="mt-3 max-w-2xl text-sm text-fg-muted md:text-base">
-              Every trader starts the month with a virtual $10,000. Tap a
-              card for the full analytics dashboard — equity curve, R
-              distribution, monthly P&L, coin breakdown.
+              {t.lb.subtitle}
             </p>
             <p className="mt-2 max-w-2xl text-[11px] text-fg-dim">
-              Simulated results. Hypothetical performance has inherent
-              limitations. Past performance is not indicative of future
-              results.
+              {t.lb.disclaimer}
             </p>
           </div>
           <Link
             href="/signup"
             className="btn-primary whitespace-nowrap px-5 py-3 text-base"
           >
-            Browse marketplace →
+            {t.lb.cta}
           </Link>
         </header>
 
         {shown.length === 0 ? (
           <div className="mt-10 rounded-2xl border border-dashed border-border px-4 py-12 text-center text-sm text-fg-dim">
-            No closed trades yet this month — check back soon.
+            {t.lb.empty}
           </div>
         ) : (
           <div className="mt-10 grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
-            {shown.map((t, i) => (
+            {shown.map((tr, i) => (
               <TraderCard
-                key={t.trader_id}
-                trader={t}
+                key={tr.trader_id}
+                trader={tr}
                 rank={i + 1}
                 onOpen={() => {
-                  const name = displayName(t);
+                  const name = displayName(tr);
                   setActive({ analyst: name, displayName: name });
                 }}
               />
@@ -87,6 +85,7 @@ function TraderCard({
   rank: number;
   onOpen: () => void;
 }) {
+  const { t } = useT();
   const name = displayName(trader);
   const winRate =
     trader.monthly_win_rate == null
@@ -127,7 +126,7 @@ function TraderCard({
             <div>
               <div className="text-base font-semibold text-fg">{name}</div>
               <div className="text-[11px] text-fg-dim stat-num">
-                {trader.followers.toLocaleString('en-US')} followers
+                {trader.followers.toLocaleString('en-US')} {t.lb.followers}
               </div>
             </div>
           </div>
@@ -145,7 +144,7 @@ function TraderCard({
         </div>
 
         <div className="mt-5 border-t border-border pt-4">
-          <div className="mono-label !text-fg-dim">Virtual balance</div>
+          <div className="mono-label !text-fg-dim">{t.lb.balance_label}</div>
           <div className={`stat-num mt-0.5 text-3xl font-bold md:text-4xl ${balanceTone}`}>
             ${trader.virtual_balance_usd.toLocaleString('en-US', {
               minimumFractionDigits: 2,
@@ -153,23 +152,22 @@ function TraderCard({
             })}
           </div>
           <div className="mt-0.5 text-[11px] text-fg-dim">
-            from{' '}
-            <span className="stat-num text-fg-muted">$10,000</span> this month
+            {t.lb.from_label}
           </div>
         </div>
 
         <div className="mt-4 grid grid-cols-3 gap-2">
           <MiniStat
-            label="Trades"
+            label={t.lb.trades}
             value={trader.monthly_trades.toString()}
           />
           <MiniStat
-            label="Wins"
+            label={t.lb.wins}
             value={trader.monthly_wins.toString()}
             tone="success"
           />
           <MiniStat
-            label="Win rate"
+            label={t.lb.win_rate}
             value={winRate != null ? `${winRate}%` : '—'}
             tone={winRate != null && winRate >= 50 ? 'success' : 'neutral'}
           />
@@ -191,10 +189,10 @@ function TraderCard({
                 positive ? 'bg-emerald-400 animate-pulse' : 'bg-rose-400'
               }`}
             />
-            {positive ? 'Live' : 'Drawdown'}
+            {positive ? t.lb.live : t.lb.drawdown}
           </span>
           <span className="text-fg-muted transition group-hover:text-brand">
-            View full analytics →
+            {t.lb.view_full}
           </span>
         </div>
       </div>

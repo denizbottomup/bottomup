@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useT } from '@/lib/i18n';
 
 interface Brand {
   name: string;
@@ -20,12 +21,13 @@ const BACKERS: Brand[] = [
 ];
 
 export function PartnersSection() {
+  const { t } = useT();
   return (
     <section className="relative border-y border-border bg-bg-card/30">
       <div className="mx-auto max-w-[1400px] px-4 py-12 md:px-8 md:py-16">
         <div className="grid grid-cols-1 gap-10 md:grid-cols-[1fr_1px_1fr]">
           <div>
-            <div className="mono-label !text-fg-dim">Exchange &amp; ecosystem partners</div>
+            <div className="mono-label !text-fg-dim">{t.partners.exchanges}</div>
             <div className="mt-5 grid grid-cols-2 items-center gap-x-6 gap-y-5 sm:grid-cols-4">
               {PARTNERS.map((p) => (
                 <BrandMark key={p.slug} brand={p} />
@@ -36,7 +38,7 @@ export function PartnersSection() {
           <div className="hidden bg-border md:block" />
 
           <div>
-            <div className="mono-label !text-fg-dim">Backed by</div>
+            <div className="mono-label !text-fg-dim">{t.partners.backed_by}</div>
             <div className="mt-5 grid grid-cols-2 items-center gap-x-6 gap-y-5">
               {BACKERS.map((b) => (
                 <BrandMark key={b.slug} brand={b} />

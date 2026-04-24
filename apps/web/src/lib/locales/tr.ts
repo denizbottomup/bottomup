@@ -1,0 +1,351 @@
+import type { Dict } from './schema';
+
+export const tr: Dict = {
+  nav: {
+    foxy: 'Foxy AI',
+    marketplace: 'Marketplace',
+    mcp: 'MCP Seti',
+    traders: 'Trader’lar',
+    pricing: 'Fiyatlandırma',
+    signin: 'Giriş',
+    signup: 'Ücretsiz başla',
+  },
+  hero: {
+    headline_1: 'Akıllı Paranın',
+    headline_2: 'App Store’u.',
+    subtitle:
+      'Herkesin, merkeziyetsiz bir marketplace üzerinden elit trader’ları ve AI agent’ları kopyalamasını sağlayan otomatik portföy yönetimi.',
+    cta_primary: 'Ücretsiz başla →',
+    cta_secondary: 'Foxy seni nasıl korur?',
+    kpi_volume: 'İşlem hacmi',
+    kpi_downloads: 'İndirme',
+    kpi_mau: 'MAU',
+    kpi_trustpilot: 'Trustpilot',
+    kpi_volume_sub: 'Tüm zamanlar',
+    kpi_downloads_sub: '$0 CAC',
+    kpi_mau_sub: 'DAU/MAU %24',
+    kpi_trustpilot_sub: 'Mükemmel',
+  },
+  partners: {
+    exchanges: 'Borsa ve ekosistem ortakları',
+    backed_by: 'Yatırımcılar',
+  },
+  intro: {
+    label: 'Tanıtım videosu',
+    headline_1: '60 saniyede',
+    headline_2: 'BottomUP nasıl çalışır?',
+  },
+  mobile: {
+    label: 'Cebinde',
+    headline_1: 'Sinyaller, simülasyonlar ve',
+    headline_2: 'canlı kopya trade',
+    headline_3: '— hepsi uygulamada.',
+    body: 'Seçtiğin trader’ları takip et, her setup’ın yanında Foxy’nin yorumunu gör, marketplace’e yeni bir şey düşer düşmez bildirim al. Sekme arası geçiş yok, atlanan fırsat yok.',
+    bullet_push: 'Her yeni setup’ta anında push bildirim',
+    bullet_score: 'Her kartta Foxy AI risk skoru',
+    bullet_copy: 'OKX bağlıyken tek dokunuşla kopya trade',
+    bullet_sim: '10.000$ sanal kasa ile portföy simülatörü',
+  },
+  ps: {
+    label: 'Tezimiz',
+    headline_1: 'Retail trading bozuk.',
+    headline_2: 'Biz yeniden kurduk.',
+    subtitle:
+      'Herkesin, merkeziyetsiz bir marketplace üzerinden elit trader’ları ve AI agent’ları kopyalamasını sağlayan otomatik portföy yönetimi — uçtan uca tescilli risk firewall’ımız tarafından denetlenir.',
+    before: 'BottomUP’tan önce',
+    with: 'BottomUP ile',
+    rows: [
+      {
+        problem_title: 'Kötü işlemleri kopyalıyorsun',
+        problem_body:
+          'Trader’ın 50x kaldıraçla intikam trade yapıyor — sen de yapıyorsun. Filtre yok, ikinci bir görüş yok, duruş yok.',
+        solution_title: 'AI risk yöneticisi',
+        solution_body:
+          'Foxy AI her sinyali 225 veri kaynağına karşı denetler ve geçmeyenleri engeller — trader’ın göndermiş olsa bile.',
+      },
+      {
+        problem_title: 'Alpha’n dağınık',
+        problem_body:
+          'Trader’lar Telegram’da. Bot devler Discord’da. Sinyaller üç ayrı borsada. Sekme değiştirmeye işlem yapmaktan çok vakit harcıyorsun.',
+        solution_title: 'Tek uygulama, tüm stratejiler',
+        solution_body:
+          'İnsan trader’lar, algo botlar ve AI agent’lar — hepsi tek marketplace’te. Credits ile abone ol, emirler 7/24 cüzdanında çalışır.',
+      },
+      {
+        problem_title: 'Silo’lanmış piyasalar, silo’lanmış sen',
+        problem_body:
+          'Kripto bir app’te, hisseler başka bir app’te, forex başka yerde. Beş ayrı login olmadan varlıklar arası tez kuramıyorsun.',
+        solution_title: 'Tek terminal, çoklu varlık',
+        solution_body:
+          'Kripto şu an canlı. Hisseler, forex ve emtialar 2027 Q1’de aynı altyapıda — tek hesap, tek portföy görünümü.',
+      },
+    ],
+  },
+  foxy: {
+    label: 'Foxy AI · Risk Firewall',
+    headline_1: 'Her işlem cüzdanına',
+    headline_2: 'ulaşmadan',
+    headline_3: 'denetlenir.',
+    subtitle:
+      '225 veri kaynağıyla eğitilmiş tescilli bir AI’dır Foxy. Bir trader, bot veya agent sinyal yayınladığında Foxy bunu teknik, temel, haber, order book derinliği ve trader’ın risk paterni üzerinden 0–100 arasında skorlar. Skor kırmızıysa işlem engellenir — sen abone olsan bile.',
+    pillars: [
+      { title: 'Denetle', body: 'Her gelen sinyal execution’dan önce 225 kaynakta yakalanır ve skorlanır.' },
+      { title: 'Engelle', body: 'Risk zarfını aşan işlemler kayıp yaşanmadan firewall’da durdurulur.' },
+      { title: 'Optimize et', body: 'Entry/exit emirleri slippage’ı azaltmak ve net P&L’i artırmak için ayarlanır.' },
+      { title: 'Simüle et', body: 'Portföyünü kur, takım performansını gerçek fiyatlarla dene — gerçek sermaye riski yok.' },
+    ],
+    signal_flow: 'Sinyal akışı',
+    trader_node: 'Trader / Bot / AI agent',
+    trader_node_sub: 'sinyal yayınlar',
+    foxy_node: 'Foxy AI firewall',
+    foxy_node_sub: 'riski 0–100 skorlar · 225 veri kaynağı',
+    decision_bad: 'Risk > eşik',
+    decision_bad_body: 'Engellendi ✕',
+    decision_ok: 'Risk OK',
+    decision_ok_body: 'Optimize ✓',
+    wallet_node: 'Cüzdanın',
+    wallet_node_sub: 'yalnızca Foxy onaylarsa çalıştırılır',
+    stat: '✓ Foxy son 30 günde marketplace genelinde 1.247 riskli sinyali engelledi.',
+  },
+  mkt: {
+    label: 'Marketplace',
+    headline_1: 'Üç strateji türü.',
+    headline_2: 'Tek marketplace.',
+    subtitle:
+      'Creator’lar mağaza açar. Kullanıcılar BottomUP Credits ile abone olur. Stratejiler bağlı cüzdanında 7/24 çalışır — her emir önce Foxy tarafından denetlenir.',
+    golive: 'Marketplace açılışı · Mayıs 2026',
+    shops: [
+      {
+        kind: 'İnsan trader’lar',
+        tagline: 'Her çağrıda adını ortaya koyan analistleri takip et.',
+        bullets: [
+          'Doğrulanmış P&L eğrisi, win rate ve risk profili',
+          'Giriş / stop / TP ile canlı yayınlanan setup’lar',
+          'Creator, abonelik + hacimden %25 pay alır',
+        ],
+      },
+      {
+        kind: 'Algoritmik botlar',
+        tagline: 'Onaylanmış, back-test edilmiş, 7/24 çalışan stratejiler.',
+        bullets: [
+          'Strateji kaynağı şeffaf, black-box değil',
+          'Bir kez abone ol, sen uyurken çalışır',
+          'Foxy, sapma gösteren botu anında keser',
+        ],
+      },
+      {
+        kind: 'AI agent’lar',
+        tagline: 'Özel görevli otonom agent’lar.',
+        bullets: [
+          'Alpha avcısı, rebalance, hedge, airdrop izleyicisi',
+          'Her 2 ayda bir yeni agent tipi',
+          'MCP Seti ile bağlamsal destek',
+        ],
+      },
+    ],
+    credits_label: 'BottomUP Credits · mikro-ekonomi nasıl çalışır',
+    steps: [
+      { title: 'Credits al', body: 'Kredi kartı veya kripto. Credits, tüm mağazalarda geçerli evrensel para birimidir.' },
+      { title: 'Mağazalara abone ol', body: 'Güvendiğin trader, bot veya agent’ı seç. İstediğin zaman iptal et.' },
+      { title: 'Foxy sinyalleri denetler', body: 'Her emir firewall’dan çıkmadan 0–100 skorlanır.' },
+      { title: 'Cüzdan çalıştırır', body: 'Onaylanan emirler 7/24 bağlı cüzdanına düşer.' },
+    ],
+  },
+  lb: {
+    label: 'Canlı sıralama',
+    headline_1: '1. günde 10.000$.',
+    headline_2: 'Şimdi neredeler?',
+    subtitle:
+      'Her trader aya sanal 10.000$ ile başlar. Bir karta dokun, tam analitik panoyu gör — equity eğrisi, R dağılımı, aylık P&L, coin kırılımı.',
+    disclaimer:
+      'Simüle edilmiş sonuçlar. Hipotetik performansın doğal sınırları vardır. Geçmiş performans gelecekteki sonuçların göstergesi değildir.',
+    cta: 'Marketplace’i gezin →',
+    empty: 'Bu ay kapanan işlem yok — birazdan gel.',
+    balance_label: 'Sanal bakiye',
+    from_label: 'bu ay 10.000$’dan',
+    trades: 'İşlem',
+    wins: 'Kazanan',
+    win_rate: 'Win rate',
+    live: 'Canlı',
+    drawdown: 'Drawdown',
+    view_full: 'Tüm analitikleri gör →',
+    followers: 'takipçi',
+  },
+  mcp: {
+    label: 'MCP Seti',
+    headline_1: 'Dokuz',
+    headline_2: 'Modüler Crypto Processor, birlikte çalışır.',
+    subtitle:
+      'Her MCP, bilgi kaosunu eyleme dönüştüren uzman bir AI agent’tır. Foxy ile birlikte sürekli çalışırlar — işlemlerin denetlenmiş, zamanlamalı ve stratejine uygun gelir.',
+    cards: [
+      { title: 'Risk azaltma', body: 'Takip ettiğin her trader’da intikam trade, aşırı kaldıraç ve güvensiz pozisyon boyutlarını gerçek zamanlı işaretler.' },
+      { title: 'İşlem zamanlaması', body: 'Order book derinliği, makro olaylar (FOMC, TÜFE, ETF haberleri) ve tarihsel slippage’ı izleyerek en iyi giriş/çıkış penceresini önerir.' },
+      { title: 'Eşleştirme', body: 'Risk iştahını profilleyip uyumlu trader stillerini eşler — scalper, momentum veya uzun vadeli swing.' },
+      { title: 'Token araştırma', body: 'Kontrat sağlığı, geliştirici aktivitesi, whale cüzdan hareketleri ve sosyal yükselişleri inceler. Ham veri değil, yatırım hipotezi üretir.' },
+      { title: 'Launch & airdrop avcısı', body: 'Yeni deployment’ları, testnet aktivitesini ve Telegram buzz’ı izler. Alpha’yı erken haber verir, airdrop’a uygun cüzdanları tespit eder.' },
+      { title: 'Portföy rebalance', body: 'Piyasa hareket ettikçe aşırı maruziyet ve sektör korelasyon riskini tespit eder. Drawdown gelmeden hedge veya rotasyon önerir.' },
+      { title: 'Regülasyon taraması', body: 'Haber feed’lerini, borsa politika güncellemelerini ve bölgesel yasal sinyalleri toplar. Uyum riskini — delisting, yaptırımlar — gelmeden önce uyarır.' },
+      { title: 'Sentiment sapması', body: 'On-chain yükselirken Twitter/Reddit düşüş yönlü olduğunda gizli alpha’yı yakalar. Kalabalık uyanmadan erken pozisyon için birebir.' },
+      { title: 'Manipülasyon bekçisi', body: 'Influencer cüzdan aktivitesini, promosyon zamanlamasını ve yükselme paternlerini izler. Koordineli pump’ları ve ücretli viral hype’ı işaretler.' },
+    ],
+  },
+  pulse: {
+    label: 'Canlı piyasa bağlamı',
+    headline_1: 'Foxy’nin kullandığı',
+    headline_2: 'veri',
+    headline_3: '— sana da açık.',
+    subtitle:
+      'CoinGlass, CoinGecko ve Binance vadeli, Foxy firewall’a gerçek zamanlı beslenir. Sen de birebir aynı yüzeyi görürsün: Fear & Greed, BTC dominance, borsa çaplı funding, long/short dengesi, 24s likidasyon ve open interest değişimi.',
+    auto: 'Otomatik yenilenir · 5 dk cache',
+    fg: 'Fear & Greed Index',
+    dom: 'BTC Dominance',
+    funding: 'Top funding (abs)',
+    liq_24h: '24s likidasyon',
+    ls: 'Long / Short oranı',
+    ls_sub: 'Binance · 1s',
+    oi: 'Açık pozisyon (24s)',
+    no_data: 'Veri yok',
+    liq_table: 'Coin başına likidasyon · son 24s',
+    table_coin: 'Coin',
+    table_long: 'Long',
+    table_short: 'Short',
+    table_total: 'Toplam',
+    table_split: 'Long/Short',
+  },
+  news: {
+    label: 'Haber akışı',
+    headline_1: 'Kripto haberleri,',
+    headline_2: 'sentiment',
+    subtitle:
+      'Her haber pozitif/negatif olarak etiketlenir ve hareket ettirdiği coin’lere bağlıdır. İstediğin haberi burada aç — yeni sekme yok, bağlam kaybı yok.',
+    no_summary: 'Bu haber için ek özet yok.',
+  },
+  pr: {
+    label: 'Fiyatlandırma',
+    headline_1: 'Engellenen bir kötü işlem',
+    headline_2: 'yılı amorti eder.',
+    subtitle:
+      'Abonelik; marketplace, Foxy firewall ve MCP Seti’nin tamamına erişim sağlar. Tekil mağazalar BottomUP Credits ile abone olunur — creator’lar ürettikleri gelirin %25’ini alır.',
+    most_popular: 'En popüler',
+    billed_monthly: 'Aylık faturalanır, yenilenir',
+    billed_upfront: '{total} peşin',
+    save_17: '%17 tasarruf',
+    save_25: '%25 tasarruf',
+    plans: [
+      {
+        name: 'Aylık',
+        cta: 'Aylık başla',
+        features: [
+          'Tam marketplace erişimi — trader, bot, AI agent',
+          'Her sinyalde Foxy AI firewall',
+          'Canlı piyasa panosu (CoinGlass + Binance)',
+          'Canlı fiyatlarla portföy simülasyonu',
+          'Topluluk sohbet · 7 kanal',
+          'Web + push bildirim',
+        ],
+      },
+      {
+        name: '3 Aylık',
+        cta: '3 aylık başla',
+        features: [
+          'Aylık’taki her şey',
+          'OKX kopya trade — tek tıkla execution',
+          'MCP Seti — 9 AI agent’ın tamamı',
+          'Çeyreklik performans raporu',
+          'Öncelikli destek',
+        ],
+      },
+      {
+        name: '6 Aylık',
+        cta: '6 aylık başla',
+        features: [
+          '3 Aylık’taki her şey',
+          'İşlem hacminden $BUP token ödülleri',
+          'TradFi piyasalarına erken erişim (Q1 2027)',
+          '1:1 strateji danışmanlığı',
+          'Kurucu topluluk rozeti',
+        ],
+      },
+    ],
+    footer:
+      'Tüm planlar USD cinsinden faturalanır ve dönem sonunda iptal edilmezse otomatik yenilenir. İstediğin zaman hesap veya app store üzerinden iptal edebilirsin. Yarım dönem iadesi yoktur. Yatırım tavsiyesi değildir — Risk Açıklama’ya bak. Kopya trade ABD’de ikamet edenlere sunulmaz.',
+  },
+  faq: {
+    label: 'Sıkça sorulanlar',
+    headline_1: 'Yatırımcıların ve',
+    headline_2: 'trader’ların',
+    headline_3: 'sorduğu her şey.',
+    items: [
+      {
+        q: 'BottomUP yatırım tavsiyesi mi?',
+        a: 'Hayır. BottomUP kayıtlı bir yatırım danışmanı, broker-dealer veya para hizmetleri işletmesi değildir. Platformdaki her şey — sinyaller, Foxy AI yorumları, MCP çıktıları, sıralama bakiyeleri — yalnızca bilgilendirme ve eğitim amaçlıdır. Geçmiş performans (gerçek ya da simüle) gelecek sonuçların göstergesi değildir. Her işlem kararı ve her kayıp sana aittir. Tam resim için Risk Açıklama’mıza bak.',
+      },
+      {
+        q: 'Kopya trade ABD’de ikamet edenlere açık mı?',
+        a: 'Henüz değil. OKX borsası ABD retail hesaplarına hizmet vermediği için BottomUP ABD’deki kişiler için canlı kopya trade emri yönlendiremiyor. Sosyal, analitik ve simülasyon özelliklerini kullanmaya devam edebilirsin. ABD uyumlu bir broker entegrasyonu yayına girdiğinde duyuracağız.',
+      },
+      {
+        q: 'BottomUP’ı tek cümleyle özetle?',
+        a: 'Akıllı paranın App Store’u — insan trader’lara, algoritmik botlara ve AI agent’lara abone olduğun, her sinyalin cüzdanına ulaşmadan önce tescilli AI firewall’ımızca denetlendiği bir marketplace.',
+      },
+      {
+        q: 'Foxy AI, normal kopya trade’den nasıl farklı?',
+        a: 'Geleneksel kopya trade, trader (veya bot) ne gönderiyorsa aynen yansıtır. 50x kaldıraçla intikam trade atarsa sen de atarsın. Foxy her sinyali yakalar, 225 veri kaynağına karşı 0–100 arası skorlar ve risk yüksekse işlemi firewall’da engeller — sen abone olsan bile. Yansıtma değil, denetim.',
+      },
+      {
+        q: 'MCP nedir?',
+        a: 'Modüler Crypto Processor — Foxy ile birlikte çalışan 9 özel AI agent: risk azaltma, işlem zamanlaması, trader eşleştirme, token araştırma, airdrop avcısı, portföy rebalance, regülasyon taraması, sentiment sapması ve influencer manipülasyon bekçisi. Her biri farklı bir gürültü akışını kullanılabilir sinyale dönüştürür.',
+      },
+      {
+        q: 'Marketplace’te neye abone olabilirim?',
+        a: 'Üç tür mağaza: canlı setup yayınlayan insan trader’lar, 7/24 çalışan onaylı algoritmik botlar ve özel görevli otonom AI agent’lar (alpha avcısı, rebalance, hedge). Credits ile üçünde de abone olursun.',
+      },
+      {
+        q: 'OKX’te kopya trade nasıl çalışır?',
+        a: 'OKX API’ni bağla (Read + Trade only — Withdraw asla). Abone olduğun creator sinyal yayınladığında Foxy denetler, giriş/çıkışı optimize eder ve worker’ımız aynı emri senin hesabına atar. Kontrol tamamen sende — API key’i OKX’ten iptal et veya BottomUP’tan bağlantıyı kes.',
+      },
+      {
+        q: 'BottomUP Credits nedir?',
+        a: 'Marketplace’in evrensel para birimi. Kredi kartı veya kripto ile satın al, herhangi bir mağazaya abone olmak için kullan. Creator’lar ürettikleri kredi gelirinin %25’ini + referans gelirinin %10’unu alır. Platform %30 alır; kalanı altyapı ve hacim iade’sini finanse eder.',
+      },
+      {
+        q: '$BUP token canlı mı?',
+        a: 'Henüz değil. $BUP, 2026’da marketplace ile birlikte trade-to-earn mekaniğiyle çıkacak — marketplace satın almaları, back-test erişimi, tam Foxy özellikleri ve hacim ödülleri için kullanılır. Detaylar pitch deck ve whitepaper’da.',
+      },
+      {
+        q: 'Hemen nasıl başlarım?',
+        a: 'bupcore.ai’den ücretsiz üye ol — e-posta, Google, Apple veya telefon. Hesabın iOS ve Android ile anında senkronlanır. Mağazalara göz at, Foxy simülasyon modunda stratejini dene, canlıya geçmeye hazır olduğunda OKX’i bağla.',
+      },
+    ],
+  },
+  final: {
+    headline_1: 'Akıllı parayı kopyala.',
+    headline_2: 'Gerisini Foxy filtrelesin.',
+    sub: 'Trader’lar, botlar ve AI agent’lar şu an marketplace’te canlı. Her sinyal denetlenir, her işlem optimize edilir. 30 saniyede üye ol, mağazalara göz atmaya başla.',
+    cta_primary: 'Ücretsiz başla →',
+    cta_secondary: 'Giriş yap',
+    disclaimer:
+      'Yatırım tavsiyesi değildir. Kripto işlemleri yüksek kayıp riski taşır. Kopya trade, ABD’de ikamet edenlere sunulmaz.',
+  },
+  ft: {
+    tagline:
+      'Akıllı paranın App Store’u. Elit trader’lar, AI agent’lar ve algoritmik botlar — tek marketplace, Foxy AI korumasında.',
+    product: 'Ürün',
+    account: 'Hesap',
+    legal: 'Yasal',
+    nav_foxy: 'Foxy AI',
+    nav_marketplace: 'Marketplace',
+    nav_mcp: 'MCP Seti',
+    nav_pricing: 'Fiyatlandırma',
+    signup: 'Ücretsiz üye ol',
+    signin: 'Giriş yap',
+    faq: 'SSS',
+    terms: 'Kullanım şartları',
+    privacy: 'Gizlilik',
+    risk: 'Risk açıklaması',
+    disclosure:
+      'BottomUP, Inc. bir Delaware kuruluşudur. BottomUP kayıtlı bir yatırım danışmanı, broker-dealer, commodity pool operator, commodity trading advisor veya money services business değildir. Hizmetteki tüm içerik — sinyaller, Foxy AI yorumları ve creator stratejileri dahil — yalnızca bilgilendirme ve eğitim amaçlıdır; bireyselleştirilmiş yatırım, hukuk veya vergi tavsiyesi değildir. Geçmiş performans, simüle edilmiş performans ve hipotetik sonuçlar (herhangi bir "10.000$ sanal portföy" rakamı dahil) gelecekteki sonuçların göstergesi değildir. Kripto varlık alım-satımı, özellikle kaldıraç veya türev kullanımı, yüksek toplam kayıp riski içerir. Kopya trade işlevi şu anda ABD’de ikamet edenlere sunulmaz. OFAC yaptırımlı bölgelerin sakinleri uygun değildir.',
+    copy: '© {year} BottomUP, Inc. · Tüm hakları saklıdır.',
+    address: '1209 Orange St, Wilmington, DE 19801, ABD',
+  },
+};

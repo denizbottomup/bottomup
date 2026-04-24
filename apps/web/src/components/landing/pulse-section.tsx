@@ -1,51 +1,56 @@
+'use client';
+
 import type { LandingPayload } from './landing-data';
 import { formatUsd } from './landing-data';
+import { useT, type Dict } from '@/lib/i18n';
 
 export function PulseSection({ pulse }: { pulse: LandingPayload['pulse'] }) {
+  const { t } = useT();
   return (
     <section id="pulse" className="border-y border-border bg-bg-card/30">
       <div className="mx-auto max-w-[1400px] px-4 py-14 md:px-8 md:py-20">
         <header className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <div className="text-[11px] uppercase tracking-[0.2em] text-brand">
-              Live market context
+              {t.pulse.label}
             </div>
             <h2 className="mt-1 text-3xl font-extrabold tracking-[-0.02em] md:text-5xl">
-              The same data <span className="logo-gradient">Foxy</span> uses.
+              {t.pulse.headline_1}{' '}
+              <span className="logo-gradient">{t.pulse.headline_2}</span>{' '}
+              {t.pulse.headline_3}
             </h2>
             <p className="mt-2 text-sm text-fg-muted md:max-w-2xl">
-              CoinGlass, CoinGecko, and Binance futures feed the Foxy firewall
-              in real time. You see the exact same surface: Fear & Greed, BTC
-              dominance, cross-exchange funding, long/short bias, 24h
-              liquidations, and open interest change.
+              {t.pulse.subtitle}
             </p>
           </div>
           <span className="rounded-full border border-border bg-bg-card px-3 py-1 text-[10px] text-fg-muted">
-            Auto-refreshed · 5 min cache
+            {t.pulse.auto}
           </span>
         </header>
 
         <div className="mt-8 grid grid-cols-2 gap-3 md:grid-cols-4">
-          <FearGreedCard pulse={pulse} />
-          <DominanceCard pulse={pulse} />
-          <FundingCard pulse={pulse} />
-          <LiquidationCard pulse={pulse} />
+          <FearGreedCard pulse={pulse} tp={t.pulse} />
+          <DominanceCard pulse={pulse} tp={t.pulse} />
+          <FundingCard pulse={pulse} tp={t.pulse} />
+          <LiquidationCard pulse={pulse} tp={t.pulse} />
         </div>
 
         <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
-          <LongShortCard pulse={pulse} />
-          <OpenInterestCard pulse={pulse} />
+          <LongShortCard pulse={pulse} tp={t.pulse} />
+          <OpenInterestCard pulse={pulse} tp={t.pulse} />
         </div>
 
         {pulse.liquidation.length > 0 || pulse.open_interest.length > 0 ? (
-          <LiquidationTable pulse={pulse} />
+          <LiquidationTable pulse={pulse} tp={t.pulse} />
         ) : null}
       </div>
     </section>
   );
 }
 
-function FearGreedCard({ pulse }: { pulse: LandingPayload['pulse'] }) {
+type PulseTp = Dict['pulse'];
+
+function FearGreedCard({ pulse, tp }: { pulse: LandingPayload['pulse']; tp: PulseTp }) {
   const fg = pulse.fear_greed;
   const hist = pulse.fear_greed_history;
   const tone =
@@ -62,7 +67,7 @@ function FearGreedCard({ pulse }: { pulse: LandingPayload['pulse'] }) {
   return (
     <div className="rounded-2xl border border-border bg-bg-card p-4">
       <div className="text-[10px] uppercase tracking-wider text-fg-dim">
-        Fear & Greed Index
+        {tp.fg}
       </div>
       <div className="mt-1 flex items-baseline gap-2">
         <span className={`text-3xl font-semibold md:text-4xl ${tone}`}>
@@ -85,15 +90,15 @@ function FearGreedCard({ pulse }: { pulse: LandingPayload['pulse'] }) {
   );
 }
 
-function DominanceCard({ pulse }: { pulse: LandingPayload['pulse'] }) {
+function DominanceCard({ pulse, tp }: { pulse: LandingPayload['pulse']; tp: PulseTp }) {
   const dom = pulse.dominance;
   if (!dom) {
     return (
       <div className="rounded-2xl border border-border bg-bg-card p-4">
         <div className="text-[10px] uppercase tracking-wider text-fg-dim">
-          Dominance
+          {tp.dom}
         </div>
-        <div className="mt-2 text-sm text-fg-dim">No data</div>
+        <div className="mt-2 text-sm text-fg-dim">{tp.no_data}</div>
       </div>
     );
   }
@@ -103,7 +108,7 @@ function DominanceCard({ pulse }: { pulse: LandingPayload['pulse'] }) {
   return (
     <div className="rounded-2xl border border-border bg-bg-card p-4">
       <div className="text-[10px] uppercase tracking-wider text-fg-dim">
-        BTC Dominance
+        {tp.dom}
       </div>
       <div className="mt-1 text-3xl font-semibold md:text-4xl">
         {btc.toFixed(1)}
@@ -122,16 +127,16 @@ function DominanceCard({ pulse }: { pulse: LandingPayload['pulse'] }) {
   );
 }
 
-function FundingCard({ pulse }: { pulse: LandingPayload['pulse'] }) {
+function FundingCard({ pulse, tp }: { pulse: LandingPayload['pulse']; tp: PulseTp }) {
   const rows = pulse.top_funding.slice(0, 4);
   return (
     <div className="rounded-2xl border border-border bg-bg-card p-4">
       <div className="text-[10px] uppercase tracking-wider text-fg-dim">
-        Top funding (abs)
+        {tp.funding}
       </div>
       <div className="mt-2 flex flex-col gap-1">
         {rows.length === 0 ? (
-          <span className="text-xs text-fg-dim">No data</span>
+          <span className="text-xs text-fg-dim">{tp.no_data}</span>
         ) : (
           rows.map((r) => {
             const bps = r.funding_rate * 10000;
@@ -157,7 +162,7 @@ function FundingCard({ pulse }: { pulse: LandingPayload['pulse'] }) {
   );
 }
 
-function LiquidationCard({ pulse }: { pulse: LandingPayload['pulse'] }) {
+function LiquidationCard({ pulse, tp }: { pulse: LandingPayload['pulse']; tp: PulseTp }) {
   const total = pulse.liquidation
     .slice(0, 5)
     .reduce((n, r) => n + r.total_24h_usd, 0);
@@ -168,7 +173,7 @@ function LiquidationCard({ pulse }: { pulse: LandingPayload['pulse'] }) {
   return (
     <div className="rounded-2xl border border-border bg-bg-card p-4">
       <div className="text-[10px] uppercase tracking-wider text-fg-dim">
-        24h liquidations
+        {tp.liq_24h}
       </div>
       <div className="mt-1 text-3xl font-semibold md:text-4xl">
         {formatUsd(total)}
@@ -179,29 +184,29 @@ function LiquidationCard({ pulse }: { pulse: LandingPayload['pulse'] }) {
             <div className="bg-emerald-400" style={{ width: `${pct}%` }} />
           </div>
           <div className="mt-2 flex items-center justify-between text-[10px] text-fg-dim">
-            <span>Long {pct.toFixed(0)}%</span>
-            <span>Short {(100 - pct).toFixed(0)}%</span>
+            <span>{tp.table_long} {pct.toFixed(0)}%</span>
+            <span>{tp.table_short} {(100 - pct).toFixed(0)}%</span>
           </div>
         </>
       ) : (
-        <div className="mt-2 text-xs text-fg-dim">No data</div>
+        <div className="mt-2 text-xs text-fg-dim">{tp.no_data}</div>
       )}
     </div>
   );
 }
 
-function LongShortCard({ pulse }: { pulse: LandingPayload['pulse'] }) {
+function LongShortCard({ pulse, tp }: { pulse: LandingPayload['pulse']; tp: PulseTp }) {
   const rows = pulse.top_long_short.slice(0, 4);
   return (
     <div className="rounded-2xl border border-border bg-bg-card p-4">
       <div className="flex items-center justify-between">
         <div className="text-[10px] uppercase tracking-wider text-fg-dim">
-          Long / Short ratio
+          {tp.ls}
         </div>
-        <span className="text-[10px] text-fg-dim">Binance · 1h</span>
+        <span className="text-[10px] text-fg-dim">{tp.ls_sub}</span>
       </div>
       {rows.length === 0 ? (
-        <div className="mt-2 text-xs text-fg-dim">No data</div>
+        <div className="mt-2 text-xs text-fg-dim">{tp.no_data}</div>
       ) : (
         <div className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-2">
           {rows.map((r) => {
@@ -231,18 +236,18 @@ function LongShortCard({ pulse }: { pulse: LandingPayload['pulse'] }) {
   );
 }
 
-function OpenInterestCard({ pulse }: { pulse: LandingPayload['pulse'] }) {
+function OpenInterestCard({ pulse, tp }: { pulse: LandingPayload['pulse']; tp: PulseTp }) {
   const rows = pulse.open_interest.slice(0, 3);
   return (
     <div className="rounded-2xl border border-border bg-bg-card p-4">
       <div className="flex items-center justify-between">
         <div className="text-[10px] uppercase tracking-wider text-fg-dim">
-          Open interest (24h)
+          {tp.oi}
         </div>
         <span className="text-[10px] text-fg-dim">CoinGlass</span>
       </div>
       {rows.length === 0 ? (
-        <div className="mt-2 text-xs text-fg-dim">No data</div>
+        <div className="mt-2 text-xs text-fg-dim">{tp.no_data}</div>
       ) : (
         <div className="mt-3 flex flex-col gap-1.5 font-mono text-[12px]">
           {rows.map((r) => {
@@ -271,25 +276,25 @@ function OpenInterestCard({ pulse }: { pulse: LandingPayload['pulse'] }) {
   );
 }
 
-function LiquidationTable({ pulse }: { pulse: LandingPayload['pulse'] }) {
+function LiquidationTable({ pulse, tp }: { pulse: LandingPayload['pulse']; tp: PulseTp }) {
   const liq = pulse.liquidation.slice(0, 8);
   if (liq.length === 0) return null;
   return (
     <div className="mt-4 overflow-hidden rounded-2xl border border-border bg-bg-card">
       <div className="flex items-center justify-between border-b border-border px-4 py-3">
         <div className="text-[10px] uppercase tracking-wider text-fg-dim">
-          Liquidations by coin · last 24h
+          {tp.liq_table}
         </div>
         <span className="text-[10px] text-fg-dim">CoinGlass</span>
       </div>
       <table className="w-full text-sm">
         <thead className="text-[10px] uppercase tracking-wider text-fg-dim">
           <tr>
-            <th className="px-4 py-2 text-left">Coin</th>
-            <th className="px-4 py-2 text-right">Long</th>
-            <th className="px-4 py-2 text-right">Short</th>
-            <th className="px-4 py-2 text-right">Total</th>
-            <th className="hidden px-4 py-2 text-right md:table-cell">Long/Short</th>
+            <th className="px-4 py-2 text-left">{tp.table_coin}</th>
+            <th className="px-4 py-2 text-right">{tp.table_long}</th>
+            <th className="px-4 py-2 text-right">{tp.table_short}</th>
+            <th className="px-4 py-2 text-right">{tp.table_total}</th>
+            <th className="hidden px-4 py-2 text-right md:table-cell">{tp.table_split}</th>
           </tr>
         </thead>
         <tbody>

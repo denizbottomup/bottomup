@@ -1,7 +1,11 @@
+'use client';
+
 import Link from 'next/link';
 import { Logo } from '@/components/logo';
+import { useT } from '@/lib/i18n';
 
 export function LandingFooter() {
+  const { t } = useT();
   const year = new Date().getFullYear();
   return (
     <footer className="border-t border-border bg-bg-card/40">
@@ -10,8 +14,7 @@ export function LandingFooter() {
           <div className="col-span-2 md:col-span-2">
             <Logo variant="lockup" size="sm" />
             <p className="mt-3 max-w-sm text-[13px] text-fg-muted">
-              The App Store of smart money. Elite traders, AI agents, and
-              algorithmic bots — one marketplace, protected by Foxy AI.
+              {t.ft.tagline}
             </p>
             <div className="mt-4 flex items-center gap-3 text-fg-muted">
               <a
@@ -52,27 +55,27 @@ export function LandingFooter() {
 
           <div>
             <div className="text-[11px] font-semibold uppercase tracking-wider text-fg">
-              Product
+              {t.ft.product}
             </div>
             <ul className="mt-3 space-y-2 text-sm text-fg-muted">
               <li>
                 <a href="#foxy" className="hover:text-fg">
-                  Foxy AI
+                  {t.ft.nav_foxy}
                 </a>
               </li>
               <li>
                 <a href="#marketplace" className="hover:text-fg">
-                  Marketplace
+                  {t.ft.nav_marketplace}
                 </a>
               </li>
               <li>
                 <a href="#mcp" className="hover:text-fg">
-                  MCP Suite
+                  {t.ft.nav_mcp}
                 </a>
               </li>
               <li>
                 <a href="#pricing" className="hover:text-fg">
-                  Pricing
+                  {t.ft.nav_pricing}
                 </a>
               </li>
             </ul>
@@ -80,22 +83,22 @@ export function LandingFooter() {
 
           <div>
             <div className="text-[11px] font-semibold uppercase tracking-wider text-fg">
-              Account
+              {t.ft.account}
             </div>
             <ul className="mt-3 space-y-2 text-sm text-fg-muted">
               <li>
                 <Link href="/signup" className="hover:text-fg">
-                  Get started free
+                  {t.ft.signup}
                 </Link>
               </li>
               <li>
                 <Link href="/signin" className="hover:text-fg">
-                  Sign in
+                  {t.ft.signin}
                 </Link>
               </li>
               <li>
                 <a href="#faq" className="hover:text-fg">
-                  FAQ
+                  {t.ft.faq}
                 </a>
               </li>
             </ul>
@@ -103,22 +106,22 @@ export function LandingFooter() {
 
           <div>
             <div className="text-[11px] font-semibold uppercase tracking-wider text-fg">
-              Legal
+              {t.ft.legal}
             </div>
             <ul className="mt-3 space-y-2 text-sm text-fg-muted">
               <li>
                 <Link href="/terms" className="hover:text-fg">
-                  Terms of service
+                  {t.ft.terms}
                 </Link>
               </li>
               <li>
                 <Link href="/privacy" className="hover:text-fg">
-                  Privacy
+                  {t.ft.privacy}
                 </Link>
               </li>
               <li>
                 <Link href="/risk-disclosure" className="hover:text-fg">
-                  Risk disclosure
+                  {t.ft.risk}
                 </Link>
               </li>
             </ul>
@@ -126,31 +129,12 @@ export function LandingFooter() {
         </div>
 
         <div className="mt-10 rounded-2xl border border-border bg-bg-card/40 p-5 text-[11px] leading-relaxed text-fg-dim">
-          <strong className="text-fg">Important disclosures.</strong>{' '}
-          BottomUP, Inc. is a Delaware corporation. BottomUP is not a
-          registered investment adviser, broker-dealer, commodity pool
-          operator, commodity trading advisor, or money services business.
-          All content on the Service — including signals, Foxy AI verdicts,
-          and creator strategies — is provided for informational and
-          educational purposes only and is not individualized investment,
-          legal, or tax advice. Past performance, simulated performance, and
-          hypothetical results (including any &ldquo;$10,000 virtual
-          portfolio&rdquo; figures) are not indicative of future results.
-          Trading crypto-assets, and in particular using leverage or
-          derivatives, involves a high risk of total loss. Copy-trading
-          functionality is not currently offered to U.S. persons. Residents
-          of OFAC-sanctioned regions are ineligible. See our{' '}
-          <Link href="/risk-disclosure" className="text-fg-muted underline hover:text-fg">
-            Risk Disclosure
-          </Link>{' '}
-          for full details.
+          {t.ft.disclosure}
         </div>
 
         <div className="mt-6 flex flex-col items-center justify-between gap-3 border-t border-border pt-6 text-[11px] text-fg-dim md:flex-row">
-          <div>© {year} BottomUP, Inc. · All rights reserved.</div>
-          <div className="text-center md:text-right">
-            1209 Orange St, Wilmington, DE 19801, USA
-          </div>
+          <div>{t.ft.copy.replace('{year}', String(year))}</div>
+          <div className="text-center md:text-right">{t.ft.address}</div>
         </div>
       </div>
     </footer>

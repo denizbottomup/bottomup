@@ -2,10 +2,12 @@
 
 import { useEffect, useState } from 'react';
 import type { LandingPayload } from './landing-data';
+import { useT } from '@/lib/i18n';
 
 type NewsItem = LandingPayload['news'][0];
 
 export function NewsSection({ news }: { news: LandingPayload['news'] }) {
+  const { t } = useT();
   const [active, setActive] = useState<NewsItem | null>(null);
 
   useEffect(() => {
@@ -29,15 +31,13 @@ export function NewsSection({ news }: { news: LandingPayload['news'] }) {
       <div className="mx-auto max-w-[1400px] px-4 py-14 md:px-8 md:py-20">
         <header className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <div className="mono-label">News feed</div>
+            <div className="mono-label">{t.news.label}</div>
             <h2 className="mt-1 text-3xl font-extrabold tracking-[-0.02em] md:text-5xl">
-              Crypto news, tagged with{' '}
-              <span className="logo-gradient">sentiment.</span>
+              {t.news.headline_1}{' '}
+              <span className="logo-gradient">{t.news.headline_2}</span>
             </h2>
             <p className="mt-2 max-w-xl text-sm text-fg-muted">
-              Every story labelled positive / negative and linked to the coins
-              it moves. Open any item right here — no new tab, no
-              context-switch.
+              {t.news.subtitle}
             </p>
           </div>
         </header>
@@ -49,7 +49,13 @@ export function NewsSection({ news }: { news: LandingPayload['news'] }) {
         </div>
       </div>
 
-      {active ? <NewsModal item={active} onClose={() => setActive(null)} /> : null}
+      {active ? (
+        <NewsModal
+          item={active}
+          onClose={() => setActive(null)}
+          noSummary={t.news.no_summary}
+        />
+      ) : null}
     </section>
   );
 }
@@ -117,7 +123,15 @@ function NewsCard({
   );
 }
 
-function NewsModal({ item, onClose }: { item: NewsItem; onClose: () => void }) {
+function NewsModal({
+  item,
+  onClose,
+  noSummary,
+}: {
+  item: NewsItem;
+  onClose: () => void;
+  noSummary: string;
+}) {
   const tone =
     item.sentiment === 'positive' || item.sentiment === 'Positive'
       ? 'bg-mint/15 text-mint ring-mint/40'
@@ -194,9 +208,7 @@ function NewsModal({ item, onClose }: { item: NewsItem; onClose: () => void }) {
               {item.text}
             </div>
           ) : (
-            <p className="mt-5 text-sm text-fg-dim">
-              No additional summary available for this article.
-            </p>
+            <p className="mt-5 text-sm text-fg-dim">{noSummary}</p>
           )}
         </div>
       </div>
