@@ -27,20 +27,20 @@ export function LandingNav() {
         <div className="flex items-center gap-8">
           <Logo variant="lockup" size="sm" />
           <nav className="hidden items-center gap-6 text-sm text-fg-muted md:flex">
-            <a href="#pulse" className="hover:text-fg transition">
-              Markets
+            <a href="#foxy" className="hover:text-fg transition">
+              Foxy AI
             </a>
-            <a href="#leaderboard" className="hover:text-fg transition">
-              Traders
+            <a href="#marketplace" className="hover:text-fg transition">
+              Marketplace
             </a>
-            <a href="#features" className="hover:text-fg transition">
-              Product
+            <a href="#mcp" className="hover:text-fg transition">
+              MCP Suite
+            </a>
+            <a href="#traction" className="hover:text-fg transition">
+              Traction
             </a>
             <a href="#pricing" className="hover:text-fg transition">
               Pricing
-            </a>
-            <a href="#faq" className="hover:text-fg transition">
-              FAQ
             </a>
           </nav>
         </div>
@@ -79,20 +79,20 @@ export function LandingNav() {
       {mobileOpen ? (
         <div className="border-t border-border bg-bg md:hidden">
           <nav className="flex flex-col p-4 text-sm">
-            <a href="#pulse" className="py-2 text-fg-muted" onClick={() => setMobileOpen(false)}>
-              Markets
+            <a href="#foxy" className="py-2 text-fg-muted" onClick={() => setMobileOpen(false)}>
+              Foxy AI
             </a>
-            <a href="#leaderboard" className="py-2 text-fg-muted" onClick={() => setMobileOpen(false)}>
-              Traders
+            <a href="#marketplace" className="py-2 text-fg-muted" onClick={() => setMobileOpen(false)}>
+              Marketplace
             </a>
-            <a href="#features" className="py-2 text-fg-muted" onClick={() => setMobileOpen(false)}>
-              Product
+            <a href="#mcp" className="py-2 text-fg-muted" onClick={() => setMobileOpen(false)}>
+              MCP Suite
+            </a>
+            <a href="#traction" className="py-2 text-fg-muted" onClick={() => setMobileOpen(false)}>
+              Traction
             </a>
             <a href="#pricing" className="py-2 text-fg-muted" onClick={() => setMobileOpen(false)}>
               Pricing
-            </a>
-            <a href="#faq" className="py-2 text-fg-muted" onClick={() => setMobileOpen(false)}>
-              FAQ
             </a>
             <div className="mt-3 flex flex-col gap-2 border-t border-border pt-3">
               <Link href="/signin" className="btn-ghost justify-center">

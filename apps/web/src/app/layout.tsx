@@ -8,17 +8,21 @@ const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 export const metadata: Metadata = {
   metadataBase: new URL('https://bupcore.ai'),
   title: {
-    default: 'bupcore — Social crypto trading',
+    default: 'bupcore — The App Store of Smart Money',
     template: '%s · bupcore',
   },
   description:
-    "Follow the setups of top crypto traders in real time. Foxy AI risk verdict, OKX copy trading, and a $10,000 virtual portfolio on every free signup.",
+    'Elite traders, AI agents, and algorithmic bots — one marketplace, protected by Foxy AI. Every signal audited across 225 data sources before it reaches your wallet. $1.59B lifetime volume, 4.4/5 Trustpilot.',
   keywords: [
     'crypto',
     'social trading',
     'copy trading',
+    'AI risk firewall',
+    'Foxy AI',
+    'trading marketplace',
+    'algorithmic bots',
+    'AI agents',
     'OKX',
-    'trading signals',
     'bupcore',
     'bottomup',
   ],
@@ -27,15 +31,15 @@ export const metadata: Metadata = {
     locale: 'en_US',
     url: 'https://bupcore.ai',
     siteName: 'bupcore',
-    title: 'bupcore — Social crypto trading',
+    title: 'bupcore — The App Store of Smart Money',
     description:
-      '$10,000 virtual portfolio, live trader signals, Foxy AI risk verdict, and OKX copy trading. Test first — go live when you\'re up.',
+      'Elite traders, AI agents, algorithmic bots — one marketplace, protected by the Foxy AI risk firewall. 225 data sources, live across crypto (stocks, forex, commodities coming).',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'bupcore — Social crypto trading',
+    title: 'bupcore — The App Store of Smart Money',
     description:
-      '$10,000 virtual portfolio, live trader signals, Foxy AI, OKX copy trading.',
+      'One marketplace for elite traders, AI agents, and algorithmic bots. Every signal audited by Foxy AI before execution.',
   },
   icons: { icon: '/icon.png' },
 };

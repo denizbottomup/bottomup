@@ -7,17 +7,18 @@ export function FinalCta() {
         <div className="absolute left-1/2 top-1/2 h-[400px] w-[800px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-brand/15 blur-[120px]" />
       </div>
       <div className="mx-auto max-w-[1100px] px-4 py-16 text-center md:px-8 md:py-24">
-        <div className="inline-flex items-center gap-2 rounded-full border border-brand/40 bg-brand/10 px-3 py-1 text-xs text-brand">
-          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-brand" />
-          $10,000 virtual portfolio — instant on signup
+        <div className="inline-flex items-center gap-2 rounded-full border border-emerald-400/40 bg-emerald-400/10 px-3 py-1 text-xs text-emerald-300">
+          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />
+          Foxy AI Shield active
         </div>
         <h2 className="mt-5 text-3xl font-semibold leading-tight md:text-5xl">
-          Don't miss the next{' '}
-          <span className="text-brand">winning setup.</span>
+          Copy smart money.{' '}
+          <span className="text-brand">Let Foxy filter the rest.</span>
         </h2>
         <p className="mx-auto mt-4 max-w-xl text-sm text-fg-muted md:text-base">
-          The top crypto traders are live right now. Sign up, build your team,
-          track your portfolio — go live on OKX when you're ready.
+          Traders, bots, and AI agents run live on the marketplace right now.
+          Every signal audited. Every trade optimized. Sign up in 30 seconds
+          and start browsing shops.
         </p>
         <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
           <Link href="/signup" className="btn-primary px-6 py-3 text-base">

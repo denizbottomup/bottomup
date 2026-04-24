@@ -14,19 +14,19 @@ export function LeaderboardSection({
         <header className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <div className="text-[11px] uppercase tracking-[0.2em] text-brand">
-              Trader leaderboard + live setups
+              Marketplace · live shops
             </div>
             <h2 className="mt-1 text-2xl font-semibold md:text-3xl">
-              We'll show you exactly who to follow
+              Subscribe to the traders already running money.
             </h2>
             <p className="mt-2 max-w-xl text-sm text-fg-muted">
-              Top traders ranked by monthly ROI plus the latest setups they've
-              published. Sign up, add them to your team, and test them with your
-              $10,000 virtual portfolio.
+              Ranked by monthly ROI. Every setup below is real and live on
+              the marketplace right now — each one pre-audited by Foxy
+              before it reaches your wallet.
             </p>
           </div>
           <Link href="/signup" className="btn-ghost whitespace-nowrap">
-            See the full leaderboard →
+            Browse the full marketplace →
           </Link>
         </header>
 

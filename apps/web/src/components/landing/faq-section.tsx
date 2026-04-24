@@ -4,36 +4,44 @@ import { useState } from 'react';
 
 const QA: Array<{ q: string; a: string }> = [
   {
-    q: 'How do I get started?',
-    a: 'Sign up for free at bupcore.ai with email, Google, Apple, or your phone number. The moment your account is created we credit it with a $10,000 virtual portfolio — no payment info required.',
+    q: 'What is bupcore, in one sentence?',
+    a: 'The App Store of smart money — a marketplace where you subscribe to human traders, algorithmic bots, and AI agents, with every signal audited by our proprietary AI firewall before it reaches your wallet.',
   },
   {
-    q: 'How does the $10,000 virtual portfolio work?',
-    a: "Pick up to 6 traders for your team. Every setup they publish opens in your portfolio at real market prices. After 30 days you see exactly what you would have made (or lost) if you had traded with real money.",
+    q: 'How is Foxy AI different from regular copy trading?',
+    a: "Platforms like eToro or 3Commas just mirror whatever the trader (or bot) sends. If the trader revenge-trades with 50x leverage, so do you. Foxy intercepts every signal, scores it 0–100 across 225 data sources, and blocks the trade at the firewall if risk is too high — even if you subscribed. It's audit, not mirror.",
   },
   {
-    q: 'Is OKX copy trading safe?',
-    a: "Your API credentials are encrypted on our servers and never returned to the browser. We only need Read + Trade permissions — Withdraw is never requested. You can also add an IP restriction on OKX. Revoke at any time from OKX or disconnect from bupcore.",
+    q: 'What are MCPs?',
+    a: "Modular Crypto Processors — nine specialized AI agents running alongside Foxy: risk mitigation, trade timing, trader matchmaking, token research, airdrop scout, portfolio rebalancing, regulatory scan, sentiment divergence, and influencer manipulation watchdog. Each one turns a different stream of noise into actionable signal.",
   },
   {
-    q: 'How are traders selected?',
-    a: "Every trader is manually approved by the Bupcore team. Each profile shows their 180-day cumulative P&L curve, win rate, and risk profile — you decide who to follow based on real data, not marketing.",
+    q: 'What can I subscribe to on the marketplace?',
+    a: 'Three kinds of shops: human traders publishing live setups, vetted algorithmic bots running 24/7, and autonomous AI agents with specialized mandates (alpha scout, rebalancer, hedger). Credits subscribe you across all three.',
   },
   {
-    q: 'What is Foxy AI?',
-    a: "An automated risk note attached to every setup: a 0-100 risk score and a short paragraph covering entry-stop sanity, R/R, news alignment, and breakeven-stop detection. Powered by Anthropic's Claude Haiku.",
+    q: 'How does copy trading on OKX work?',
+    a: "Connect your OKX API (Read + Trade only — never Withdraw). When a creator you subscribe to publishes a signal, Foxy audits it, optimizes the entry/exit, and our worker places the same order on your account. You keep full control — revoke the API key at OKX or disconnect from bupcore any time.",
   },
   {
-    q: 'Can I cancel anytime?',
-    a: 'Yes. Even on the 3-month or 6-month plan you can cancel auto-renew at any time and keep full access until the remaining period ends.',
+    q: 'What are BottomUP Credits?',
+    a: "The universal currency across the marketplace. Buy with credit card or crypto, use them to subscribe to any shop. Creators earn 25% of credit revenue they generate plus 10% on referrals. The platform takes 30%; the rest funds infrastructure and volume rebates.",
   },
   {
-    q: 'Which exchanges are supported?',
-    a: 'OKX today. Binance and Bybit are coming in 2026. Setups are exchange-agnostic — you can follow them anywhere; only copy trading is tied to a specific broker.',
+    q: 'Is the $BUP token live?',
+    a: 'Not yet. $BUP launches alongside the marketplace in 2026 with trade-to-earn mechanics — utility spans marketplace purchases, back-testing access, full Foxy features, and volume rewards. More info in the pitch deck and whitepaper.',
   },
   {
-    q: 'Is there a mobile app?',
-    a: 'Yes. Bupcore is available on the App Store and Google Play. Your web account syncs with mobile — sign in anywhere, same team, same performance.',
+    q: 'Which exchanges and assets are supported?',
+    a: "OKX is live today; Binance and Bybit are on the roadmap. Crypto is live across all markets; Stocks, Forex, and Commodities launch in Q1 2027 on the same marketplace.",
+  },
+  {
+    q: 'Why should I trust you with my trades?',
+    a: "The numbers are public: $1.59B lifetime volume, 107K+ organic downloads, 4.4/5 on Trustpilot, 315% YoY revenue growth, $0 paid CAC. Delaware HQ, Dubai VARA license in progress. No exchange dependency — we don't custody your funds, your wallet stays yours.",
+  },
+  {
+    q: 'How do I get started today?',
+    a: 'Sign up free on bupcore.ai — email, Google, Apple, or phone. Your account syncs with iOS and Android instantly. Browse shops, try Foxy simulation mode to test a strategy, then connect OKX when you want to go live.',
   },
 ];
 
@@ -46,7 +54,7 @@ export function FaqSection() {
             Frequently asked
           </div>
           <h2 className="mt-1 text-3xl font-semibold md:text-4xl">
-            Things people ask before signing up
+            Everything investors and traders ask us.
           </h2>
         </header>
 

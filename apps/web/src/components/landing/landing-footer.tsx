@@ -10,8 +10,8 @@ export function LandingFooter() {
           <div className="col-span-2 md:col-span-2">
             <Logo variant="lockup" size="sm" />
             <p className="mt-3 max-w-sm text-[13px] text-fg-muted">
-              Social crypto trading — live signals from top analysts, AI risk
-              verdict, and one-click copy trading on OKX.
+              The App Store of smart money. Elite traders, AI agents, and
+              algorithmic bots — one marketplace, protected by Foxy AI.
             </p>
             <div className="mt-4 flex items-center gap-3 text-fg-muted">
               <a
@@ -56,18 +56,23 @@ export function LandingFooter() {
             </div>
             <ul className="mt-3 space-y-2 text-sm text-fg-muted">
               <li>
-                <a href="#features" className="hover:text-fg">
-                  Features
+                <a href="#foxy" className="hover:text-fg">
+                  Foxy AI
                 </a>
               </li>
               <li>
-                <a href="#pulse" className="hover:text-fg">
-                  Markets
+                <a href="#marketplace" className="hover:text-fg">
+                  Marketplace
                 </a>
               </li>
               <li>
-                <a href="#leaderboard" className="hover:text-fg">
-                  Traders
+                <a href="#mcp" className="hover:text-fg">
+                  MCP Suite
+                </a>
+              </li>
+              <li>
+                <a href="#roadmap" className="hover:text-fg">
+                  Roadmap
                 </a>
               </li>
               <li>

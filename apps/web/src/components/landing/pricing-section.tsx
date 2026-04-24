@@ -10,12 +10,12 @@ const PLANS = [
     total: null,
     save: null,
     features: [
-      'Access every trader setup',
-      'Foxy AI risk verdict',
-      'Live market dashboard (CoinGlass)',
-      '7-channel community chat',
+      'Full marketplace access — traders, bots, AI agents',
+      'Foxy AI firewall on every signal',
+      'Live market dashboard (CoinGlass + Binance)',
+      'Portfolio simulation against live prices',
+      'Community chat · 7 channels',
       'Web + push notifications',
-      '$10,000 virtual portfolio',
     ],
     cta: 'Start monthly',
     highlight: false,
@@ -30,9 +30,9 @@ const PLANS = [
     save: 'Save 17%',
     features: [
       'Everything in Monthly',
-      'OKX copy trading enabled',
-      'Team management',
-      'Quarterly performance reports',
+      'OKX copy trading — one-click execution',
+      'MCP Suite — all 9 AI agents',
+      'Quarterly performance report',
       'Priority support',
     ],
     cta: 'Start quarterly',
@@ -48,9 +48,9 @@ const PLANS = [
     save: 'Save 25%',
     features: [
       'Everything in Quarterly',
+      '$BUP token rewards on trade volume',
+      'Early access to TradFi markets (Q1 2027)',
       '1:1 strategy consult',
-      'Early access to new features',
-      'Price lock for 6 months',
       'Founders community badge',
     ],
     cta: 'Start 6 months',
@@ -67,11 +67,12 @@ export function PricingSection() {
             Pricing
           </div>
           <h2 className="mt-1 text-3xl font-semibold md:text-4xl">
-            One winning trade covers the year
+            One blocked bad trade covers the year.
           </h2>
           <p className="mt-3 text-sm text-fg-muted">
-            Test first with the $10,000 virtual portfolio. Upgrade only when
-            you like the numbers. Cancel anytime — we never re-charge you.
+            Subscriptions unlock the marketplace, Foxy firewall, and the full
+            MCP Suite. Individual shops subscribe via BottomUP Credits —
+            creators earn 25% of revenue they generate.
           </p>
         </header>
 

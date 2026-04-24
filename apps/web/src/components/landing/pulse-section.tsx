@@ -8,16 +8,16 @@ export function PulseSection({ pulse }: { pulse: LandingPayload['pulse'] }) {
         <header className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <div className="text-[11px] uppercase tracking-[0.2em] text-brand">
-              Live market data
+              Live market context
             </div>
             <h2 className="mt-1 text-2xl font-semibold md:text-3xl">
-              Every number a crypto trader reads, in one place
+              The same data Foxy uses — open to everyone.
             </h2>
-            <p className="mt-2 text-sm text-fg-muted md:max-w-xl">
-              CoinGlass, CoinGecko, and Binance futures — aggregated server-side
-              and cached for 5 minutes so nothing lags. Fear & Greed,
-              dominance, funding rates, long/short bias, liquidations, open
-              interest — the full dashboard, no login required.
+            <p className="mt-2 text-sm text-fg-muted md:max-w-2xl">
+              CoinGlass, CoinGecko, and Binance futures feed the Foxy firewall
+              in real time. You see the exact same surface: Fear & Greed, BTC
+              dominance, cross-exchange funding, long/short bias, 24h
+              liquidations, and open interest change.
             </p>
           </div>
           <span className="rounded-full border border-border bg-bg-card px-3 py-1 text-[10px] text-fg-muted">

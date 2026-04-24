@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { Logo } from '@/components/logo';
 import { useAuth } from '@/lib/auth-context';
-import { StoreBadges } from '@/components/landing/store-links';
 
 export default function AccountPage() {
   const router = useRouter();
@@ -76,8 +75,23 @@ export default function AccountPage() {
             you can access all setups, Foxy AI notes, and your team from the
             iOS and Android apps using this same account.
           </p>
-          <div className="mt-5">
-            <StoreBadges variant="primary" />
+          <div className="mt-5 flex flex-wrap gap-2">
+            <a
+              href="https://apps.apple.com/tr/app/bottomup-social/id1661474993"
+              target="_blank"
+              rel="noreferrer"
+              className="btn-ghost px-3 py-2 text-xs"
+            >
+              App Store
+            </a>
+            <a
+              href="https://play.google.com/store/apps/details?id=com.bottomup.bottomupapp"
+              target="_blank"
+              rel="noreferrer"
+              className="btn-ghost px-3 py-2 text-xs"
+            >
+              Google Play
+            </a>
           </div>
         </section>
 
