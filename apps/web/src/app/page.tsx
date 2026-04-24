@@ -2,6 +2,7 @@ import { FaqSection } from '@/components/landing/faq-section';
 import { FinalCta } from '@/components/landing/final-cta';
 import { FoxyFirewallSection } from '@/components/landing/foxy-firewall-section';
 import { Hero } from '@/components/landing/hero';
+import { IntroVideoSection } from '@/components/landing/intro-video-section';
 import { LandingFooter } from '@/components/landing/landing-footer';
 import { LandingNav } from '@/components/landing/nav';
 import { LeaderboardSection } from '@/components/landing/leaderboard-section';
@@ -25,6 +26,7 @@ export default async function LandingPage() {
       {data ? <TickerStrip pulse={data.pulse} /> : null}
 
       <Hero data={data} />
+      <IntroVideoSection />
       <ProblemSolutionSection />
       <FoxyFirewallSection />
       <MarketplaceSection />
