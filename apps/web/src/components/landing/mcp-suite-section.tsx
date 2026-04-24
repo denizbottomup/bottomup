@@ -54,8 +54,9 @@ export function McpSuiteSection() {
           <div className="text-[11px] uppercase tracking-[0.2em] text-brand">
             MCP Suite
           </div>
-          <h2 className="mt-1 text-2xl font-semibold md:text-3xl">
-            Nine Modular Crypto Processors, working together.
+          <h2 className="mt-1 text-3xl font-extrabold tracking-[-0.02em] md:text-5xl">
+            <span className="logo-gradient">Nine</span> Modular Crypto Processors,
+            working together.
           </h2>
           <p className="mt-3 text-sm text-fg-muted md:text-base">
             Each MCP is a specialized AI agent that turns information chaos

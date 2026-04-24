@@ -36,6 +36,7 @@ export interface LandingPayload {
   news: Array<{
     id: string;
     title: string | null;
+    text: string | null;
     source: string | null;
     image: string | null;
     url: string | null;

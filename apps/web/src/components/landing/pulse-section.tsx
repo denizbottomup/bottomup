@@ -10,8 +10,8 @@ export function PulseSection({ pulse }: { pulse: LandingPayload['pulse'] }) {
             <div className="text-[11px] uppercase tracking-[0.2em] text-brand">
               Live market context
             </div>
-            <h2 className="mt-1 text-2xl font-semibold md:text-3xl">
-              The same data Foxy uses — open to everyone.
+            <h2 className="mt-1 text-3xl font-extrabold tracking-[-0.02em] md:text-5xl">
+              The same data <span className="logo-gradient">Foxy</span> uses.
             </h2>
             <p className="mt-2 text-sm text-fg-muted md:max-w-2xl">
               CoinGlass, CoinGecko, and Binance futures feed the Foxy firewall

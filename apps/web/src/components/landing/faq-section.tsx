@@ -53,8 +53,9 @@ export function FaqSection() {
           <div className="text-[11px] uppercase tracking-[0.2em] text-brand">
             Frequently asked
           </div>
-          <h2 className="mt-1 text-3xl font-semibold md:text-4xl">
-            Everything investors and traders ask us.
+          <h2 className="mt-1 text-4xl font-extrabold tracking-[-0.02em] md:text-5xl">
+            Everything investors and{' '}
+            <span className="logo-gradient">traders</span> ask us.
           </h2>
         </header>
 

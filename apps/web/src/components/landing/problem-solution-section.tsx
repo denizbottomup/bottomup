@@ -40,9 +40,9 @@ export function ProblemSolutionSection() {
       <div className="mx-auto max-w-[1400px] px-4 py-14 md:px-8 md:py-20">
         <header className="mx-auto max-w-2xl text-center">
           <div className="mono-label">The thesis</div>
-          <h2 className="mt-2 text-3xl font-bold tracking-tight md:text-5xl">
+          <h2 className="mt-2 text-4xl font-extrabold tracking-[-0.02em] md:text-6xl">
             Retail trading is broken.{' '}
-            <span className="brand-gradient">We rebuilt it.</span>
+            <span className="logo-gradient">We rebuilt it.</span>
           </h2>
         </header>
 

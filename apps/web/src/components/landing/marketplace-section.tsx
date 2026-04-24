@@ -7,8 +7,9 @@ export function MarketplaceSection() {
             <div className="text-[11px] uppercase tracking-[0.2em] text-brand">
               The marketplace
             </div>
-            <h2 className="mt-1 text-2xl font-semibold md:text-3xl">
-              Three kinds of strategy. One subscription model.
+            <h2 className="mt-1 text-3xl font-extrabold tracking-[-0.02em] md:text-5xl">
+              Three kinds of strategy.{' '}
+              <span className="logo-gradient">One marketplace.</span>
             </h2>
             <p className="mt-2 max-w-2xl text-sm text-fg-muted">
               Creators open shops. Users subscribe with BottomUP Credits.

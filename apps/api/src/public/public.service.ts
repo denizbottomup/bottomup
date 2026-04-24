@@ -36,6 +36,7 @@ export interface LandingSetup {
 export interface LandingNews {
   id: string;
   title: string | null;
+  text: string | null;
   source: string | null;
   image: string | null;
   url: string | null;
@@ -227,7 +228,7 @@ export class PublicService {
 
   private async latestNews(limit: number): Promise<LandingNews[]> {
     const rows = await this.prisma.$queryRawUnsafe<Array<Record<string, unknown>>>(
-      `SELECT id::text AS id, title, source_name AS source,
+      `SELECT id::text AS id, title, text, source_name AS source,
               COALESCE(thumbnail_url, image_url) AS image,
               news_url AS url, date, sentiment, COALESCE(tickers, ARRAY[]::text[]) AS tickers
          FROM news
@@ -238,6 +239,7 @@ export class PublicService {
     return rows.map((r) => ({
       id: r.id as string,
       title: (r.title as string | null) ?? null,
+      text: (r.text as string | null) ?? null,
       source: (r.source as string | null) ?? null,
       image: (r.image as string | null) ?? null,
       url: (r.url as string | null) ?? null,

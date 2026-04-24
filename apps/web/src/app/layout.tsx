@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import { AuthProvider } from '@/lib/auth-context';
+import { GtmNoScript, GtmScript } from '@/components/gtm';
 import './globals.css';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
@@ -47,7 +48,11 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={inter.variable}>
+      <head>
+        <GtmScript />
+      </head>
       <body>
+        <GtmNoScript />
         <AuthProvider>{children}</AuthProvider>
       </body>
     </html>

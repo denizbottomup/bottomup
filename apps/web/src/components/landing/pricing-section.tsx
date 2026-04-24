@@ -66,8 +66,9 @@ export function PricingSection() {
           <div className="text-[11px] uppercase tracking-[0.2em] text-brand">
             Pricing
           </div>
-          <h2 className="mt-1 text-3xl font-semibold md:text-4xl">
-            One blocked bad trade covers the year.
+          <h2 className="mt-1 text-4xl font-extrabold tracking-[-0.02em] md:text-6xl">
+            One blocked bad trade{' '}
+            <span className="logo-gradient">covers the year.</span>
           </h2>
           <p className="mt-3 text-sm text-fg-muted">
             Subscriptions unlock the marketplace, Foxy firewall, and the full

@@ -15,9 +15,9 @@ export function LeaderboardSection({
         <header className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <div className="mono-label">Live leaderboard</div>
-            <h2 className="mt-2 text-3xl font-bold tracking-tight md:text-5xl">
-              $10,000 on April 1st.{' '}
-              <span className="brand-gradient">Where are they now?</span>
+            <h2 className="mt-2 text-4xl font-extrabold tracking-[-0.02em] md:text-6xl">
+              $10,000 on day one.{' '}
+              <span className="logo-gradient">Where are they now?</span>
             </h2>
             <p className="mt-3 max-w-2xl text-sm text-fg-muted md:text-base">
               Every trader starts the month with a virtual $10,000. Equal

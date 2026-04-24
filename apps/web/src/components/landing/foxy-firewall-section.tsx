@@ -11,10 +11,10 @@ export function FoxyFirewallSection() {
             <div className="inline-flex items-center gap-2 rounded-full border border-emerald-400/40 bg-emerald-400/10 px-3 py-1 text-xs text-emerald-300">
               Foxy AI · Risk Firewall
             </div>
-            <h2 className="mt-4 text-3xl font-semibold leading-tight md:text-4xl lg:text-5xl">
+            <h2 className="mt-4 text-4xl font-extrabold leading-[1.02] tracking-[-0.02em] md:text-5xl lg:text-6xl">
               Every trade{' '}
-              <span className="text-emerald-300">audited</span> before it
-              reaches your wallet.
+              <span className="logo-gradient">audited</span> before it reaches
+              your wallet.
             </h2>
             <p className="mt-5 max-w-xl text-base text-fg-muted">
               Foxy is a proprietary AI trained on 225 data sources. When a

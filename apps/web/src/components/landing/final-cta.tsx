@@ -11,9 +11,9 @@ export function FinalCta() {
           <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />
           Foxy AI Shield active
         </div>
-        <h2 className="mt-5 text-3xl font-semibold leading-tight md:text-5xl">
+        <h2 className="mt-5 text-4xl font-extrabold leading-[1.02] tracking-[-0.02em] md:text-6xl">
           Copy smart money.{' '}
-          <span className="text-brand">Let Foxy filter the rest.</span>
+          <span className="logo-gradient">Let Foxy filter the rest.</span>
         </h2>
         <p className="mx-auto mt-4 max-w-xl text-sm text-fg-muted md:text-base">
           Traders, bots, and AI agents run live on the marketplace right now.

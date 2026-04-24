@@ -25,7 +25,14 @@
     @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50 disabled:pointer-events-none;
   }
   .btn-primary {
-    @apply btn bg-brand text-white hover:bg-brand-dark;
+    @apply btn text-white;
+    background-image: linear-gradient(135deg, #ff8a4c 0%, #e56b1a 70%, #7c5cff 150%);
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.15) inset,
+      0 10px 30px -10px rgba(255, 138, 76, 0.45);
+  }
+  .btn-primary:hover {
+    background-image: linear-gradient(135deg, #ff9a5c 0%, #ef7a28 70%, #8e6fff 150%);
   }
   .btn-ghost {
     @apply btn border border-border text-fg hover:bg-bg-elev;
@@ -65,6 +72,23 @@
   animation: pulse-glow 3s ease-in-out infinite;
 }
 
+@keyframes multi-glow {
+  0%, 100% {
+    box-shadow:
+      0 0 0 0 rgba(255, 138, 76, 0),
+      0 0 0 0 rgba(124, 92, 255, 0);
+  }
+  50% {
+    box-shadow:
+      0 0 30px 6px rgba(255, 138, 76, 0.35),
+      0 0 60px 12px rgba(124, 92, 255, 0.2);
+  }
+}
+
+.animate-multi-glow {
+  animation: multi-glow 3.5s ease-in-out infinite;
+}
+
 @keyframes fade-in-up {
   0% {
     opacity: 0;
@@ -101,14 +125,34 @@
 }
 
 .brand-gradient {
-  background: linear-gradient(135deg, #ff6b1a 0%, #ffb88a 50%, #d14f00 100%);
+  background: linear-gradient(135deg, #ff8a4c 0%, #ffb88a 50%, #e56b1a 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* 4-color logo gradient — violet → orange → mint → sky */
+.logo-gradient {
+  background: linear-gradient(
+    110deg,
+    #7c5cff 0%,
+    #ff8a4c 38%,
+    #2bc18b 70%,
+    #3b5bff 100%
+  );
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
 }
 
 .cyber-gradient {
-  background: linear-gradient(135deg, #ff6b1a 0%, #fbbf24 40%, #a78bfa 100%);
+  background: linear-gradient(
+    110deg,
+    #ff8a4c 0%,
+    #ffb88a 30%,
+    #a994ff 65%,
+    #7c5cff 100%
+  );
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;

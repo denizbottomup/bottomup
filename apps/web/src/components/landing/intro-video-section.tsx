@@ -4,9 +4,9 @@ export function IntroVideoSection() {
       <div className="mx-auto max-w-[1100px] px-4 py-10 md:px-8 md:py-16">
         <header className="text-center">
           <div className="mono-label">Watch the intro</div>
-          <h2 className="mt-2 text-2xl font-bold tracking-tight md:text-4xl">
+          <h2 className="mt-2 text-3xl font-extrabold tracking-[-0.02em] md:text-5xl">
             60 seconds on{' '}
-            <span className="brand-gradient">how bupcore works.</span>
+            <span className="logo-gradient">how bupcore works.</span>
           </h2>
         </header>
 
