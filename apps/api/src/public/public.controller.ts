@@ -1,4 +1,4 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, NotFoundException, Param } from '@nestjs/common';
 import { PublicService } from './public.service.js';
 
 /**
@@ -12,5 +12,14 @@ export class PublicController {
   @Get('/landing')
   landing(): ReturnType<PublicService['landing']> {
     return this.pub.landing();
+  }
+
+  @Get('/trader/:name')
+  async trader(
+    @Param('name') name: string,
+  ): ReturnType<PublicService['traderDetail']> {
+    const row = await this.pub.traderDetail(decodeURIComponent(name));
+    if (!row) throw new NotFoundException('Trader not found');
+    return row;
   }
 }

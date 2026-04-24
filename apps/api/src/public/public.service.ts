@@ -3,6 +3,53 @@ import type { PrismaClient } from '@bottomup/db';
 import { PRISMA } from '../common/prisma.module.js';
 import { MarketIntelService } from '../market-intel/market-intel.service.js';
 
+export interface TraderDetailSummary {
+  trader: {
+    id: string;
+    name: string | null;
+    first_name: string | null;
+    last_name: string | null;
+    image: string | null;
+    bio: string | null;
+    followers: number;
+  };
+  stats: {
+    trades: number;
+    wins: number;
+    losses: number;
+    win_rate: number | null;
+    total_pnl: number;
+    total_r: number;
+    best_trade_pnl: number;
+    worst_trade_pnl: number;
+    virtual_balance_usd: number;
+    virtual_return_pct: number;
+  };
+  equity_curve: Array<{ t: number; balance: number }>;
+  monthly: Array<{ month: string; net_r: number; trades: number }>;
+  coins: Array<{
+    coin: string;
+    trades: number;
+    wins: number;
+    win_rate: number;
+    net_r: number;
+    net_pnl: number;
+  }>;
+  long_short: {
+    long: { trades: number; wins: number; net_r: number; net_pnl: number };
+    short: { trades: number; wins: number; net_r: number; net_pnl: number };
+  };
+  recent: Array<{
+    id: string;
+    coin: string;
+    position: 'long' | 'short' | null;
+    status: string;
+    close_date: Date | null;
+    pnl: number;
+    r: number;
+  }>;
+}
+
 export interface LandingTrader {
   trader_id: string;
   name: string | null;
@@ -121,6 +168,203 @@ export class PublicService {
    *   - Balance = $10,000 + SUM(estimated_pnl) — net of fees, matches
    *     the 'net_pnl' column admins see.
    */
+  /**
+   * Public trader detail — accepts the trader's display `name` (that's
+   * how the card click-through links in; UUIDs aren't in the landing
+   * payload). Returns everything a marketing detail view needs:
+   * headline stats, equity curve, monthly R series, coin breakdown,
+   * long/short split, and the 8 most recent closed trades.
+   */
+  async traderDetail(name: string): Promise<TraderDetailSummary | null> {
+    const nameClean = String(name ?? '').trim();
+    if (!nameClean) return null;
+
+    const user = await this.prisma.$queryRawUnsafe<Array<Record<string, unknown>>>(
+      `SELECT u.id::text AS id, u.name, u.first_name, u.last_name, u.image,
+              tp.content AS bio,
+              (SELECT COUNT(*)::int FROM follow_notify f
+                WHERE f.trader_id = u.id AND f.follow = TRUE AND f.is_deleted = FALSE) AS followers
+         FROM "user" u
+         LEFT JOIN trader_profile tp ON tp.trader_id = u.id AND tp.is_deleted = FALSE
+        WHERE u.is_trader = TRUE AND u.is_deleted = FALSE AND u.name = $1
+        LIMIT 1`,
+      nameClean,
+    );
+    const u = user[0];
+    if (!u) return null;
+    const traderId = u.id as string;
+
+    // Closed futures trades (success/stopped). Same filter basis as the
+    // leaderboard and admin Metabase query.
+    const trades = await this.prisma.$queryRawUnsafe<Array<Record<string, unknown>>>(
+      `SELECT s.id::text AS id,
+              s.coin_name,
+              s.position::text AS position,
+              s.status::text AS status,
+              s.close_date,
+              COALESCE(p.estimated_pnl, 0) AS pnl,
+              COALESCE(p.estimated_pnl_rate, 0) AS r
+         FROM setup s
+         JOIN trader_setup_pnl_performance p ON p.setup_id = s.id
+        WHERE s.is_deleted = FALSE
+          AND s.trader_id = $1::uuid
+          AND s.category = 'futures'::categories_type
+          AND s.status IN ('success'::statuses_type,'stopped'::statuses_type)
+        ORDER BY s.close_date ASC NULLS LAST`,
+      traderId,
+    );
+
+    const STARTING = 10000;
+    let runningBalance = STARTING;
+    let totalPnl = 0;
+    let totalR = 0;
+    let wins = 0;
+    let losses = 0;
+    let bestPnl = -Infinity;
+    let worstPnl = Infinity;
+
+    const equity: Array<{ t: number; balance: number }> = [];
+    const monthlyMap = new Map<string, { net_r: number; trades: number }>();
+    const coinMap = new Map<
+      string,
+      { trades: number; wins: number; net_r: number; net_pnl: number }
+    >();
+    const long = { trades: 0, wins: 0, net_r: 0, net_pnl: 0 };
+    const short = { trades: 0, wins: 0, net_r: 0, net_pnl: 0 };
+
+    for (const t of trades) {
+      const pnl = Number(t.pnl ?? 0);
+      const r = Number(t.r ?? 0);
+      const coin = String(t.coin_name ?? '');
+      const pos = t.position === 'long' || t.position === 'short' ? t.position : null;
+      const closeAt = t.close_date as Date | null;
+      const isWin = t.status === 'success';
+
+      totalPnl += pnl;
+      totalR += r;
+      if (isWin) wins += 1;
+      else losses += 1;
+      if (pnl > bestPnl) bestPnl = pnl;
+      if (pnl < worstPnl) worstPnl = pnl;
+
+      runningBalance += pnl;
+      if (closeAt)
+        equity.push({ t: new Date(closeAt).getTime(), balance: runningBalance });
+
+      if (closeAt) {
+        const d = new Date(closeAt);
+        const ym = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
+        const cur = monthlyMap.get(ym) ?? { net_r: 0, trades: 0 };
+        cur.net_r += r;
+        cur.trades += 1;
+        monthlyMap.set(ym, cur);
+      }
+
+      if (coin) {
+        const cc = coinMap.get(coin) ?? {
+          trades: 0,
+          wins: 0,
+          net_r: 0,
+          net_pnl: 0,
+        };
+        cc.trades += 1;
+        if (isWin) cc.wins += 1;
+        cc.net_r += r;
+        cc.net_pnl += pnl;
+        coinMap.set(coin, cc);
+      }
+
+      if (pos === 'long') {
+        long.trades += 1;
+        if (isWin) long.wins += 1;
+        long.net_r += r;
+        long.net_pnl += pnl;
+      } else if (pos === 'short') {
+        short.trades += 1;
+        if (isWin) short.wins += 1;
+        short.net_r += r;
+        short.net_pnl += pnl;
+      }
+    }
+
+    const totalTrades = wins + losses;
+    const winRate = totalTrades > 0 ? wins / totalTrades : null;
+
+    const coins = Array.from(coinMap.entries())
+      .map(([coin, c]) => ({
+        coin,
+        trades: c.trades,
+        wins: c.wins,
+        win_rate: c.trades > 0 ? Math.round((c.wins / c.trades) * 1000) / 10 : 0,
+        net_r: Math.round(c.net_r * 100) / 100,
+        net_pnl: Math.round(c.net_pnl * 100) / 100,
+      }))
+      .sort((a, b) => b.net_r - a.net_r)
+      .slice(0, 8);
+
+    const monthly = Array.from(monthlyMap.entries())
+      .map(([month, v]) => ({
+        month,
+        net_r: Math.round(v.net_r * 100) / 100,
+        trades: v.trades,
+      }))
+      .sort((a, b) => (a.month < b.month ? -1 : 1))
+      .slice(-12);
+
+    // Equity: sample up to 180 points so the SVG sparkline stays tight.
+    let curve = equity;
+    if (curve.length > 180) {
+      const step = Math.ceil(curve.length / 180);
+      curve = curve.filter((_, i) => i % step === 0 || i === curve.length - 1);
+    }
+
+    const recent = [...trades]
+      .reverse()
+      .slice(0, 8)
+      .map((t) => ({
+        id: t.id as string,
+        coin: String(t.coin_name ?? ''),
+        position:
+          t.position === 'long' || t.position === 'short'
+            ? (t.position as 'long' | 'short')
+            : null,
+        status: String(t.status ?? ''),
+        close_date: (t.close_date as Date | null) ?? null,
+        pnl: Math.round(Number(t.pnl ?? 0) * 100) / 100,
+        r: Math.round(Number(t.r ?? 0) * 100) / 100,
+      }));
+
+    return {
+      trader: {
+        id: traderId,
+        name: (u.name as string | null) ?? null,
+        first_name: (u.first_name as string | null) ?? null,
+        last_name: (u.last_name as string | null) ?? null,
+        image: (u.image as string | null) ?? null,
+        bio: (u.bio as string | null) ?? null,
+        followers: Number(u.followers ?? 0),
+      },
+      stats: {
+        trades: totalTrades,
+        wins,
+        losses,
+        win_rate: winRate,
+        total_pnl: Math.round(totalPnl * 100) / 100,
+        total_r: Math.round(totalR * 100) / 100,
+        best_trade_pnl: bestPnl === -Infinity ? 0 : Math.round(bestPnl * 100) / 100,
+        worst_trade_pnl: worstPnl === Infinity ? 0 : Math.round(worstPnl * 100) / 100,
+        virtual_balance_usd: Math.round(runningBalance * 100) / 100,
+        virtual_return_pct:
+          Math.round(((runningBalance - STARTING) / STARTING) * 10000) / 100,
+      },
+      equity_curve: curve,
+      monthly,
+      coins,
+      long_short: { long, short },
+      recent,
+    };
+  }
+
   private async topTraders(limit: number): Promise<LandingTrader[]> {
     const capped = Math.max(1, Math.min(20, limit));
     const rows = await this.prisma.$queryRawUnsafe<Array<Record<string, unknown>>>(
