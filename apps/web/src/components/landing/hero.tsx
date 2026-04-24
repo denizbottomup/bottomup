@@ -17,16 +17,16 @@ export function Hero({ data }: { data: LandingPayload | null }) {
         <div className="flex flex-col justify-center">
           <div className="inline-flex w-fit items-center gap-2 rounded-full border border-brand/30 bg-brand/10 px-3 py-1 text-[11px] text-brand">
             <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-brand" />
-            10.000$ sanal kasa · üye olunca anında
+            $10,000 virtual portfolio · instant on signup
           </div>
           <h1 className="mt-5 text-[40px] font-semibold leading-[1.05] tracking-tight md:text-[56px] lg:text-[64px]">
-            Kripto işlemini <span className="text-brand">trader'lara</span> bırak.
+            Let top crypto <span className="text-brand">traders</span> run your trades.
           </h1>
           <p className="mt-5 max-w-[540px] text-base text-fg-muted md:text-lg">
-            Bottomup, Türkiye'nin en çok takip edilen kripto analistlerinin
-            setup'larını canlı yayınlıyor. Ücretsiz üye ol, takımını kur,
-            10.000$ sanal kasada dene — hazır olduğunda OKX üzerinden gerçek
-            kopya trade'e geç.
+            Bupcore streams the setups of the most followed crypto analysts in
+            real time. Sign up for free, pick your team, test them with a
+            $10,000 virtual portfolio — and when you're ready, go live with
+            copy trading on OKX.
           </p>
 
           <div className="mt-7 flex flex-wrap items-center gap-3">
@@ -34,29 +34,29 @@ export function Hero({ data }: { data: LandingPayload | null }) {
               href="/signup"
               className="btn-primary animate-glow px-5 py-3 text-base"
             >
-              Ücretsiz üye ol — 10.000$ kasa hediye
+              Get started free — $10K portfolio inside
             </Link>
             <Link href="/signin" className="btn-ghost px-5 py-3 text-base">
-              Giriş yap
+              Sign in
             </Link>
           </div>
 
           {stats ? (
             <dl className="mt-10 grid max-w-lg grid-cols-3 gap-4 border-t border-border pt-6">
               <Stat
-                label="Aktif trader"
-                value={stats.total_traders.toLocaleString('tr-TR')}
+                label="Active traders"
+                value={stats.total_traders.toLocaleString('en-US')}
               />
               <Stat
-                label="Canlı setup"
-                value={stats.active_setups.toLocaleString('tr-TR')}
+                label="Live setups"
+                value={stats.active_setups.toLocaleString('en-US')}
               />
               <Stat
-                label="30g başarı"
+                label="30d win rate"
                 value={
                   stats.success_rate_30d == null
                     ? '—'
-                    : `%${Math.round(stats.success_rate_30d * 100)}`
+                    : `${Math.round(stats.success_rate_30d * 100)}%`
                 }
                 tone="success"
               />
@@ -68,7 +68,7 @@ export function Hero({ data }: { data: LandingPayload | null }) {
           <div className="relative rounded-2xl border border-border bg-bg-card/60 p-4 shadow-2xl backdrop-blur md:p-5">
             <div className="flex items-center justify-between">
               <div className="text-[10px] uppercase tracking-wider text-fg-muted">
-                Canlı akış · son sinyaller
+                Live feed · latest signals
               </div>
               <span className="flex items-center gap-1.5 text-[10px] text-emerald-300">
                 <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />
@@ -84,7 +84,7 @@ export function Hero({ data }: { data: LandingPayload | null }) {
 
             <div className="mt-4 space-y-2">
               <div className="text-[10px] uppercase tracking-wider text-fg-muted">
-                Liderler
+                Top traders
               </div>
               {topTraders.length > 0 ? (
                 topTraders.map((t) => (
@@ -98,17 +98,17 @@ export function Hero({ data }: { data: LandingPayload | null }) {
             <div className="mt-4 flex items-center justify-between rounded-xl border border-brand/20 bg-brand/5 p-3">
               <div className="text-xs text-fg">
                 <div className="font-semibold text-brand">
-                  10.000$ sanal kasa hazır
+                  $10,000 virtual portfolio ready
                 </div>
                 <div className="text-[11px] text-fg-muted">
-                  Üye ol, takımını kur, performansı gör
+                  Sign up, pick your team, track performance
                 </div>
               </div>
               <Link
                 href="/signup"
                 className="rounded-md bg-brand px-3 py-1.5 text-[11px] font-semibold text-white hover:bg-brand-dark"
               >
-                Başla →
+                Start →
               </Link>
             </div>
           </div>
@@ -192,7 +192,7 @@ function HeroSetupCard({
         ) : null}
       </div>
       <div className="mt-2 flex items-center gap-3 font-mono text-[11px]">
-        <PriceChip label="Giriş" value={setup.entry_value} tone="brand" />
+        <PriceChip label="Entry" value={setup.entry_value} tone="brand" />
         {setup.stop_value != null ? (
           <PriceChip label="Stop" value={setup.stop_value} tone="rose" />
         ) : null}
@@ -256,7 +256,7 @@ function HeroTraderRow({
         </div>
       )}
       <span className="flex-1 truncate text-xs text-fg">{name}</span>
-      <span className="text-[10px] text-fg-dim">{trader.followers} tk.</span>
+      <span className="text-[10px] text-fg-dim">{trader.followers} fl.</span>
       {roi != null ? (
         <span
           className={`w-14 text-right font-mono text-xs ${roi >= 0 ? 'text-emerald-300' : 'text-rose-300'}`}

@@ -9,15 +9,15 @@ export function NewsSection({ news }: { news: LandingPayload['news'] }) {
         <header className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <div className="text-[11px] uppercase tracking-[0.2em] text-brand">
-              Haber akışı
+              News feed
             </div>
             <h2 className="mt-1 text-2xl font-semibold md:text-3xl">
-              Kripto haberleri, duygu skoruyla birlikte
+              Crypto news, tagged with sentiment
             </h2>
             <p className="mt-2 max-w-xl text-sm text-fg-muted">
-              Her haber pozitif/negatif duygu etiketiyle gelir, ilgili coin'leri
-              işaretler. Setup aldığında o coin'e dair son gelişmeleri tek
-              tıkla görürsün.
+              Every story is labelled positive / negative and linked to the
+              coins it moves. When a new setup drops, you see what's happening
+              around that coin in one tap.
             </p>
           </div>
         </header>
@@ -61,7 +61,7 @@ function NewsCard({ n }: { n: LandingPayload['news'][0] }) {
           {n.source ? <span>{n.source}</span> : null}
           {n.date ? (
             <span>
-              · {new Date(n.date).toLocaleDateString('tr-TR', {
+              · {new Date(n.date).toLocaleDateString('en-US', {
                 day: 'numeric',
                 month: 'short',
               })}

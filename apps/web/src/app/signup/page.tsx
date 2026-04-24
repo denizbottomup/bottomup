@@ -35,13 +35,13 @@ export default function SignUpPage() {
 
   return (
     <AuthCard
-      title="Hesap oluştur"
-      subtitle="30 saniyede başla"
+      title="Create your account"
+      subtitle="30 seconds and you're in"
       footer={
         <>
-          Hesabın var mı?{' '}
+          Already have an account?{' '}
           <Link href="/signin" className="text-brand hover:underline">
-            Giriş yap
+            Sign in
           </Link>
         </>
       }
@@ -53,7 +53,7 @@ export default function SignUpPage() {
           disabled={busy}
           className="btn-ghost w-full py-3"
         >
-          Google ile devam et
+          Continue with Google
         </button>
         <button
           type="button"
@@ -61,7 +61,7 @@ export default function SignUpPage() {
           disabled={busy}
           className="btn-ghost w-full py-3"
         >
-          Apple ile devam et
+          Continue with Apple
         </button>
       </div>
 
@@ -70,14 +70,14 @@ export default function SignUpPage() {
           <div className="w-full border-t border-border" />
         </div>
         <div className="relative flex justify-center text-xs text-fg-dim">
-          <span className="px-2 bg-bg-card">veya e-posta ile</span>
+          <span className="px-2 bg-bg-card">or with email</span>
         </div>
       </div>
 
       <form onSubmit={onEmailSignUp} className="space-y-3">
         <input
           type="email"
-          placeholder="E-posta"
+          placeholder="Email"
           className="input"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
@@ -86,7 +86,7 @@ export default function SignUpPage() {
         />
         <input
           type="password"
-          placeholder="Şifre (en az 6 karakter)"
+          placeholder="Password (min 6 characters)"
           className="input"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
@@ -96,18 +96,17 @@ export default function SignUpPage() {
         />
         {err ? <p className="text-sm text-red-400">{err}</p> : null}
         <button type="submit" className="btn-primary w-full py-3" disabled={busy}>
-          {busy ? 'Hesap oluşturuluyor…' : 'Hesap oluştur'}
+          {busy ? 'Creating account…' : 'Create account'}
         </button>
         <p className="text-xs text-fg-dim text-center">
-          Devam ederek{' '}
+          By continuing you agree to our{' '}
           <a href="https://www.bottomup.app/term_of_services" target="_blank" rel="noreferrer" className="underline hover:text-fg">
-            şartları
+            terms
           </a>{' '}
-          ve{' '}
+          and{' '}
           <a href="https://www.bottomup.app/privacy_policy" target="_blank" rel="noreferrer" className="underline hover:text-fg">
-            gizliliği
-          </a>{' '}
-          kabul etmiş sayılırsın.
+            privacy policy
+          </a>.
         </p>
       </form>
     </AuthCard>

@@ -4,36 +4,36 @@ import { useState } from 'react';
 
 const QA: Array<{ q: string; a: string }> = [
   {
-    q: 'Bottomup nasıl başlıyor?',
-    a: 'Bupcore.ai üzerinden ücretsiz üye ol — e-posta, Google, Apple veya telefon numaranla tek adımda. Hesabın açılır açılmaz 10.000$ sanal kasa yüklenir, hiçbir ödeme bilgisi istenmez.',
+    q: 'How do I get started?',
+    a: 'Sign up for free at bupcore.ai with email, Google, Apple, or your phone number. The moment your account is created we credit it with a $10,000 virtual portfolio — no payment info required.',
   },
   {
-    q: '10.000$ sanal kasa nasıl çalışıyor?',
-    a: 'Takımına kadar 6 trader seçiyorsun. Bu trader\'ların yayınladığı her setup senin kasanda gerçek fiyatlarla açılıyor. 30 gün sonunda kasanın kaç paraya geldiğini, hangi trader\'ın nasıl performans gösterdiğini görüyorsun.',
+    q: 'How does the $10,000 virtual portfolio work?',
+    a: "Pick up to 6 traders for your team. Every setup they publish opens in your portfolio at real market prices. After 30 days you see exactly what you would have made (or lost) if you had traded with real money.",
   },
   {
-    q: 'OKX kopya trade güvenli mi?',
-    a: 'API anahtarlarını sunucuda şifreli tutuyoruz, uygulamaya asla geri dönmez. Sadece Read + Trade izni yeterli; çekim (Withdraw) izni istemiyoruz. İstersen IP kısıtlaması da ekleyebilirsin. Anahtarı istediğin zaman OKX\'ten iptal edebilir, bizden de silebilirsin.',
+    q: 'Is OKX copy trading safe?',
+    a: "Your API credentials are encrypted on our servers and never returned to the browser. We only need Read + Trade permissions — Withdraw is never requested. You can also add an IP restriction on OKX. Revoke at any time from OKX or disconnect from bupcore.",
   },
   {
-    q: 'Trader\'lar nasıl seçiliyor?',
-    a: 'Tüm trader\'lar Bottomup ekibi tarafından onaylanır. Her trader\'ın 180 günlük kümülatif kârı, win rate\'i ve risk profili açık — kimi takip edeceğine datayla karar verirsin.',
+    q: 'How are traders selected?',
+    a: "Every trader is manually approved by the Bupcore team. Each profile shows their 180-day cumulative P&L curve, win rate, and risk profile — you decide who to follow based on real data, not marketing.",
   },
   {
-    q: 'Foxy AI ne işe yarıyor?',
-    a: 'Her setup\'a özel risk skoru (0-100) ve Türkçe kısa yorum veriyor: entry-stop mantıklı mı, R/R uygun mu, haberlerle uyumlu mu, breakeven stop var mı? Anthropic Claude Haiku modeliyle çalışıyor.',
+    q: 'What is Foxy AI?',
+    a: "An automated risk note attached to every setup: a 0-100 risk score and a short paragraph covering entry-stop sanity, R/R, news alignment, and breakeven-stop detection. Powered by Anthropic's Claude Haiku.",
   },
   {
-    q: 'Aboneliği istediğim zaman iptal edebilir miyim?',
-    a: 'Evet. 3 aylık veya 6 aylık plandaysan da istediğin zaman yenilemeyi iptal edebilirsin, kalan süre boyunca erişim devam eder.',
+    q: 'Can I cancel anytime?',
+    a: 'Yes. Even on the 3-month or 6-month plan you can cancel auto-renew at any time and keep full access until the remaining period ends.',
   },
   {
-    q: 'Hangi borsalar destekleniyor?',
-    a: 'Şu an OKX destekleniyor. 2026 içinde Binance ve Bybit geliyor. Setup\'ları borsadan bağımsız olarak her yerde görebilirsin; sadece kopya trade OKX üzerinden.',
+    q: 'Which exchanges are supported?',
+    a: 'OKX today. Binance and Bybit are coming in 2026. Setups are exchange-agnostic — you can follow them anywhere; only copy trading is tied to a specific broker.',
   },
   {
-    q: 'Mobil uygulamada var mı?',
-    a: 'Evet. iOS ve Android uygulamaları App Store ve Google Play\'de mevcut. Aynı hesapla hem web hem mobilden giriş yapabilirsin — tüm veriler senkron.',
+    q: 'Is there a mobile app?',
+    a: 'Yes. Bupcore is available on the App Store and Google Play. Your web account syncs with mobile — sign in anywhere, same team, same performance.',
   },
 ];
 
@@ -43,10 +43,10 @@ export function FaqSection() {
       <div className="mx-auto max-w-[900px] px-4 py-14 md:px-8 md:py-20">
         <header className="text-center">
           <div className="text-[11px] uppercase tracking-[0.2em] text-brand">
-            Sık sorulanlar
+            Frequently asked
           </div>
           <h2 className="mt-1 text-3xl font-semibold md:text-4xl">
-            Merak ettiklerin
+            Things people ask before signing up
           </h2>
         </header>
 

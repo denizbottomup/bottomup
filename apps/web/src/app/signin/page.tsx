@@ -100,13 +100,13 @@ export default function SignInPage() {
 
   return (
     <AuthCard
-      title="Tekrar hoş geldin"
-      subtitle="Hesabına giriş yap"
+      title="Welcome back"
+      subtitle="Sign in to your account"
       footer={
         <>
-          Hesabın yok mu?{' '}
+          Don't have an account?{' '}
           <Link href="/signup" className="text-brand hover:underline">
-            Kayıt ol
+            Sign up
           </Link>
         </>
       }
@@ -118,7 +118,7 @@ export default function SignInPage() {
           disabled={busy}
           className="btn-ghost w-full py-3"
         >
-          <GoogleIcon /> Google ile devam et
+          <GoogleIcon /> Continue with Google
         </button>
         <button
           type="button"
@@ -126,7 +126,7 @@ export default function SignInPage() {
           disabled={busy}
           className="btn-ghost w-full py-3"
         >
-          <AppleIcon /> Apple ile devam et
+          <AppleIcon /> Continue with Apple
         </button>
       </div>
 
@@ -135,7 +135,7 @@ export default function SignInPage() {
           <div className="w-full border-t border-border" />
         </div>
         <div className="relative flex justify-center text-xs text-fg-dim">
-          <span className="px-2 bg-bg-card">veya</span>
+          <span className="px-2 bg-bg-card">or</span>
         </div>
       </div>
 
@@ -151,7 +151,7 @@ export default function SignInPage() {
             mode === 'email' ? 'bg-bg-card text-fg ring-1 ring-white/10' : 'text-fg-muted'
           }`}
         >
-          E-posta
+          Email
         </button>
         <button
           type="button"
@@ -163,7 +163,7 @@ export default function SignInPage() {
             mode === 'phone' ? 'bg-bg-card text-fg ring-1 ring-white/10' : 'text-fg-muted'
           }`}
         >
-          Telefon
+          Phone
         </button>
       </div>
 
@@ -171,7 +171,7 @@ export default function SignInPage() {
         <form onSubmit={onEmailSignIn} className="space-y-3">
           <input
             type="email"
-            placeholder="E-posta"
+            placeholder="Email"
             className="input"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
@@ -180,7 +180,7 @@ export default function SignInPage() {
           />
           <input
             type="password"
-            placeholder="Şifre"
+            placeholder="Password"
             className="input"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
@@ -189,7 +189,7 @@ export default function SignInPage() {
           />
           {err ? <p className="text-sm text-red-400">{err}</p> : null}
           <button type="submit" className="btn-primary w-full py-3" disabled={busy}>
-            {busy ? 'Giriş yapılıyor…' : 'Giriş yap'}
+            {busy ? 'Signing in…' : 'Sign in'}
           </button>
         </form>
       ) : !confirmer ? (
@@ -204,11 +204,11 @@ export default function SignInPage() {
             required
           />
           <p className="text-[11px] text-fg-dim">
-            Ülke koduyla birlikte yaz (örn. +90).
+            Include the country code (e.g. +1, +44, +90).
           </p>
           {err ? <p className="text-sm text-red-400">{err}</p> : null}
           <button type="submit" className="btn-primary w-full py-3" disabled={busy}>
-            {busy ? 'Kod gönderiliyor…' : 'Kod gönder'}
+            {busy ? 'Sending code…' : 'Send code'}
           </button>
         </form>
       ) : (
@@ -216,7 +216,7 @@ export default function SignInPage() {
           <input
             type="text"
             inputMode="numeric"
-            placeholder="SMS kodu"
+            placeholder="SMS code"
             className="input font-mono tracking-widest"
             value={otp}
             onChange={(e) => setOtp(e.target.value)}
@@ -224,11 +224,11 @@ export default function SignInPage() {
             required
           />
           <p className="text-[11px] text-fg-dim">
-            {phone} numarasına gönderilen 6 haneli kodu gir.
+            Enter the 6-digit code we sent to {phone}.
           </p>
           {err ? <p className="text-sm text-red-400">{err}</p> : null}
           <button type="submit" className="btn-primary w-full py-3" disabled={busy}>
-            {busy ? 'Doğrulanıyor…' : 'Doğrula'}
+            {busy ? 'Verifying…' : 'Verify'}
           </button>
           <button
             type="button"
@@ -238,7 +238,7 @@ export default function SignInPage() {
             }}
             className="w-full text-xs text-fg-muted hover:text-fg"
           >
-            Numarayı değiştir
+            Change number
           </button>
         </form>
       )}

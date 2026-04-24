@@ -10,49 +10,50 @@ export function VirtualPortfolioSection() {
         <div className="grid grid-cols-1 items-center gap-10 lg:grid-cols-[1fr_560px]">
           <div>
             <div className="inline-flex items-center gap-2 rounded-full border border-brand/40 bg-brand/15 px-3 py-1 text-xs text-brand">
-              <span className="font-mono font-bold">$10,000</span> · sanal kasa
-              herkese hediye
+              <span className="font-mono font-bold">$10,000</span> · virtual
+              portfolio on every signup
             </div>
             <h2 className="mt-4 text-3xl font-semibold leading-tight md:text-4xl lg:text-5xl">
-              Para koymadan dene.{' '}
-              <span className="text-brand">Kazandığında</span> canlıya geç.
+              Test first.{' '}
+              <span className="text-brand">Go live</span> only when you're up.
             </h2>
             <p className="mt-5 max-w-xl text-base text-fg-muted">
-              Üye olur olmaz hesabına <strong className="text-fg">10.000$</strong>{' '}
-              sanal kasa yatırıyoruz. Sen de Bottomup'taki en iyi trader'lardan
-              bir takım kuruyorsun. Takımın setup'ları kasada canlı çalışıyor;
-              30 gün sonunda performansı kara kara üstünde görüyorsun.
+              The second you sign up we credit your account with{' '}
+              <strong className="text-fg">$10,000</strong> in virtual funds.
+              Build a team of the top traders on bupcore; their setups open
+              in your portfolio at real market prices. After 30 days you see
+              exactly how each pick performed — no guessing.
             </p>
 
             <ol className="mt-8 space-y-3">
               <Step
                 n="1"
-                title="10.000$ sanal kasa"
-                body="Üye olduğunda otomatik tanımlanır. Kredi kartı istemiyoruz."
+                title="$10,000 virtual portfolio"
+                body="Added the moment you sign up. No credit card required."
               />
               <Step
                 n="2"
-                title="Takımını kur"
-                body="6 trader'a kadar seç. Her birinin açtığı setup kasanda long/short olarak açılır."
+                title="Build your team"
+                body="Pick up to 6 traders. Every setup they publish opens long/short in your virtual book."
               />
               <Step
                 n="3"
-                title="30 gün izle"
-                body="Gerçek fiyatlarla simüle edilir. Kazançlar, kayıplar, R/R, drawdown — her şey gerçek gibi."
+                title="Watch for 30 days"
+                body="Simulated against real prices. Wins, losses, R/R, drawdown — everything counts just like live."
               />
               <Step
                 n="4"
-                title="Canlıya geç"
-                body="Sonuçtan memnunsan OKX'e Bottomup ref'iyle üye ol, API'ni bağla, aynı takımla gerçek trade'e devam et."
+                title="Go live"
+                body="Happy with the outcome? Create your OKX account via our referral, connect your API, keep the same team — this time with real capital."
               />
             </ol>
 
             <div className="mt-8 flex flex-wrap gap-3">
               <Link href="/signup" className="btn-primary px-5 py-3 text-base">
-                Kasayı al — ücretsiz
+                Claim your $10K portfolio
               </Link>
               <a href="#pricing" className="btn-ghost px-5 py-3 text-base">
-                Fiyatları gör
+                See pricing
               </a>
             </div>
           </div>

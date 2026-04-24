@@ -10,9 +10,8 @@ export function LandingFooter() {
           <div className="col-span-2 md:col-span-2">
             <Logo variant="lockup" size="sm" />
             <p className="mt-3 max-w-sm text-[13px] text-fg-muted">
-              Kripto'da sosyal trading, Türkiye'nin en çok takip edilen
-              analistlerinden canlı sinyaller, AI risk yorumu ve OKX ile kopya
-              trade.
+              Social crypto trading — live signals from top analysts, AI risk
+              verdict, and one-click copy trading on OKX.
             </p>
             <div className="mt-4 flex items-center gap-3 text-fg-muted">
               <a
@@ -53,27 +52,27 @@ export function LandingFooter() {
 
           <div>
             <div className="text-[11px] font-semibold uppercase tracking-wider text-fg">
-              Ürün
+              Product
             </div>
             <ul className="mt-3 space-y-2 text-sm text-fg-muted">
               <li>
                 <a href="#features" className="hover:text-fg">
-                  Özellikler
+                  Features
                 </a>
               </li>
               <li>
                 <a href="#pulse" className="hover:text-fg">
-                  Pazar pulsu
+                  Markets
                 </a>
               </li>
               <li>
                 <a href="#leaderboard" className="hover:text-fg">
-                  Liderler
+                  Traders
                 </a>
               </li>
               <li>
                 <a href="#pricing" className="hover:text-fg">
-                  Fiyat
+                  Pricing
                 </a>
               </li>
             </ul>
@@ -81,22 +80,22 @@ export function LandingFooter() {
 
           <div>
             <div className="text-[11px] font-semibold uppercase tracking-wider text-fg">
-              Hesap
+              Account
             </div>
             <ul className="mt-3 space-y-2 text-sm text-fg-muted">
               <li>
                 <Link href="/signup" className="hover:text-fg">
-                  Ücretsiz üye ol
+                  Get started free
                 </Link>
               </li>
               <li>
                 <Link href="/signin" className="hover:text-fg">
-                  Giriş yap
+                  Sign in
                 </Link>
               </li>
               <li>
                 <a href="#faq" className="hover:text-fg">
-                  SSS
+                  FAQ
                 </a>
               </li>
             </ul>
@@ -104,7 +103,7 @@ export function LandingFooter() {
 
           <div>
             <div className="text-[11px] font-semibold uppercase tracking-wider text-fg">
-              Yasal
+              Legal
             </div>
             <ul className="mt-3 space-y-2 text-sm text-fg-muted">
               <li>
@@ -114,7 +113,7 @@ export function LandingFooter() {
                   rel="noreferrer"
                   className="hover:text-fg"
                 >
-                  Kullanım şartları
+                  Terms of service
                 </a>
               </li>
               <li>
@@ -124,7 +123,7 @@ export function LandingFooter() {
                   rel="noreferrer"
                   className="hover:text-fg"
                 >
-                  Gizlilik
+                  Privacy
                 </a>
               </li>
             </ul>
@@ -132,9 +131,10 @@ export function LandingFooter() {
         </div>
 
         <div className="mt-10 flex flex-col items-center justify-between gap-3 border-t border-border pt-6 text-[11px] text-fg-dim md:flex-row">
-          <div>© {year} bottomUP · Tüm hakları saklıdır.</div>
+          <div>© {year} bupcore · All rights reserved.</div>
           <div className="text-center md:text-right">
-            Bottomup finansal tavsiye vermez. Alım-satım kararları sana aittir.
+            Bupcore does not provide financial advice. Trading decisions are
+            yours alone.
           </div>
         </div>
       </div>

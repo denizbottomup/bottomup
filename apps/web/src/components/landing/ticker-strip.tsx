@@ -7,7 +7,7 @@ export function TickerStrip({ pulse }: { pulse: LandingPayload['pulse'] }) {
     const fg = pulse.fear_greed.value;
     items.push({
       label: 'Fear & Greed',
-      value: `${fg} · ${turkishFng(pulse.fear_greed.classification)}`,
+      value: `${fg} · ${pulse.fear_greed.classification}`,
       tone:
         fg >= 70
           ? 'text-emerald-300'
@@ -27,7 +27,7 @@ export function TickerStrip({ pulse }: { pulse: LandingPayload['pulse'] }) {
   }
   if (pulse.dominance) {
     items.push({
-      label: 'Toplam Cap',
+      label: 'Total Cap',
       value: shortUsd(pulse.dominance.total_market_cap_usd),
       tone: 'text-fg',
     });
@@ -44,7 +44,7 @@ export function TickerStrip({ pulse }: { pulse: LandingPayload['pulse'] }) {
   const topLiq = pulse.liquidation[0];
   if (topLiq) {
     items.push({
-      label: '24s Likid.',
+      label: '24h Liquid.',
       value: `${topLiq.symbol} ${shortUsd(topLiq.total_24h_usd)}`,
       tone: 'text-rose-300',
     });
@@ -52,7 +52,7 @@ export function TickerStrip({ pulse }: { pulse: LandingPayload['pulse'] }) {
   const topOi = pulse.open_interest[0];
   if (topOi && topOi.oi_change_24h_pct != null) {
     items.push({
-      label: 'OI Değişim',
+      label: 'OI 24h',
       value: `${topOi.symbol} ${topOi.oi_change_24h_pct >= 0 ? '+' : ''}${topOi.oi_change_24h_pct.toFixed(2)}%`,
       tone: topOi.oi_change_24h_pct >= 0 ? 'text-emerald-300' : 'text-rose-300',
     });
@@ -84,13 +84,3 @@ function shortUsd(n: number): string {
   return `$${n.toFixed(0)}`;
 }
 
-function turkishFng(cls: string): string {
-  const map: Record<string, string> = {
-    'Extreme Fear': 'Aşırı korku',
-    Fear: 'Korku',
-    Neutral: 'Nötr',
-    Greed: 'Açgözlülük',
-    'Extreme Greed': 'Aşırı açgözlülük',
-  };
-  return map[cls] ?? cls;
-}

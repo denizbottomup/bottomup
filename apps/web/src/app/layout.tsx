@@ -8,42 +8,41 @@ const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 export const metadata: Metadata = {
   metadataBase: new URL('https://bupcore.ai'),
   title: {
-    default: 'bupcore — Kriptoyu okuyan trader topluluğu',
+    default: 'bupcore — Social crypto trading',
     template: '%s · bupcore',
   },
   description:
-    "Türkiye'nin en çok takip edilen kripto analistlerinin setup'ları, Foxy AI risk yorumu, OKX kopya trade ve 10.000$ sanal kasa. Üye ol, takımını kur, performansı izle.",
+    "Follow the setups of top crypto traders in real time. Foxy AI risk verdict, OKX copy trading, and a $10,000 virtual portfolio on every free signup.",
   keywords: [
-    'kripto',
-    'trader',
-    'kopya trade',
+    'crypto',
+    'social trading',
     'copy trading',
     'OKX',
-    'kripto sinyal',
-    'bottomup',
+    'trading signals',
     'bupcore',
+    'bottomup',
   ],
   openGraph: {
     type: 'website',
-    locale: 'tr_TR',
+    locale: 'en_US',
     url: 'https://bupcore.ai',
     siteName: 'bupcore',
-    title: 'bupcore — Kriptoyu okuyan trader topluluğu',
+    title: 'bupcore — Social crypto trading',
     description:
-      '10.000$ sanal kasa, canlı trader sinyalleri, Foxy AI risk yorumu ve OKX kopya trade. Para koymadan dene; kazandığında canlıya geç.',
+      '$10,000 virtual portfolio, live trader signals, Foxy AI risk verdict, and OKX copy trading. Test first — go live when you\'re up.',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'bupcore — Kriptoyu okuyan trader topluluğu',
+    title: 'bupcore — Social crypto trading',
     description:
-      '10.000$ sanal kasa, canlı trader sinyalleri, Foxy AI ve OKX kopya trade.',
+      '$10,000 virtual portfolio, live trader signals, Foxy AI, OKX copy trading.',
   },
   icons: { icon: '/icon.png' },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="tr" className={inter.variable}>
+    <html lang="en" className={inter.variable}>
       <body>
         <AuthProvider>{children}</AuthProvider>
       </body>

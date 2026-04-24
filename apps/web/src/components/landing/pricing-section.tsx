@@ -3,57 +3,57 @@ import Link from 'next/link';
 const PLANS = [
   {
     code: 'monthly',
-    name: 'Aylık',
+    name: 'Monthly',
     price: 30,
     priceLabel: '$30',
-    periodLabel: 'ay',
+    periodLabel: 'mo',
     total: null,
     save: null,
     features: [
-      'Tüm trader setup\'larına erişim',
-      'Foxy AI risk yorumu',
-      'Canlı pazar pulsu (CoinGlass)',
-      '7 kanallı sohbet',
-      'Web push bildirim',
-      '10.000$ sanal kasa',
+      'Access every trader setup',
+      'Foxy AI risk verdict',
+      'Live market dashboard (CoinGlass)',
+      '7-channel community chat',
+      'Web + push notifications',
+      '$10,000 virtual portfolio',
     ],
-    cta: 'Aylık al',
+    cta: 'Start monthly',
     highlight: false,
   },
   {
     code: 'quarter',
-    name: '3 Aylık',
+    name: '3 Months',
     price: 25,
     priceLabel: '$25',
-    periodLabel: 'ay',
+    periodLabel: 'mo',
     total: 75,
-    save: '%17 tasarruf',
+    save: 'Save 17%',
     features: [
-      'Aylık planın tüm özellikleri',
-      'OKX kopya trade aktif',
-      'Takım yönetimi',
-      '3 aylık performans raporları',
-      'Öncelikli destek',
+      'Everything in Monthly',
+      'OKX copy trading enabled',
+      'Team management',
+      'Quarterly performance reports',
+      'Priority support',
     ],
-    cta: '3 Aylık al',
+    cta: 'Start quarterly',
     highlight: true,
   },
   {
     code: 'half',
-    name: '6 Aylık',
+    name: '6 Months',
     price: 22.5,
     priceLabel: '$22.50',
-    periodLabel: 'ay',
+    periodLabel: 'mo',
     total: 135,
-    save: '%25 tasarruf',
+    save: 'Save 25%',
     features: [
-      '3 aylık planın tüm özellikleri',
-      'Özel strateji danışmanlığı',
-      'Yeni özelliklere erken erişim',
-      '6 ay boyunca fiyat garantisi',
-      'Kurucu topluluğu rozeti',
+      'Everything in Quarterly',
+      '1:1 strategy consult',
+      'Early access to new features',
+      'Price lock for 6 months',
+      'Founders community badge',
     ],
-    cta: '6 Aylık al',
+    cta: 'Start 6 months',
     highlight: false,
   },
 ];
@@ -64,14 +64,14 @@ export function PricingSection() {
       <div className="mx-auto max-w-[1400px] px-4 py-14 md:px-8 md:py-20">
         <header className="mx-auto max-w-2xl text-center">
           <div className="text-[11px] uppercase tracking-[0.2em] text-brand">
-            Fiyatlandırma
+            Pricing
           </div>
           <h2 className="mt-1 text-3xl font-semibold md:text-4xl">
-            Bir setup, bir kopya trade — kendini amorti eder
+            One winning trade covers the year
           </h2>
           <p className="mt-3 text-sm text-fg-muted">
-            Önce 10.000$ sanal kasayla dene. İşin memnun edince üyelikle canlıya
-            geç. İstediğin zaman iptal et — tarafından başka bir şey çekilmez.
+            Test first with the $10,000 virtual portfolio. Upgrade only when
+            you like the numbers. Cancel anytime — we never re-charge you.
           </p>
         </header>
 
@@ -82,8 +82,8 @@ export function PricingSection() {
         </div>
 
         <p className="mt-8 text-center text-[11px] text-fg-dim">
-          Tüm planlar USD olarak gösterilir. Kredi kartı veya App Store / Google
-          Play üzerinden ödersin. İstediğin zaman iptal, sorun çıkarsa tam iade.
+          All plans billed in USD. Pay via credit card or App Store / Google
+          Play. Cancel anytime — full refund if anything goes wrong.
         </p>
       </div>
     </section>
@@ -101,7 +101,7 @@ function PlanCard({ plan }: { plan: (typeof PLANS)[number] }) {
     >
       {plan.highlight ? (
         <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-brand px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-white">
-          En popüler
+          Most popular
         </div>
       ) : null}
       <div className="text-[11px] uppercase tracking-wider text-fg-muted">
@@ -113,7 +113,7 @@ function PlanCard({ plan }: { plan: (typeof PLANS)[number] }) {
       </div>
       {plan.total != null ? (
         <div className="mt-1 text-[11px] text-fg-dim">
-          Toplam ${plan.total}{' '}
+          ${plan.total} billed upfront{' '}
           {plan.save ? (
             <span className="ml-1 rounded-md bg-emerald-400/10 px-1.5 py-0.5 text-emerald-300 ring-1 ring-emerald-400/30">
               {plan.save}
@@ -121,7 +121,7 @@ function PlanCard({ plan }: { plan: (typeof PLANS)[number] }) {
           ) : null}
         </div>
       ) : (
-        <div className="mt-1 text-[11px] text-fg-dim">Tek seferlik, yenilenir</div>
+        <div className="mt-1 text-[11px] text-fg-dim">Billed monthly, renews</div>
       )}
 
       <ul className="mt-6 flex flex-1 flex-col gap-2 text-sm text-fg">

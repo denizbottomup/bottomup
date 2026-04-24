@@ -14,19 +14,19 @@ export function LeaderboardSection({
         <header className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <div className="text-[11px] uppercase tracking-[0.2em] text-brand">
-              Trader liderleri + canlı sinyaller
+              Trader leaderboard + live setups
             </div>
             <h2 className="mt-1 text-2xl font-semibold md:text-3xl">
-              Kimleri takip edeceğini sana gösterelim
+              We'll show you exactly who to follow
             </h2>
             <p className="mt-2 max-w-xl text-sm text-fg-muted">
-              Aylık ROI'ye göre sıralanmış en iyi trader'lar ve şu an yayınlanan
-              en son setup'lar. Üye olduğunda bunları takımına ekler, kasanda
-              denersin.
+              Top traders ranked by monthly ROI plus the latest setups they've
+              published. Sign up, add them to your team, and test them with your
+              $10,000 virtual portfolio.
             </p>
           </div>
           <Link href="/signup" className="btn-ghost whitespace-nowrap">
-            Tüm liderleri gör →
+            See the full leaderboard →
           </Link>
         </header>
 
@@ -34,12 +34,12 @@ export function LeaderboardSection({
           <div>
             <div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-fg-muted">
               <span className="h-px flex-1 bg-border" />
-              En iyi trader'lar · Aylık ROI
+              Top traders · Monthly ROI
               <span className="h-px flex-1 bg-border" />
             </div>
             <div className="space-y-2">
               {traders.length === 0 ? (
-                <Empty text="Trader verisi henüz yüklenmedi." />
+                <Empty text="Trader data isn't loaded yet." />
               ) : (
                 traders.map((t, i) => <TraderRow key={t.trader_id} trader={t} rank={i + 1} />)
               )}
@@ -49,12 +49,12 @@ export function LeaderboardSection({
           <div>
             <div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-fg-muted">
               <span className="h-px flex-1 bg-border" />
-              Son setup'lar · Canlı
+              Latest setups · Live
               <span className="h-px flex-1 bg-border" />
             </div>
             <div className="space-y-2">
               {setups.length === 0 ? (
-                <Empty text="Canlı setup bulunamadı." />
+                <Empty text="No live setups right now." />
               ) : (
                 setups.slice(0, 6).map((s) => <SetupRow key={s.id} setup={s} />)
               )}
@@ -108,9 +108,9 @@ function TraderRow({
       <div className="min-w-0 flex-1">
         <div className="truncate text-sm font-medium text-fg">{name}</div>
         <div className="text-[11px] text-fg-dim">
-          {trader.followers.toLocaleString('tr-TR')} takipçi
+          {trader.followers.toLocaleString('en-US')} followers
           {trader.win_rate != null
-            ? ` · %${Math.round(trader.win_rate * 100)} başarı`
+            ? ` · ${Math.round(trader.win_rate * 100)}% win rate`
             : ''}
         </div>
       </div>

@@ -36,7 +36,7 @@ export default function AccountPage() {
             onClick={() => void signOut().then(() => router.replace('/'))}
             className="btn-ghost"
           >
-            Çıkış yap
+            Sign out
           </button>
         </div>
       </header>
@@ -57,7 +57,7 @@ export default function AccountPage() {
           )}
           <div className="min-w-0">
             <h1 className="text-2xl font-semibold text-fg md:text-3xl">
-              Hoş geldin{user.displayName ? `, ${user.displayName.split(' ')[0]}` : ''}!
+              Welcome{user.displayName ? `, ${user.displayName.split(' ')[0]}` : ''}!
             </h1>
             <p className="mt-1 text-sm text-fg-muted">{display}</p>
           </div>
@@ -66,15 +66,15 @@ export default function AccountPage() {
         <section className="mt-8 rounded-2xl border border-brand/30 bg-brand/5 p-6">
           <div className="inline-flex items-center gap-2 rounded-full border border-brand/40 bg-brand/10 px-3 py-1 text-[11px] text-brand">
             <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-brand" />
-            Web yakında yayında
+            Web app coming soon
           </div>
           <h2 className="mt-3 text-xl font-semibold text-fg">
-            Hesabın kuruldu. Şimdi uygulamadan devam et.
+            Your account is ready. Continue on mobile for now.
           </h2>
           <p className="mt-2 text-sm text-fg-muted">
-            bupcore.ai tarayıcı uygulaması aktif geliştirme aşamasında. Bu arada
-            aynı hesabınla iOS veya Android uygulamasından setup'lara, Foxy AI
-            yorumlarına ve takımına erişebilirsin.
+            The bupcore.ai web app is under active development. In the meantime
+            you can access all setups, Foxy AI notes, and your team from the
+            iOS and Android apps using this same account.
           </p>
           <div className="mt-5">
             <StoreBadges variant="primary" />
@@ -82,19 +82,19 @@ export default function AccountPage() {
         </section>
 
         <section className="mt-4 rounded-2xl border border-border bg-bg-card/40 p-6 text-sm">
-          <h3 className="font-semibold text-fg">Hesap bilgileri</h3>
+          <h3 className="font-semibold text-fg">Account info</h3>
           <dl className="mt-3 grid grid-cols-1 gap-y-2 md:grid-cols-2">
-            <Row label="E-posta" value={user.email ?? '—'} />
-            <Row label="Telefon" value={user.phoneNumber ?? '—'} />
+            <Row label="Email" value={user.email ?? '—'} />
+            <Row label="Phone" value={user.phoneNumber ?? '—'} />
             <Row
-              label="Sağlayıcı"
+              label="Provider"
               value={user.providerData.map((p) => p.providerId.replace('.com', '')).join(', ') || 'password'}
             />
             <Row
-              label="Üyelik"
+              label="Member since"
               value={
                 user.metadata.creationTime
-                  ? new Date(user.metadata.creationTime).toLocaleDateString('tr-TR', {
+                  ? new Date(user.metadata.creationTime).toLocaleDateString('en-US', {
                       day: 'numeric',
                       month: 'long',
                       year: 'numeric',
@@ -107,9 +107,9 @@ export default function AccountPage() {
 
         <div className="mt-6 flex items-center justify-between text-xs text-fg-dim">
           <Link href="/" className="hover:text-fg">
-            ← Anasayfa
+            ← Home
           </Link>
-          <span>Web'e erişim aktifleştiğinde e-postandan haberdar ederiz.</span>
+          <span>We'll email you when web access goes live.</span>
         </div>
       </main>
     </div>

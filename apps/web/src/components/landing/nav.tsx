@@ -28,36 +28,36 @@ export function LandingNav() {
           <Logo variant="lockup" size="sm" />
           <nav className="hidden items-center gap-6 text-sm text-fg-muted md:flex">
             <a href="#pulse" className="hover:text-fg transition">
-              Pazar pulsu
+              Markets
             </a>
             <a href="#leaderboard" className="hover:text-fg transition">
-              Liderler
+              Traders
             </a>
             <a href="#features" className="hover:text-fg transition">
-              Özellikler
+              Product
             </a>
             <a href="#pricing" className="hover:text-fg transition">
-              Fiyat
+              Pricing
             </a>
             <a href="#faq" className="hover:text-fg transition">
-              SSS
+              FAQ
             </a>
           </nav>
         </div>
 
         <div className="hidden items-center gap-2 md:flex">
           <Link href="/signin" className="btn-ghost">
-            Giriş
+            Sign in
           </Link>
           <Link href="/signup" className="btn-primary">
-            Ücretsiz üye ol
+            Get started free
           </Link>
         </div>
 
         <button
           className="md:hidden rounded-lg border border-border p-2 text-fg"
           onClick={() => setMobileOpen((v) => !v)}
-          aria-label="Menü"
+          aria-label="Menu"
         >
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             {mobileOpen ? (
@@ -80,26 +80,26 @@ export function LandingNav() {
         <div className="border-t border-border bg-bg md:hidden">
           <nav className="flex flex-col p-4 text-sm">
             <a href="#pulse" className="py-2 text-fg-muted" onClick={() => setMobileOpen(false)}>
-              Pazar pulsu
+              Markets
             </a>
             <a href="#leaderboard" className="py-2 text-fg-muted" onClick={() => setMobileOpen(false)}>
-              Liderler
+              Traders
             </a>
             <a href="#features" className="py-2 text-fg-muted" onClick={() => setMobileOpen(false)}>
-              Özellikler
+              Product
             </a>
             <a href="#pricing" className="py-2 text-fg-muted" onClick={() => setMobileOpen(false)}>
-              Fiyat
+              Pricing
             </a>
             <a href="#faq" className="py-2 text-fg-muted" onClick={() => setMobileOpen(false)}>
-              SSS
+              FAQ
             </a>
             <div className="mt-3 flex flex-col gap-2 border-t border-border pt-3">
               <Link href="/signin" className="btn-ghost justify-center">
-                Giriş
+                Sign in
               </Link>
               <Link href="/signup" className="btn-primary justify-center">
-                Ücretsiz üye ol
+                Get started free
               </Link>
             </div>
           </nav>
