@@ -9,6 +9,7 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
+import {} from '@nestjs/common';
 import { FirebaseAuthGuard } from '../common/guards/firebase-auth.guard.js';
 import { CurrentUser, type AuthedUser } from '../common/decorators/current-user.decorator.js';
 import {
@@ -21,6 +22,22 @@ import {
 @UseGuards(FirebaseAuthGuard)
 export class SetupController {
   constructor(private readonly setups: SetupService) {}
+
+  @Put()
+  createViaPut(
+    @CurrentUser() viewer: AuthedUser,
+    @Body() body: Parameters<SetupService['create']>[1],
+  ): Promise<{ id: string }> {
+    return this.setups.create(viewer, body);
+  }
+
+  @Post()
+  createViaPost(
+    @CurrentUser() viewer: AuthedUser,
+    @Body() body: Parameters<SetupService['create']>[1],
+  ): Promise<{ id: string }> {
+    return this.setups.create(viewer, body);
+  }
 
   @Get(':setupId')
   detail(

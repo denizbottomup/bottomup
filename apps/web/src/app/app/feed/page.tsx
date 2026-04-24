@@ -95,7 +95,15 @@ export default function FeedPage() {
             count={act?.length ?? null}
           />
         </div>
-        <LiveBadge connected={connected} />
+        <div className="flex items-center gap-3">
+          <Link
+            href="/app/setup/new"
+            className="rounded-md bg-brand/15 px-3 py-1.5 text-xs font-medium text-brand ring-1 ring-brand/30 transition hover:bg-brand/20"
+          >
+            + Yeni setup
+          </Link>
+          <LiveBadge connected={connected} />
+        </div>
       </div>
 
       {tags && tags.length > 0 ? (

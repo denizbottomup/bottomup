@@ -1,4 +1,9 @@
-import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Inject,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import type { PrismaClient } from '@bottomup/db';
 import { PRISMA } from '../common/prisma.module.js';
 import type { AuthedUser } from '../common/decorators/current-user.decorator.js';
@@ -76,6 +81,140 @@ const VALID_REPORT_REASONS = /^[\s\S]{4,400}$/;
 @Injectable()
 export class SetupService {
   constructor(@Inject(PRISMA) private readonly prisma: PrismaClient) {}
+
+  /**
+   * Trader-authored setup publish. Mobile uses PUT /setup/ with a JSON
+   * body; we accept the same shape plus support POST for web forms that
+   * are friendlier with HTML method conventions. Only users marked
+   * is_trader may publish.
+   *
+   * Validations match the mobile client:
+   *   - coin_name must be a non-empty uppercase USDT pair
+   *   - entry_value > 0, stop_value opposite side of entry for the chosen
+   *     direction, TP1 must be on the profit side
+   *   - category, position, order_type validated against enums
+   */
+  async create(
+    viewer: AuthedUser,
+    body: {
+      coin_name: string;
+      category: 'spot' | 'futures';
+      position: 'long' | 'short';
+      order_type?: 'market' | 'limit' | 'stop';
+      entry_value: number;
+      entry_value_end?: number | null;
+      stop_value?: number | null;
+      profit_taking_1?: number | null;
+      profit_taking_2?: number | null;
+      profit_taking_3?: number | null;
+      open_leverage?: number | null;
+      note?: string | null;
+      tags?: string[];
+    },
+  ): Promise<{ id: string }> {
+    const viewerId = await this.resolveViewerId(viewer);
+    const check = await this.prisma.$queryRawUnsafe<Array<{ is_trader: boolean; is_approved: boolean }>>(
+      `SELECT COALESCE(is_trader, FALSE) AS is_trader,
+              COALESCE(is_approved, FALSE) AS is_approved
+         FROM "user" WHERE id = $1::uuid LIMIT 1`,
+      viewerId,
+    );
+    const row = check[0];
+    if (!row?.is_trader) {
+      throw new BadRequestException('Only traders can publish setups');
+    }
+
+    const coin = String(body.coin_name ?? '').trim().toUpperCase();
+    if (!/^[A-Z0-9]{3,20}$/.test(coin)) {
+      throw new BadRequestException('coin_name invalid');
+    }
+    if (!['spot', 'futures'].includes(body.category)) {
+      throw new BadRequestException('category invalid');
+    }
+    if (!['long', 'short'].includes(body.position)) {
+      throw new BadRequestException('position invalid');
+    }
+    const orderType = body.order_type ?? 'limit';
+    if (!['market', 'limit', 'stop'].includes(orderType)) {
+      throw new BadRequestException('order_type invalid');
+    }
+
+    const entry = Number(body.entry_value);
+    if (!Number.isFinite(entry) || entry <= 0) {
+      throw new BadRequestException('entry_value must be > 0');
+    }
+    const entryEnd = body.entry_value_end == null ? null : Number(body.entry_value_end);
+    const stop = body.stop_value == null ? null : Number(body.stop_value);
+    const tp1 = body.profit_taking_1 == null ? null : Number(body.profit_taking_1);
+    const tp2 = body.profit_taking_2 == null ? null : Number(body.profit_taking_2);
+    const tp3 = body.profit_taking_3 == null ? null : Number(body.profit_taking_3);
+
+    const isLong = body.position === 'long';
+    if (stop != null) {
+      if (isLong && stop >= entry) {
+        throw new BadRequestException('stop must be below entry for long');
+      }
+      if (!isLong && stop <= entry) {
+        throw new BadRequestException('stop must be above entry for short');
+      }
+    }
+    if (tp1 != null) {
+      if (isLong && tp1 <= entry) {
+        throw new BadRequestException('TP1 must be above entry for long');
+      }
+      if (!isLong && tp1 >= entry) {
+        throw new BadRequestException('TP1 must be below entry for short');
+      }
+    }
+
+    const leverage = body.open_leverage == null ? null : Math.max(1, Math.min(125, Math.round(Number(body.open_leverage))));
+    const note = body.note ? String(body.note).slice(0, 2000) : null;
+    const tags = Array.isArray(body.tags) ? body.tags.filter((t) => typeof t === 'string').map((t) => t.trim()).filter(Boolean).slice(0, 10) : [];
+
+    const rows = await this.prisma.$queryRawUnsafe<Array<{ id: string }>>(
+      `INSERT INTO setup
+         (id, created_at, updated_at, is_deleted, trader_id, category, coin_name,
+          is_active, is_targeted, position, profit_taking_1, profit_taking_2, profit_taking_3,
+          stop_value, tags, status, entry_value, entry_value_end, is_hidden, note,
+          open_leverage, order_type, last_acted_at,
+          initial_entry_value, initial_entry_value_end, initial_stop_value,
+          initial_profit_taking_1, initial_profit_taking_2, initial_profit_taking_3)
+       VALUES
+         (gen_random_uuid(), NOW(), NOW(), FALSE, $1::uuid, $2::categories_type, $3,
+          TRUE, FALSE, $4::positions_type, $5, $6, $7,
+          $8, $9, 'incoming'::statuses_type, $10, $11, FALSE, $12,
+          $13, $14::order_types_type, NOW(),
+          $10, $11, $8, $5, $6, $7)
+       RETURNING id::text`,
+      viewerId,
+      body.category,
+      coin,
+      body.position,
+      tp1,
+      tp2,
+      tp3,
+      stop,
+      tags,
+      entry,
+      entryEnd,
+      note,
+      leverage,
+      orderType,
+    );
+
+    const setupId = rows[0]?.id;
+    if (!setupId) throw new BadRequestException('Failed to create setup');
+
+    await this.prisma.$executeRawUnsafe(
+      `INSERT INTO setup_events
+         (setup_id, trader_id, event_time, changed_column, old_value, new_value, action)
+       VALUES ($1::uuid, $2::uuid, NOW(), 'status', NULL, 'incoming', 'insert')`,
+      setupId,
+      viewerId,
+    );
+
+    return { id: setupId };
+  }
 
   async detail(viewer: AuthedUser, setupId: string): Promise<SetupDetail> {
     const viewerId = await this.resolveViewerId(viewer);
