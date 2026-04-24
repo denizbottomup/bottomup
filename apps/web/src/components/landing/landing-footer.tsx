@@ -16,18 +16,18 @@ export function LandingFooter() {
             </p>
             <div className="mt-4 flex items-center gap-3 text-fg-muted">
               <a
-                href="https://twitter.com/bottomaborsar"
+                href="https://x.com/bottomupsocial"
                 target="_blank"
                 rel="noreferrer"
-                aria-label="Twitter"
+                aria-label="X"
                 className="hover:text-fg"
               >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M22.46 6c-.77.35-1.6.58-2.46.69.89-.53 1.56-1.37 1.88-2.38-.83.5-1.75.85-2.72 1.05C18.37 4.5 17.26 4 16 4c-2.35 0-4.27 1.92-4.27 4.29 0 .34.04.67.11.98C8.28 9.09 5.11 7.38 3 4.79c-.37.63-.58 1.37-.58 2.15 0 1.49.75 2.81 1.91 3.56-.71 0-1.37-.2-1.95-.5v.03c0 2.08 1.48 3.82 3.44 4.21a4.22 4.22 0 01-1.93.07 4.28 4.28 0 004 2.98 8.521 8.521 0 01-5.33 1.84c-.34 0-.68-.02-1.02-.06C3.44 20.29 5.7 21 8.12 21 16 21 20.33 14.46 20.33 8.79c0-.19 0-.37-.01-.56.84-.6 1.56-1.36 2.14-2.23z" />
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
                 </svg>
               </a>
               <a
-                href="https://t.me/bottomupdestek"
+                href="https://t.me/BottomUPcommunity"
                 target="_blank"
                 rel="noreferrer"
                 aria-label="Telegram"
@@ -35,6 +35,17 @@ export function LandingFooter() {
               >
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.446 1.394c-.14.18-.357.295-.6.295-.002 0-.003 0-.005 0l.213-3.053 5.56-5.022c.24-.213-.054-.334-.373-.121l-6.869 4.326-2.96-.924c-.64-.203-.658-.64.135-.954l11.566-4.458c.538-.196 1.006.128.832.941z" />
+                </svg>
+              </a>
+              <a
+                href="https://www.linkedin.com/company/bottomupsocial/"
+                target="_blank"
+                rel="noreferrer"
+                aria-label="LinkedIn"
+                className="hover:text-fg"
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14zM8.339 18.338v-7.18H6.004v7.18h2.335zM7.17 10.152a1.349 1.349 0 1 0 0-2.697 1.349 1.349 0 0 0 0 2.697zM18.338 18.338v-3.936c0-2.024-1.094-2.962-2.552-2.962-1.178 0-1.706.648-2 1.102v-.948h-2.335c.031.662 0 7.18 0 7.18h2.335v-4.01c0-.21.015-.42.077-.57.168-.42.555-.854 1.202-.854.848 0 1.188.644 1.188 1.588v3.846h2.085z" />
                 </svg>
               </a>
             </div>

@@ -2,10 +2,10 @@ import type { ReactNode } from 'react';
 
 const IOS_URL =
   process.env.NEXT_PUBLIC_IOS_URL ||
-  'https://apps.apple.com/tr/app/bottomup/id1543283530';
+  'https://apps.apple.com/tr/app/bottomup-social/id1661474993';
 const ANDROID_URL =
   process.env.NEXT_PUBLIC_ANDROID_URL ||
-  'https://play.google.com/store/apps/details?id=com.bottomup.app';
+  'https://play.google.com/store/apps/details?id=com.bottomup.bottomupapp';
 
 export const storeUrls = {
   ios: IOS_URL,
