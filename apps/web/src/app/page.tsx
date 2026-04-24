@@ -9,6 +9,7 @@ import { LeaderboardSection } from '@/components/landing/leaderboard-section';
 import { MarketplaceSection } from '@/components/landing/marketplace-section';
 import { McpSuiteSection } from '@/components/landing/mcp-suite-section';
 import { MobilePreviewSection } from '@/components/landing/mobile-preview-section';
+import { PartnersSection } from '@/components/landing/partners-section';
 import { NewsSection } from '@/components/landing/news-section';
 import { PricingSection } from '@/components/landing/pricing-section';
 import { ProblemSolutionSection } from '@/components/landing/problem-solution-section';
@@ -27,6 +28,7 @@ export default async function LandingPage() {
       {data ? <TickerStrip pulse={data.pulse} /> : null}
 
       <Hero data={data} />
+      <PartnersSection />
       <MobilePreviewSection />
       <IntroVideoSection />
       <ProblemSolutionSection />

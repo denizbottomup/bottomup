@@ -1,12 +1,12 @@
 export function MobilePreviewSection() {
   return (
-    <section className="relative overflow-hidden">
+    <section className="relative overflow-hidden bg-black">
       <div className="pointer-events-none absolute inset-0 -z-10">
-        <div className="absolute left-1/2 top-1/2 h-[520px] w-[900px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-brand/12 blur-[140px]" />
-        <div className="absolute right-[10%] top-[30%] h-[320px] w-[320px] rounded-full bg-violet/12 blur-[110px]" />
+        <div className="absolute right-[5%] top-1/2 h-[460px] w-[460px] -translate-y-1/2 rounded-full bg-brand/10 blur-[140px]" />
+        <div className="absolute right-[20%] top-[30%] h-[260px] w-[260px] rounded-full bg-violet/10 blur-[120px]" />
       </div>
 
-      <div className="mx-auto grid max-w-[1400px] grid-cols-1 items-center gap-8 px-4 pb-6 pt-2 md:px-8 md:pb-10 md:pt-4 lg:grid-cols-[1fr_620px] lg:gap-14">
+      <div className="mx-auto grid max-w-[1400px] grid-cols-1 items-center gap-8 px-4 pb-8 pt-8 md:px-8 md:pb-14 md:pt-14 lg:grid-cols-[1fr_620px] lg:gap-14">
         <div className="order-2 lg:order-1">
           <div className="mono-label">In your pocket</div>
           <h2 className="mt-2 text-3xl font-extrabold tracking-[-0.02em] md:text-5xl">
