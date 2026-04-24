@@ -10,10 +10,9 @@ import { MarketplaceSection } from '@/components/landing/marketplace-section';
 import { McpSuiteSection } from '@/components/landing/mcp-suite-section';
 import { NewsSection } from '@/components/landing/news-section';
 import { PricingSection } from '@/components/landing/pricing-section';
-import { ProblemSection } from '@/components/landing/problem-section';
+import { ProblemSolutionSection } from '@/components/landing/problem-solution-section';
 import { PulseSection } from '@/components/landing/pulse-section';
 import { RoadmapSection } from '@/components/landing/roadmap-section';
-import { SolutionSection } from '@/components/landing/solution-section';
 import { TickerStrip } from '@/components/landing/ticker-strip';
 import { TractionSection } from '@/components/landing/traction-section';
 import { fetchLanding } from '@/components/landing/landing-data';
@@ -29,17 +28,11 @@ export default async function LandingPage() {
       {data ? <TickerStrip pulse={data.pulse} /> : null}
 
       <Hero data={data} />
-      <ProblemSection />
-      <SolutionSection />
+      <ProblemSolutionSection />
       <FoxyFirewallSection />
       <MarketplaceSection />
 
-      {data ? (
-        <LeaderboardSection
-          traders={data.top_traders}
-          setups={data.latest_setups}
-        />
-      ) : null}
+      {data ? <LeaderboardSection traders={data.top_traders} /> : null}
 
       <McpSuiteSection />
 

@@ -11,9 +11,12 @@ export interface LandingPayload {
     first_name: string | null;
     last_name: string | null;
     image: string | null;
-    monthly_roi: number | null;
-    win_rate: number | null;
     followers: number;
+    virtual_balance_usd: number;
+    virtual_return_pct: number;
+    monthly_trades: number;
+    monthly_wins: number;
+    monthly_win_rate: number | null;
   }>;
   latest_setups: Array<{
     id: string;

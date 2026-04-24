@@ -9,9 +9,12 @@ export interface LandingTrader {
   first_name: string | null;
   last_name: string | null;
   image: string | null;
-  monthly_roi: number | null;
-  win_rate: number | null;
   followers: number;
+  virtual_balance_usd: number;
+  virtual_return_pct: number;
+  monthly_trades: number;
+  monthly_wins: number;
+  monthly_win_rate: number | null;
 }
 
 export interface LandingSetup {
@@ -105,32 +108,81 @@ export class PublicService {
     };
   }
 
+  /**
+   * Builds a "what if I gave this trader $10K at the start of the month"
+   * leaderboard.
+   *
+   * For every setup the trader closed this calendar month (success, stop,
+   * or manual close) we compute a long/short-aware pct return, allocate a
+   * fixed $1,000 slot per trade, and sum. Final virtual balance = $10,000 +
+   * Σ($1,000 × r). This is deliberately simple: equal-slot, non-compounding,
+   * easy to explain, capped exposure per trade. No leverage multiplier.
+   *
+   * Wins count separately (positive P&L) so we can surface a win-rate
+   * chip alongside the balance.
+   */
   private async topTraders(limit: number): Promise<LandingTrader[]> {
+    const capped = Math.max(1, Math.min(20, limit));
     const rows = await this.prisma.$queryRawUnsafe<Array<Record<string, unknown>>>(
-      `SELECT u.id::text AS trader_id, u.name, u.first_name, u.last_name, u.image,
-              ts.monthly_roi, ts.win_rate,
+      `WITH monthly AS (
+         SELECT s.trader_id,
+                COUNT(*)::int AS trades,
+                COUNT(*) FILTER (
+                  WHERE (s.position = 'long'::positions_type AND s.close_price > s.entry_value)
+                     OR (s.position = 'short'::positions_type AND s.close_price < s.entry_value)
+                )::int AS wins,
+                COALESCE(SUM(
+                  CASE
+                    WHEN s.position = 'long'::positions_type
+                      THEN (s.close_price - s.entry_value) / NULLIF(s.entry_value, 0)
+                    WHEN s.position = 'short'::positions_type
+                      THEN (s.entry_value - s.close_price) / NULLIF(s.entry_value, 0)
+                    ELSE 0
+                  END
+                ), 0) AS total_pct
+           FROM setup s
+          WHERE s.is_deleted = FALSE
+            AND s.close_date >= DATE_TRUNC('month', NOW())
+            AND s.status IN ('success'::statuses_type,'closed'::statuses_type,'stopped'::statuses_type)
+            AND s.close_price IS NOT NULL
+            AND s.entry_value > 0
+          GROUP BY s.trader_id
+       )
+       SELECT u.id::text AS trader_id, u.name, u.first_name, u.last_name, u.image,
               (SELECT COUNT(*)::int FROM follow_notify f
-                WHERE f.trader_id = u.id AND f.follow = TRUE AND f.is_deleted = FALSE) AS followers
+                WHERE f.trader_id = u.id AND f.follow = TRUE AND f.is_deleted = FALSE) AS followers,
+              COALESCE(m.trades, 0) AS trades,
+              COALESCE(m.wins, 0)   AS wins,
+              COALESCE(m.total_pct, 0) AS total_pct
          FROM "user" u
-         LEFT JOIN trader_stats ts ON ts.trader_id = u.id
+         LEFT JOIN monthly m ON m.trader_id = u.id
         WHERE u.is_trader = TRUE AND u.is_active = TRUE AND u.is_deleted = FALSE
-          AND EXISTS (SELECT 1 FROM setup s
-                       WHERE s.trader_id = u.id
-                         AND s.is_deleted = FALSE
-                         AND s.status IN ('active'::statuses_type,'success'::statuses_type,'closed'::statuses_type))
-        ORDER BY COALESCE(ts.monthly_roi, 0) DESC, ts.monthly_pnl DESC NULLS LAST
-        LIMIT ${Math.max(1, Math.min(20, limit))}`,
+          AND m.trades IS NOT NULL AND m.trades > 0
+        ORDER BY m.total_pct DESC NULLS LAST
+        LIMIT ${capped}`,
     );
-    return rows.map((r) => ({
-      trader_id: r.trader_id as string,
-      name: (r.name as string | null) ?? null,
-      first_name: (r.first_name as string | null) ?? null,
-      last_name: (r.last_name as string | null) ?? null,
-      image: (r.image as string | null) ?? null,
-      monthly_roi: r.monthly_roi == null ? null : Number(r.monthly_roi),
-      win_rate: r.win_rate == null ? null : Number(r.win_rate),
-      followers: Number(r.followers ?? 0),
-    }));
+    const PER_TRADE_SLOT = 1000;
+    const STARTING = 10000;
+    return rows.map((r) => {
+      const trades = Number(r.trades ?? 0);
+      const wins = Number(r.wins ?? 0);
+      const totalPct = Number(r.total_pct ?? 0);
+      const balance = STARTING + PER_TRADE_SLOT * totalPct;
+      const returnPct = ((balance - STARTING) / STARTING) * 100;
+      return {
+        trader_id: r.trader_id as string,
+        name: (r.name as string | null) ?? null,
+        first_name: (r.first_name as string | null) ?? null,
+        last_name: (r.last_name as string | null) ?? null,
+        image: (r.image as string | null) ?? null,
+        followers: Number(r.followers ?? 0),
+        virtual_balance_usd: Math.round(balance * 100) / 100,
+        virtual_return_pct: Math.round(returnPct * 100) / 100,
+        monthly_trades: trades,
+        monthly_wins: wins,
+        monthly_win_rate: trades > 0 ? wins / trades : null,
+      };
+    });
   }
 
   private async latestSetups(limit: number): Promise<LandingSetup[]> {

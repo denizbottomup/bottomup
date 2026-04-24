@@ -3,78 +3,53 @@ import { displayName, type LandingPayload } from './landing-data';
 
 export function LeaderboardSection({
   traders,
-  setups,
 }: {
   traders: LandingPayload['top_traders'];
-  setups: LandingPayload['latest_setups'];
 }) {
+  const shown = traders.filter((t) => t.monthly_trades > 0).slice(0, 6);
+
   return (
-    <section id="leaderboard" className="relative">
+    <section id="leaderboard" className="relative overflow-hidden">
+      <div className="pointer-events-none absolute inset-0 -z-10 grid-pattern opacity-40" />
       <div className="mx-auto max-w-[1400px] px-4 py-14 md:px-8 md:py-20">
-        <header className="flex flex-wrap items-end justify-between gap-3">
+        <header className="flex flex-wrap items-end justify-between gap-4">
           <div>
-            <div className="text-[11px] uppercase tracking-[0.2em] text-brand">
-              Marketplace · live shops
-            </div>
-            <h2 className="mt-1 text-2xl font-semibold md:text-3xl">
-              Subscribe to the traders already running money.
+            <div className="mono-label">Live leaderboard</div>
+            <h2 className="mt-2 text-3xl font-bold tracking-tight md:text-5xl">
+              $10,000 on April 1st.{' '}
+              <span className="brand-gradient">Where are they now?</span>
             </h2>
-            <p className="mt-2 max-w-xl text-sm text-fg-muted">
-              Ranked by monthly ROI. Every setup below is real and live on
-              the marketplace right now — each one pre-audited by Foxy
-              before it reaches your wallet.
+            <p className="mt-3 max-w-2xl text-sm text-fg-muted md:text-base">
+              Every trader starts the month with a virtual $10,000. Equal
+              $1,000 slot per closed trade. Long/short aware. Numbers update
+              as they trade.
             </p>
           </div>
-          <Link href="/signup" className="btn-ghost whitespace-nowrap">
-            Browse the full marketplace →
+          <Link
+            href="/signup"
+            className="btn-primary whitespace-nowrap px-5 py-3 text-base"
+          >
+            Browse marketplace →
           </Link>
         </header>
 
-        <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-[1fr_1fr]">
-          <div>
-            <div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-fg-muted">
-              <span className="h-px flex-1 bg-border" />
-              Top traders · Monthly ROI
-              <span className="h-px flex-1 bg-border" />
-            </div>
-            <div className="space-y-2">
-              {traders.length === 0 ? (
-                <Empty text="Trader data isn't loaded yet." />
-              ) : (
-                traders.map((t, i) => <TraderRow key={t.trader_id} trader={t} rank={i + 1} />)
-              )}
-            </div>
+        {shown.length === 0 ? (
+          <div className="mt-10 rounded-2xl border border-dashed border-border px-4 py-12 text-center text-sm text-fg-dim">
+            No closed trades yet this month — check back soon.
           </div>
-
-          <div>
-            <div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-fg-muted">
-              <span className="h-px flex-1 bg-border" />
-              Latest setups · Live
-              <span className="h-px flex-1 bg-border" />
-            </div>
-            <div className="space-y-2">
-              {setups.length === 0 ? (
-                <Empty text="No live setups right now." />
-              ) : (
-                setups.slice(0, 6).map((s) => <SetupRow key={s.id} setup={s} />)
-              )}
-            </div>
+        ) : (
+          <div className="mt-10 grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
+            {shown.map((t, i) => (
+              <TraderCard key={t.trader_id} trader={t} rank={i + 1} />
+            ))}
           </div>
-        </div>
+        )}
       </div>
     </section>
   );
 }
 
-function Empty({ text }: { text: string }) {
-  return (
-    <div className="rounded-xl border border-dashed border-border px-4 py-8 text-center text-sm text-fg-dim">
-      {text}
-    </div>
-  );
-}
-
-function TraderRow({
+function TraderCard({
   trader,
   rank,
 }: {
@@ -82,98 +57,135 @@ function TraderRow({
   rank: number;
 }) {
   const name = displayName(trader);
-  const roi = trader.monthly_roi;
-  const roiTone = roi == null
-    ? 'text-fg-dim'
-    : roi >= 0
-      ? 'text-emerald-300'
-      : 'text-rose-300';
+  const winRate =
+    trader.monthly_win_rate == null
+      ? null
+      : Math.round(trader.monthly_win_rate * 100);
+  const positive = trader.virtual_return_pct >= 0;
+  const returnTone = positive ? 'text-emerald-300' : 'text-rose-300';
+  const balanceTone = positive ? 'text-fg' : 'text-rose-300';
+  const accent = positive
+    ? 'from-emerald-400/40 via-emerald-400/10'
+    : 'from-rose-400/40 via-rose-400/10';
+
   return (
-    <div className="flex items-center gap-3 rounded-xl border border-border bg-bg-card p-3 transition hover:border-white/20">
-      <span className="w-6 text-center font-mono text-xs text-fg-dim">
-        {rank}
-      </span>
-      {trader.image ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={trader.image}
-          alt=""
-          className="h-9 w-9 rounded-full object-cover ring-1 ring-white/10"
-        />
-      ) : (
-        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-white/5 text-sm font-semibold text-fg ring-1 ring-white/10">
-          {name[0]?.toUpperCase() ?? '?'}
+    <div className="group relative overflow-hidden rounded-2xl border border-border bg-bg-card p-[1px] transition hover:border-white/20">
+      <div
+        className={`pointer-events-none absolute inset-0 -z-10 bg-gradient-to-br ${accent} to-transparent opacity-0 transition group-hover:opacity-100`}
+      />
+      <div className="flex h-full flex-col rounded-[calc(1rem-1px)] bg-bg-card p-5">
+        <div className="flex items-start justify-between">
+          <div className="flex items-center gap-3">
+            <span className="mono-label !text-fg-dim">#{String(rank).padStart(2, '0')}</span>
+            {trader.image ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={trader.image}
+                alt=""
+                className="h-12 w-12 rounded-full object-cover ring-2 ring-white/10"
+              />
+            ) : (
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/5 text-lg font-bold text-fg ring-2 ring-white/10">
+                {name[0]?.toUpperCase() ?? '?'}
+              </div>
+            )}
+            <div>
+              <div className="text-base font-semibold text-fg">{name}</div>
+              <div className="text-[11px] text-fg-dim stat-num">
+                {trader.followers.toLocaleString('en-US')} followers
+              </div>
+            </div>
+          </div>
+          <span
+            className={`rounded-full px-2 py-0.5 font-mono text-[10px] font-semibold ring-1 ${
+              positive
+                ? 'bg-emerald-400/10 text-emerald-300 ring-emerald-400/30'
+                : 'bg-rose-400/10 text-rose-300 ring-rose-400/30'
+            }`}
+          >
+            {positive ? '▲' : '▼'}{' '}
+            {positive ? '+' : ''}
+            {trader.virtual_return_pct.toFixed(1)}%
+          </span>
         </div>
-      )}
-      <div className="min-w-0 flex-1">
-        <div className="truncate text-sm font-medium text-fg">{name}</div>
-        <div className="text-[11px] text-fg-dim">
-          {trader.followers.toLocaleString('en-US')} followers
-          {trader.win_rate != null
-            ? ` · ${Math.round(trader.win_rate * 100)}% win rate`
-            : ''}
+
+        <div className="mt-5 border-t border-border pt-4">
+          <div className="mono-label !text-fg-dim">Virtual balance</div>
+          <div className={`stat-num mt-0.5 text-3xl font-bold md:text-4xl ${balanceTone}`}>
+            ${trader.virtual_balance_usd.toLocaleString('en-US', {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            })}
+          </div>
+          <div className="mt-0.5 text-[11px] text-fg-dim">
+            from{' '}
+            <span className="stat-num text-fg-muted">$10,000</span> this month
+          </div>
+        </div>
+
+        <div className="mt-4 grid grid-cols-3 gap-2">
+          <MiniStat
+            label="Trades"
+            value={trader.monthly_trades.toString()}
+          />
+          <MiniStat
+            label="Wins"
+            value={trader.monthly_wins.toString()}
+            tone="success"
+          />
+          <MiniStat
+            label="Win rate"
+            value={winRate != null ? `${winRate}%` : '—'}
+            tone={winRate != null && winRate >= 50 ? 'success' : 'neutral'}
+          />
+        </div>
+
+        <div className="mt-4 flex h-1.5 overflow-hidden rounded-full bg-rose-400/20">
+          <div
+            className="bg-emerald-400"
+            style={{
+              width: `${winRate == null ? 50 : Math.min(100, Math.max(0, winRate))}%`,
+            }}
+          />
+        </div>
+
+        <div className="mt-4 flex items-center justify-between text-[11px] text-fg-dim">
+          <span
+            className={`flex items-center gap-1 ${
+              returnTone
+            }`}
+          >
+            <span className={`h-1.5 w-1.5 rounded-full ${positive ? 'bg-emerald-400 animate-pulse' : 'bg-rose-400'}`} />
+            {positive ? 'Live' : 'Drawdown'}
+          </span>
+          <span>Foxy-audited signals only</span>
         </div>
       </div>
-      {roi != null ? (
-        <span className={`font-mono text-sm font-semibold ${roiTone}`}>
-          {roi >= 0 ? '+' : ''}
-          {roi.toFixed(1)}%
-        </span>
-      ) : null}
     </div>
   );
 }
 
-function SetupRow({ setup }: { setup: LandingPayload['latest_setups'][0] }) {
-  const isLong = setup.position === 'long';
-  const isShort = setup.position === 'short';
-  const tone = isLong
-    ? 'text-emerald-300'
-    : isShort
-      ? 'text-rose-300'
-      : 'text-fg-dim';
-
+function MiniStat({
+  label,
+  value,
+  tone = 'neutral',
+}: {
+  label: string;
+  value: string;
+  tone?: 'neutral' | 'success';
+}) {
   return (
-    <div className="flex items-center gap-3 rounded-xl border border-border bg-bg-card p-3 transition hover:border-white/20">
-      {setup.coin_image ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={setup.coin_image}
-          alt=""
-          className="h-8 w-8 rounded-full object-cover ring-1 ring-white/10"
-        />
-      ) : (
-        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/5 font-mono text-[10px] text-fg-muted ring-1 ring-white/10">
-          {setup.coin_name.slice(0, 3)}
-        </div>
-      )}
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2">
-          <span className="font-mono text-sm font-semibold text-fg">
-            {setup.coin_name}
-          </span>
-          <span className={`text-[11px] font-medium ${tone}`}>
-            {isLong ? 'Long' : isShort ? 'Short' : '—'}
-          </span>
-          <span className="rounded-md bg-white/5 px-1.5 py-0.5 text-[9px] uppercase tracking-wider text-fg-dim">
-            {setup.status}
-          </span>
-        </div>
-        <div className="mt-0.5 truncate text-[11px] text-fg-dim">
-          {setup.trader_name ?? '—'}
-        </div>
+    <div className="rounded-lg bg-white/[0.03] p-2.5">
+      <div className="text-[9px] uppercase tracking-wider text-fg-dim">
+        {label}
       </div>
-      {setup.r_value != null ? (
-        <span
-          className={`rounded-md px-2 py-0.5 font-mono text-[11px] ring-1 ${
-            setup.r_value >= 2
-              ? 'bg-emerald-400/10 text-emerald-300 ring-emerald-400/30'
-              : 'bg-white/5 text-fg-muted ring-white/10'
-          }`}
-        >
-          R {setup.r_value.toFixed(1)}
-        </span>
-      ) : null}
+      <div
+        className={`stat-num mt-0.5 text-sm font-bold ${
+          tone === 'success' ? 'text-emerald-300' : 'text-fg'
+        }`}
+      >
+        {value}
+      </div>
     </div>
   );
 }
