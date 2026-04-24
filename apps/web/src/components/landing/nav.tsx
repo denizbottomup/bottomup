@@ -36,8 +36,8 @@ export function LandingNav() {
             <a href="#mcp" className="hover:text-fg transition">
               MCP Suite
             </a>
-            <a href="#traction" className="hover:text-fg transition">
-              Traction
+            <a href="#leaderboard" className="hover:text-fg transition">
+              Traders
             </a>
             <a href="#pricing" className="hover:text-fg transition">
               Pricing
@@ -88,8 +88,8 @@ export function LandingNav() {
             <a href="#mcp" className="py-2 text-fg-muted" onClick={() => setMobileOpen(false)}>
               MCP Suite
             </a>
-            <a href="#traction" className="py-2 text-fg-muted" onClick={() => setMobileOpen(false)}>
-              Traction
+            <a href="#leaderboard" className="py-2 text-fg-muted" onClick={() => setMobileOpen(false)}>
+              Traders
             </a>
             <a href="#pricing" className="py-2 text-fg-muted" onClick={() => setMobileOpen(false)}>
               Pricing

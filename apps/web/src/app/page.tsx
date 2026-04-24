@@ -1,4 +1,3 @@
-import { CompetitiveSection } from '@/components/landing/competitive-section';
 import { FaqSection } from '@/components/landing/faq-section';
 import { FinalCta } from '@/components/landing/final-cta';
 import { FoxyFirewallSection } from '@/components/landing/foxy-firewall-section';
@@ -12,9 +11,7 @@ import { NewsSection } from '@/components/landing/news-section';
 import { PricingSection } from '@/components/landing/pricing-section';
 import { ProblemSolutionSection } from '@/components/landing/problem-solution-section';
 import { PulseSection } from '@/components/landing/pulse-section';
-import { RoadmapSection } from '@/components/landing/roadmap-section';
 import { TickerStrip } from '@/components/landing/ticker-strip';
-import { TractionSection } from '@/components/landing/traction-section';
 import { fetchLanding } from '@/components/landing/landing-data';
 
 export const revalidate = 60;
@@ -37,10 +34,6 @@ export default async function LandingPage() {
       <McpSuiteSection />
 
       {data ? <PulseSection pulse={data.pulse} /> : null}
-
-      <TractionSection />
-      <CompetitiveSection />
-      <RoadmapSection />
 
       {data && data.news.length > 0 ? <NewsSection news={data.news} /> : null}
 

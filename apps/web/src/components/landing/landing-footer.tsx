@@ -71,11 +71,6 @@ export function LandingFooter() {
                 </a>
               </li>
               <li>
-                <a href="#roadmap" className="hover:text-fg">
-                  Roadmap
-                </a>
-              </li>
-              <li>
                 <a href="#pricing" className="hover:text-fg">
                   Pricing
                 </a>
