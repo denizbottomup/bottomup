@@ -85,6 +85,15 @@ interface SetupEvent {
   trader_image: string | null;
 }
 
+interface EditDraft {
+  stop_value: string;
+  profit_taking_1: string;
+  profit_taking_2: string;
+  profit_taking_3: string;
+  entry_value: string;
+  note: string;
+}
+
 interface HistoryPoint {
   id: string;
   field: string;
@@ -110,6 +119,9 @@ export default function SetupDetailPage() {
   const [meId, setMeId] = useState<string | null>(null);
   const [manageOpen, setManageOpen] = useState(false);
   const [managePending, setManagePending] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [editDraft, setEditDraft] = useState<EditDraft | null>(null);
+  const [editPending, setEditPending] = useState(false);
 
   useEffect(() => {
     if (!setupId) return;
@@ -181,6 +193,60 @@ export default function SetupDetailPage() {
       setClapPending(false);
     }
   }, [detail]);
+
+  const openEdit = useCallback(() => {
+    if (!detail) return;
+    setEditDraft({
+      stop_value: numToText(detail.stop_value),
+      profit_taking_1: numToText(detail.profit_taking_1),
+      profit_taking_2: numToText(detail.profit_taking_2),
+      profit_taking_3: numToText(detail.profit_taking_3),
+      entry_value: numToText(detail.entry_value),
+      note: detail.note ?? '',
+    });
+    setEditOpen(true);
+    setManageOpen(false);
+  }, [detail]);
+
+  const saveEdit = useCallback(async () => {
+    if (!detail || !editDraft) return;
+    setEditPending(true);
+    try {
+      const patch: Record<string, number | string | null> = {};
+      const fields: Array<keyof EditDraft> = [
+        'stop_value',
+        'profit_taking_1',
+        'profit_taking_2',
+        'profit_taking_3',
+        'entry_value',
+      ];
+      for (const f of fields) {
+        const raw = (editDraft[f] ?? '').trim();
+        if (raw === '') patch[f] = null;
+        else {
+          const n = Number(raw);
+          if (!Number.isFinite(n)) {
+            throw new Error(`${f} sayı olmalı`);
+          }
+          patch[f] = n;
+        }
+      }
+      const noteRaw = (editDraft.note ?? '').trim();
+      patch.note = noteRaw === '' ? null : noteRaw;
+
+      await api<{ ok: true }>(`/setup/${detail.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(patch),
+      });
+      const fresh = await api<SetupDetail>(`/setup/${detail.id}`);
+      setDetail(fresh);
+      setEditOpen(false);
+    } catch (x) {
+      setErr(x instanceof ApiError ? `${x.status} ${x.message}` : (x as Error).message);
+    } finally {
+      setEditPending(false);
+    }
+  }, [detail, editDraft]);
 
   const onClose = useCallback(
     async (reason: 'success' | 'stop' | 'cancel') => {
@@ -300,6 +366,12 @@ export default function SetupDetailPage() {
               </button>
               {manageOpen ? (
                 <div className="absolute right-0 z-20 mt-1 w-44 overflow-hidden rounded-lg border border-white/10 bg-bg-card shadow-xl">
+                  <ManageItem
+                    label="Fiyatları düzenle"
+                    tone="amber"
+                    disabled={managePending}
+                    onClick={openEdit}
+                  />
                   <ManageItem
                     label="Başarıyla kapat"
                     tone="emerald"
@@ -486,8 +558,149 @@ export default function SetupDetailPage() {
           }
         />
       ) : null}
+
+      {/* Edit sheet — owner only */}
+      {editOpen && editDraft ? (
+        <EditSheet
+          draft={editDraft}
+          setDraft={setEditDraft}
+          pending={editPending}
+          isLong={isLong}
+          onCancel={() => setEditOpen(false)}
+          onSave={() => void saveEdit()}
+        />
+      ) : null}
     </div>
   );
+}
+
+function EditSheet({
+  draft,
+  setDraft,
+  pending,
+  isLong,
+  onCancel,
+  onSave,
+}: {
+  draft: EditDraft;
+  setDraft: (d: EditDraft | ((prev: EditDraft | null) => EditDraft | null)) => void;
+  pending: boolean;
+  isLong: boolean;
+  onCancel: () => void;
+  onSave: () => void;
+}) {
+  const set = (k: keyof EditDraft, v: string): void => {
+    setDraft((prev) => (prev ? { ...prev, [k]: v } : prev));
+  };
+  return (
+    <div
+      className="fixed inset-0 z-40 flex items-end justify-center bg-black/60 backdrop-blur-sm md:items-center"
+      onClick={onCancel}
+    >
+      <div
+        className="w-full max-w-lg rounded-t-2xl border border-white/10 bg-bg-card p-5 md:rounded-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="mb-3 flex items-center justify-between">
+          <h3 className="text-sm font-semibold text-fg">Fiyat seviyelerini güncelle</h3>
+          <button
+            onClick={onCancel}
+            className="text-fg-dim hover:text-fg text-lg leading-none"
+            aria-label="Kapat"
+          >
+            ×
+          </button>
+        </div>
+        <p className="text-[11px] text-fg-muted">
+          Stop değerini girişe eşitlemek risk-free (breakeven) anlamına gelir — izin verilir.
+        </p>
+
+        <div className="mt-4 grid grid-cols-2 gap-3">
+          <EditField
+            label={`Giriş${isLong ? ' (alt)' : ' (üst)'}`}
+            value={draft.entry_value}
+            onChange={(v) => set('entry_value', v)}
+          />
+          <EditField
+            label="Stop"
+            value={draft.stop_value}
+            onChange={(v) => set('stop_value', v)}
+            hint="Breakeven için girişe eşitle"
+          />
+          <EditField
+            label="TP1"
+            value={draft.profit_taking_1}
+            onChange={(v) => set('profit_taking_1', v)}
+          />
+          <EditField
+            label="TP2"
+            value={draft.profit_taking_2}
+            onChange={(v) => set('profit_taking_2', v)}
+          />
+          <EditField
+            label="TP3"
+            value={draft.profit_taking_3}
+            onChange={(v) => set('profit_taking_3', v)}
+          />
+        </div>
+
+        <label className="mt-4 block text-xs text-fg-muted">
+          Not
+          <textarea
+            value={draft.note}
+            onChange={(e) => set('note', e.target.value)}
+            rows={3}
+            placeholder="Opsiyonel güncelleme açıklaması"
+            className="mt-1 w-full resize-none rounded-lg border border-border bg-bg-card px-3 py-2 text-sm text-fg placeholder:text-fg-dim focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
+          />
+        </label>
+
+        <div className="mt-4 flex items-center justify-end gap-2">
+          <button onClick={onCancel} className="btn-ghost text-sm">
+            Vazgeç
+          </button>
+          <button
+            onClick={onSave}
+            disabled={pending}
+            className="rounded-lg bg-brand px-3 py-2 text-sm font-medium text-white ring-1 ring-brand hover:bg-brand-dark disabled:opacity-60"
+          >
+            {pending ? 'Kaydediliyor…' : 'Kaydet'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function EditField({
+  label,
+  value,
+  onChange,
+  hint,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  hint?: string;
+}) {
+  return (
+    <label className="block text-xs text-fg-muted">
+      <span>{label}</span>
+      <input
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        inputMode="decimal"
+        placeholder="—"
+        className="mt-1 w-full rounded-lg border border-border bg-bg-card px-3 py-2 font-mono text-sm text-fg placeholder:text-fg-dim focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
+      />
+      {hint ? <div className="mt-0.5 text-[10px] text-fg-dim">{hint}</div> : null}
+    </label>
+  );
+}
+
+function numToText(n: number | null): string {
+  if (n == null) return '';
+  return String(n);
 }
 
 function DirectionPill({ position }: { position: 'long' | 'short' | null }) {
@@ -547,7 +760,7 @@ function ManageItem({
   onClick,
 }: {
   label: string;
-  tone: 'emerald' | 'rose' | 'dim' | 'danger';
+  tone: 'emerald' | 'rose' | 'dim' | 'danger' | 'amber';
   disabled?: boolean;
   onClick: () => void;
 }) {
@@ -556,9 +769,11 @@ function ManageItem({
       ? 'text-emerald-300 hover:bg-emerald-400/10'
       : tone === 'rose'
         ? 'text-rose-300 hover:bg-rose-400/10'
-        : tone === 'danger'
-          ? 'text-rose-400 hover:bg-rose-500/15'
-          : 'text-fg-muted hover:bg-white/5';
+        : tone === 'amber'
+          ? 'text-amber-300 hover:bg-amber-400/10'
+          : tone === 'danger'
+            ? 'text-rose-400 hover:bg-rose-500/15'
+            : 'text-fg-muted hover:bg-white/5';
   return (
     <button
       onClick={onClick}

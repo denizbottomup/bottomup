@@ -413,6 +413,183 @@ export class SetupService {
   }
 
   /**
+   * Trader edits mutable price levels on their own setup. Accepts a sparse
+   * body — only keys actually present are touched. For every changed
+   * numeric field we append a row to setup_value_history so the detail
+   * page's "Değişim geçmişi" chart stays accurate.
+   *
+   * Protected fields: coin_name, category, position, trader_id, status.
+   * Use /close or /delete for status transitions.
+   */
+  async edit(
+    viewer: AuthedUser,
+    setupId: string,
+    body: Partial<{
+      entry_value: number | null;
+      entry_value_end: number | null;
+      stop_value: number | null;
+      profit_taking_1: number | null;
+      profit_taking_2: number | null;
+      profit_taking_3: number | null;
+      open_leverage: number | null;
+      note: string | null;
+    }>,
+  ): Promise<{ ok: true }> {
+    await this.assertOwner(viewer, setupId);
+
+    const prevRows = await this.prisma.$queryRawUnsafe<
+      Array<Record<string, unknown>>
+    >(
+      `SELECT entry_value, entry_value_end, stop_value,
+              profit_taking_1, profit_taking_2, profit_taking_3,
+              open_leverage, note, position::text AS position
+         FROM setup WHERE id = $1::uuid LIMIT 1`,
+      setupId,
+    );
+    const prev = prevRows[0];
+    if (!prev) throw new NotFoundException('Setup not found');
+
+    const NUMERIC_FIELDS = [
+      'entry_value',
+      'entry_value_end',
+      'stop_value',
+      'profit_taking_1',
+      'profit_taking_2',
+      'profit_taking_3',
+    ] as const;
+    type NumericField = (typeof NUMERIC_FIELDS)[number];
+    const numericPatch: Partial<Record<NumericField, number | null>> = {};
+    for (const k of NUMERIC_FIELDS) {
+      if (Object.prototype.hasOwnProperty.call(body, k)) {
+        const raw = body[k];
+        if (raw == null) {
+          numericPatch[k] = null;
+        } else {
+          const n = Number(raw);
+          if (!Number.isFinite(n)) {
+            throw new BadRequestException(`${k} invalid`);
+          }
+          numericPatch[k] = n;
+        }
+      }
+    }
+
+    const entry =
+      numericPatch.entry_value != null
+        ? numericPatch.entry_value
+        : prev.entry_value != null
+          ? Number(prev.entry_value)
+          : null;
+    const stop =
+      'stop_value' in numericPatch
+        ? (numericPatch.stop_value ?? null)
+        : prev.stop_value != null
+          ? Number(prev.stop_value)
+          : null;
+    const tp1 =
+      'profit_taking_1' in numericPatch
+        ? (numericPatch.profit_taking_1 ?? null)
+        : prev.profit_taking_1 != null
+          ? Number(prev.profit_taking_1)
+          : null;
+    const isLong = String(prev.position ?? 'long') === 'long';
+
+    if (entry != null && entry <= 0) {
+      throw new BadRequestException('entry_value must be > 0');
+    }
+    // Breakeven stop (stop === entry) is intentionally allowed: traders
+    // use that to lock in risk-free after first entry.
+    if (stop != null && entry != null) {
+      if (isLong && stop > entry) {
+        throw new BadRequestException('stop must be <= entry for long');
+      }
+      if (!isLong && stop < entry) {
+        throw new BadRequestException('stop must be >= entry for short');
+      }
+    }
+    if (tp1 != null && entry != null) {
+      if (isLong && tp1 <= entry) {
+        throw new BadRequestException('TP1 must be above entry for long');
+      }
+      if (!isLong && tp1 >= entry) {
+        throw new BadRequestException('TP1 must be below entry for short');
+      }
+    }
+
+    const leverage =
+      'open_leverage' in body
+        ? body.open_leverage == null
+          ? null
+          : Math.max(1, Math.min(125, Math.round(Number(body.open_leverage))))
+        : undefined;
+    const note =
+      'note' in body
+        ? body.note == null
+          ? null
+          : String(body.note).slice(0, 2000)
+        : undefined;
+
+    const setClauses: string[] = [];
+    const values: unknown[] = [setupId];
+    const bind = (v: unknown): string => {
+      values.push(v);
+      return `$${values.length}`;
+    };
+
+    for (const k of NUMERIC_FIELDS) {
+      if (k in numericPatch) {
+        setClauses.push(`${k} = ${bind(numericPatch[k])}`);
+      }
+    }
+    if (leverage !== undefined) {
+      setClauses.push(`open_leverage = ${bind(leverage)}`);
+    }
+    if (note !== undefined) {
+      setClauses.push(`note = ${bind(note)}`);
+    }
+    if (setClauses.length === 0) {
+      return { ok: true };
+    }
+    setClauses.push(`last_acted_at = NOW()`);
+    setClauses.push(`updated_at = NOW()`);
+
+    await this.prisma.$executeRawUnsafe(
+      `UPDATE setup SET ${setClauses.join(', ')} WHERE id = $1::uuid`,
+      ...values,
+    );
+
+    const viewerId = await this.resolveViewerId(viewer);
+    for (const k of NUMERIC_FIELDS) {
+      if (!(k in numericPatch)) continue;
+      const oldV = prev[k] == null ? null : Number(prev[k]);
+      const newV = numericPatch[k];
+      if (oldV === newV) continue;
+      await this.prisma.$executeRawUnsafe(
+        `INSERT INTO setup_value_history (id, setup_id, field, value, created_at)
+         VALUES (gen_random_uuid(), $1::uuid, $2, $3, NOW())`,
+        setupId,
+        k,
+        newV,
+      );
+      await this.prisma.$executeRawUnsafe(
+        `INSERT INTO setup_events
+           (setup_id, trader_id, event_time, changed_column, old_value, new_value, action)
+         VALUES ($1::uuid, $2::uuid, NOW(), $3,
+                 CASE WHEN $4::text IS NULL THEN NULL ELSE $4::text END,
+                 CASE WHEN $5::text IS NULL THEN NULL ELSE $5::text END,
+                 'update')`,
+        setupId,
+        viewerId,
+        k,
+        oldV == null ? null : String(oldV),
+        newV == null ? null : String(newV),
+      );
+    }
+
+    return { ok: true };
+  }
+
+  /**
    * Trader closes their own setup. The body's `reason` steers the final
    * status: 'cancel' → 'cancelled', 'stop' → 'stopped', anything else
    * falls through to 'closed'. An explicit `close_price` is optional; if

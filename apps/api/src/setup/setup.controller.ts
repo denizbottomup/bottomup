@@ -77,6 +77,15 @@ export class SetupController {
     return this.setups.unclap(viewer, setupId);
   }
 
+  @Patch(':setupId')
+  edit(
+    @CurrentUser() viewer: AuthedUser,
+    @Param('setupId') setupId: string,
+    @Body() body: Parameters<SetupService['edit']>[2],
+  ): Promise<{ ok: true }> {
+    return this.setups.edit(viewer, setupId, body ?? {});
+  }
+
   @Patch(':setupId/close')
   close(
     @CurrentUser() viewer: AuthedUser,
