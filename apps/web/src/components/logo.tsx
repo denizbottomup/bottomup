@@ -26,7 +26,7 @@ export function Logo({
   href = '/',
   className = '',
 }: LogoProps) {
-  const src = variant === 'mark' ? '/logos/logomark-color.png' : '/logos/logotype-white.png';
+  const src = variant === 'mark' ? '/logos/logomark-color.png' : '/logos/logotype-color-light.png';
   const dims = variant === 'mark' ? marks[size] : lockups[size];
 
   const img = (
