@@ -110,17 +110,11 @@ export class PublicService {
   }
 
   /**
-   * Builds a "what if I gave this trader $10K at the start of the month"
-   * leaderboard.
-   *
-   * For every setup the trader closed this calendar month (success, stop,
-   * or manual close) we compute a long/short-aware pct return, allocate a
-   * fixed $1,000 slot per trade, and sum. Final virtual balance = $10,000 +
-   * Σ($1,000 × r). This is deliberately simple: equal-slot, non-compounding,
-   * easy to explain, capped exposure per trade. No leverage multiplier.
-   *
-   * Wins count separately (positive P&L) so we can surface a win-rate
-   * chip alongside the balance.
+   * Monthly leaderboard, aligned with the admin panel's canonical
+   * formula: PnL = Σ r_value × $100. Each trader starts the month
+   * with a virtual $10,000; every setup closed in the current month
+   * adds r_value × $100 to their balance. Wins are setups with
+   * positive r_value (break-even / negative count as non-wins).
    */
   private async topTraders(limit: number): Promise<LandingTrader[]> {
     const capped = Math.max(1, Math.min(20, limit));
@@ -128,25 +122,13 @@ export class PublicService {
       `WITH monthly AS (
          SELECT s.trader_id,
                 COUNT(*)::int AS trades,
-                COUNT(*) FILTER (
-                  WHERE (s.position = 'long'::positions_type AND s.close_price > s.entry_value)
-                     OR (s.position = 'short'::positions_type AND s.close_price < s.entry_value)
-                )::int AS wins,
-                COALESCE(SUM(
-                  CASE
-                    WHEN s.position = 'long'::positions_type
-                      THEN (s.close_price - s.entry_value) / NULLIF(s.entry_value, 0)
-                    WHEN s.position = 'short'::positions_type
-                      THEN (s.entry_value - s.close_price) / NULLIF(s.entry_value, 0)
-                    ELSE 0
-                  END
-                ), 0) AS total_pct
+                COUNT(*) FILTER (WHERE s.r_value > 0)::int AS wins,
+                COALESCE(SUM(s.r_value), 0) AS total_r
            FROM setup s
           WHERE s.is_deleted = FALSE
             AND s.close_date >= DATE_TRUNC('month', NOW())
             AND s.status IN ('success'::statuses_type,'closed'::statuses_type,'stopped'::statuses_type)
-            AND s.close_price IS NOT NULL
-            AND s.entry_value > 0
+            AND s.r_value IS NOT NULL
           GROUP BY s.trader_id
        )
        SELECT u.id::text AS trader_id, u.name, u.first_name, u.last_name, u.image,
@@ -154,21 +136,21 @@ export class PublicService {
                 WHERE f.trader_id = u.id AND f.follow = TRUE AND f.is_deleted = FALSE) AS followers,
               COALESCE(m.trades, 0) AS trades,
               COALESCE(m.wins, 0)   AS wins,
-              COALESCE(m.total_pct, 0) AS total_pct
+              COALESCE(m.total_r, 0) AS total_r
          FROM "user" u
          LEFT JOIN monthly m ON m.trader_id = u.id
         WHERE u.is_trader = TRUE AND u.is_active = TRUE AND u.is_deleted = FALSE
           AND m.trades IS NOT NULL AND m.trades > 0
-        ORDER BY m.total_pct DESC NULLS LAST
+        ORDER BY m.total_r DESC NULLS LAST
         LIMIT ${capped}`,
     );
-    const PER_TRADE_SLOT = 1000;
+    const DOLLAR_PER_R = 100;
     const STARTING = 10000;
     return rows.map((r) => {
       const trades = Number(r.trades ?? 0);
       const wins = Number(r.wins ?? 0);
-      const totalPct = Number(r.total_pct ?? 0);
-      const balance = STARTING + PER_TRADE_SLOT * totalPct;
+      const totalR = Number(r.total_r ?? 0);
+      const balance = STARTING + DOLLAR_PER_R * totalR;
       const returnPct = ((balance - STARTING) / STARTING) * 100;
       return {
         trader_id: r.trader_id as string,
