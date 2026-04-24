@@ -1,10 +1,8 @@
 'use client';
 
-import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { Logo } from '@/components/logo';
-
-const TRADE = process.env.NEXT_PUBLIC_TRADE_URL ?? '';
+import { WaitlistButton } from './waitlist';
 
 export function LandingNav() {
   const [scrolled, setScrolled] = useState(false);
@@ -48,12 +46,9 @@ export function LandingNav() {
         </div>
 
         <div className="hidden items-center gap-2 md:flex">
-          <Link href={`${TRADE}/signin`} className="btn-ghost">
-            Giriş
-          </Link>
-          <Link href={`${TRADE}/signup`} className="btn-primary">
-            10.000$ kasayla başla
-          </Link>
+          <WaitlistButton source="nav" className="btn-primary">
+            Bekleme listesine katıl
+          </WaitlistButton>
         </div>
 
         <button
@@ -96,13 +91,13 @@ export function LandingNav() {
             <a href="#faq" className="py-2 text-fg-muted" onClick={() => setMobileOpen(false)}>
               SSS
             </a>
-            <div className="mt-3 flex flex-col gap-2 border-t border-border pt-3">
-              <Link href={`${TRADE}/signin`} className="btn-ghost justify-center">
-                Giriş
-              </Link>
-              <Link href={`${TRADE}/signup`} className="btn-primary justify-center">
-                10.000$ kasayla başla
-              </Link>
+            <div className="mt-3 border-t border-border pt-3">
+              <WaitlistButton
+                source="nav-mobile"
+                className="btn-primary w-full justify-center"
+              >
+                Bekleme listesine katıl
+              </WaitlistButton>
             </div>
           </nav>
         </div>

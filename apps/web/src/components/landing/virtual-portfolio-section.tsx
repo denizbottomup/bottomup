@@ -1,6 +1,4 @@
-import Link from 'next/link';
-
-const TRADE = process.env.NEXT_PUBLIC_TRADE_URL ?? '';
+import { WaitlistButton } from './waitlist';
 
 export function VirtualPortfolioSection() {
   return (
@@ -50,18 +48,15 @@ export function VirtualPortfolioSection() {
             </ol>
 
             <div className="mt-8 flex flex-wrap gap-3">
-              <Link
-                href={`${TRADE}/signup`}
+              <WaitlistButton
+                source="virtual-portfolio"
                 className="btn-primary px-5 py-3 text-base"
               >
-                Kasayı al — ücretsiz
-              </Link>
-              <Link
-                href="#pricing"
-                className="btn-ghost px-5 py-3 text-base"
-              >
+                Waitlist'e katıl — ücretsiz
+              </WaitlistButton>
+              <a href="#pricing" className="btn-ghost px-5 py-3 text-base">
                 Fiyatları gör
-              </Link>
+              </a>
             </div>
           </div>
 

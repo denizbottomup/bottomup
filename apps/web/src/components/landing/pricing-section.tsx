@@ -1,6 +1,4 @@
-import Link from 'next/link';
-
-const TRADE = process.env.NEXT_PUBLIC_TRADE_URL ?? '';
+import { WaitlistButton } from './waitlist';
 
 const PLANS = [
   {
@@ -145,8 +143,8 @@ function PlanCard({ plan }: { plan: (typeof PLANS)[number] }) {
         ))}
       </ul>
 
-      <Link
-        href={`${TRADE}/signup?plan=${plan.code}`}
+      <WaitlistButton
+        source={`pricing-${plan.code}`}
         className={`mt-6 inline-flex items-center justify-center rounded-lg px-4 py-3 text-sm font-semibold transition ${
           plan.highlight
             ? 'bg-brand text-white hover:bg-brand-dark'
@@ -154,7 +152,7 @@ function PlanCard({ plan }: { plan: (typeof PLANS)[number] }) {
         }`}
       >
         {plan.cta}
-      </Link>
+      </WaitlistButton>
     </div>
   );
 }

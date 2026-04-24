@@ -1,7 +1,5 @@
-import Link from 'next/link';
 import { Logo } from '@/components/logo';
-
-const TRADE = process.env.NEXT_PUBLIC_TRADE_URL ?? '';
+import { WaitlistButton } from './waitlist';
 
 export function LandingFooter() {
   const year = new Date().getFullYear();
@@ -76,14 +74,9 @@ export function LandingFooter() {
             </div>
             <ul className="mt-3 space-y-2 text-sm text-fg-muted">
               <li>
-                <Link href={`${TRADE}/signup`} className="hover:text-fg">
-                  Kayıt ol
-                </Link>
-              </li>
-              <li>
-                <Link href={`${TRADE}/signin`} className="hover:text-fg">
-                  Giriş
-                </Link>
+                <WaitlistButton source="footer" className="hover:text-fg">
+                  Bekleme listesine katıl
+                </WaitlistButton>
               </li>
               <li>
                 <a href="#faq" className="hover:text-fg">

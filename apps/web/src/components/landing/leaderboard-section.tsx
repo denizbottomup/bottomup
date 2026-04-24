@@ -1,7 +1,5 @@
-import Link from 'next/link';
 import { displayName, type LandingPayload } from './landing-data';
-
-const TRADE = process.env.NEXT_PUBLIC_TRADE_URL ?? '';
+import { WaitlistButton } from './waitlist';
 
 export function LeaderboardSection({
   traders,
@@ -27,12 +25,12 @@ export function LeaderboardSection({
               denersin.
             </p>
           </div>
-          <Link
-            href={`${TRADE}/signup`}
+          <WaitlistButton
+            source="leaderboard"
             className="btn-ghost whitespace-nowrap"
           >
             Tüm liderleri gör →
-          </Link>
+          </WaitlistButton>
         </header>
 
         <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-[1fr_1fr]">

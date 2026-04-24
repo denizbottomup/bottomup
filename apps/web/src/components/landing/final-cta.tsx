@@ -1,6 +1,4 @@
-import Link from 'next/link';
-
-const TRADE = process.env.NEXT_PUBLIC_TRADE_URL ?? '';
+import { WaitlistButton } from './waitlist';
 
 export function FinalCta() {
   return (
@@ -21,18 +19,18 @@ export function FinalCta() {
           Türkiye'nin en iyi trader'ları şu an canlı yayında. Üye ol, takımını
           kur, kasada performansını gör. Hazır olduğunda OKX'e geç.
         </p>
-        <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-          <Link href={`${TRADE}/signup`} className="btn-primary px-6 py-3 text-base">
-            Ücretsiz başla →
-          </Link>
-          <Link href={`${TRADE}/signin`} className="btn-ghost px-6 py-3 text-base">
-            Giriş yap
-          </Link>
+        <div className="mt-8 flex justify-center">
+          <WaitlistButton
+            source="final-cta"
+            className="btn-primary px-6 py-3 text-base"
+          >
+            Waitlist'e katıl →
+          </WaitlistButton>
         </div>
         <div className="mt-6 flex flex-wrap items-center justify-center gap-5 text-[11px] text-fg-dim">
           <span>✓ Kredi kartı istemez</span>
-          <span>✓ 30 saniyede kayıt</span>
-          <span>✓ İstediğin zaman sil</span>
+          <span>✓ Açılışta ilk sen haber al</span>
+          <span>✓ İstediğin zaman listeden çık</span>
         </div>
       </div>
     </section>

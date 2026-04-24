@@ -1,4 +1,4 @@
-import { Controller, Get } from '@nestjs/common';
+import { Body, Controller, Get, Post } from '@nestjs/common';
 import { PublicService } from './public.service.js';
 
 /**
@@ -12,5 +12,12 @@ export class PublicController {
   @Get('/landing')
   landing(): ReturnType<PublicService['landing']> {
     return this.pub.landing();
+  }
+
+  @Post('/waitlist')
+  waitlist(
+    @Body() body: { email?: string; source?: string },
+  ): Promise<{ ok: true; already: boolean }> {
+    return this.pub.joinWaitlist(body?.email ?? '', body?.source);
   }
 }

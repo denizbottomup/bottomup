@@ -1,7 +1,5 @@
-import Link from 'next/link';
 import { displayName, type LandingPayload } from './landing-data';
-
-const TRADE = process.env.NEXT_PUBLIC_TRADE_URL ?? '';
+import { WaitlistButton } from './waitlist';
 
 export function Hero({ data }: { data: LandingPayload | null }) {
   const stats = data?.stats;
@@ -31,15 +29,15 @@ export function Hero({ data }: { data: LandingPayload | null }) {
           </p>
 
           <div className="mt-7 flex flex-wrap items-center gap-3">
-            <Link
-              href={`${TRADE}/signup`}
+            <WaitlistButton
+              source="hero"
               className="btn-primary animate-glow px-5 py-3 text-base"
             >
-              Ücretsiz başla — 10.000$ kasa hediye
-            </Link>
-            <Link href="#features" className="btn-ghost px-5 py-3 text-base">
+              Waitlist'e katıl — 10.000$ kasa hediye
+            </WaitlistButton>
+            <a href="#features" className="btn-ghost px-5 py-3 text-base">
               Nasıl çalışıyor?
-            </Link>
+            </a>
           </div>
 
           {stats ? (
@@ -105,12 +103,12 @@ export function Hero({ data }: { data: LandingPayload | null }) {
                   Üye ol, takımını kur, performansı gör
                 </div>
               </div>
-              <Link
-                href={`${TRADE}/signup`}
+              <WaitlistButton
+                source="hero-preview"
                 className="rounded-md bg-brand px-3 py-1.5 text-[11px] font-semibold text-white hover:bg-brand-dark"
               >
-                Başla →
-              </Link>
+                Katıl →
+              </WaitlistButton>
             </div>
           </div>
         </div>
