@@ -1,8 +1,8 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { Logo } from '@/components/logo';
-import { storeUrls } from './store-links';
 
 export function LandingNav() {
   const [scrolled, setScrolled] = useState(false);
@@ -46,9 +46,12 @@ export function LandingNav() {
         </div>
 
         <div className="hidden items-center gap-2 md:flex">
-          <a href={storeUrls.ios} target="_blank" rel="noreferrer" className="btn-primary">
-            Uygulamayı indir
-          </a>
+          <Link href="/signin" className="btn-ghost">
+            Giriş
+          </Link>
+          <Link href="/signup" className="btn-primary">
+            Ücretsiz üye ol
+          </Link>
         </div>
 
         <button
@@ -92,22 +95,12 @@ export function LandingNav() {
               SSS
             </a>
             <div className="mt-3 flex flex-col gap-2 border-t border-border pt-3">
-              <a
-                href={storeUrls.ios}
-                target="_blank"
-                rel="noreferrer"
-                className="btn-primary w-full justify-center"
-              >
-                App Store'dan indir
-              </a>
-              <a
-                href={storeUrls.android}
-                target="_blank"
-                rel="noreferrer"
-                className="btn-ghost w-full justify-center"
-              >
-                Google Play'den indir
-              </a>
+              <Link href="/signin" className="btn-ghost justify-center">
+                Giriş
+              </Link>
+              <Link href="/signup" className="btn-primary justify-center">
+                Ücretsiz üye ol
+              </Link>
             </div>
           </nav>
         </div>

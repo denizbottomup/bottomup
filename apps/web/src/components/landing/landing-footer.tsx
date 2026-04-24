@@ -1,5 +1,5 @@
+import Link from 'next/link';
 import { Logo } from '@/components/logo';
-import { storeUrls } from './store-links';
 
 export function LandingFooter() {
   const year = new Date().getFullYear();
@@ -81,28 +81,18 @@ export function LandingFooter() {
 
           <div>
             <div className="text-[11px] font-semibold uppercase tracking-wider text-fg">
-              Uygulamalar
+              Hesap
             </div>
             <ul className="mt-3 space-y-2 text-sm text-fg-muted">
               <li>
-                <a
-                  href={storeUrls.ios}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="hover:text-fg"
-                >
-                  App Store
-                </a>
+                <Link href="/signup" className="hover:text-fg">
+                  Ücretsiz üye ol
+                </Link>
               </li>
               <li>
-                <a
-                  href={storeUrls.android}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="hover:text-fg"
-                >
-                  Google Play
-                </a>
+                <Link href="/signin" className="hover:text-fg">
+                  Giriş yap
+                </Link>
               </li>
               <li>
                 <a href="#faq" className="hover:text-fg">

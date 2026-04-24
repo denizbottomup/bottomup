@@ -1,4 +1,4 @@
-import { StoreBadges } from './store-links';
+import Link from 'next/link';
 
 export function VirtualPortfolioSection() {
   return (
@@ -47,13 +47,12 @@ export function VirtualPortfolioSection() {
               />
             </ol>
 
-            <div className="mt-8 flex flex-col gap-3">
-              <StoreBadges variant="primary" />
-              <a
-                href="#pricing"
-                className="w-fit text-xs text-fg-muted hover:text-fg"
-              >
-                Fiyatlara bak →
+            <div className="mt-8 flex flex-wrap gap-3">
+              <Link href="/signup" className="btn-primary px-5 py-3 text-base">
+                Kasayı al — ücretsiz
+              </Link>
+              <a href="#pricing" className="btn-ghost px-5 py-3 text-base">
+                Fiyatları gör
               </a>
             </div>
           </div>

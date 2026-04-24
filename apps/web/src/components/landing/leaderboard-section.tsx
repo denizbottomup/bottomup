@@ -1,5 +1,5 @@
+import Link from 'next/link';
 import { displayName, type LandingPayload } from './landing-data';
-import { storeUrls } from './store-links';
 
 export function LeaderboardSection({
   traders,
@@ -25,14 +25,9 @@ export function LeaderboardSection({
               denersin.
             </p>
           </div>
-          <a
-            href={storeUrls.ios}
-            target="_blank"
-            rel="noreferrer"
-            className="btn-ghost whitespace-nowrap"
-          >
+          <Link href="/signup" className="btn-ghost whitespace-nowrap">
             Tüm liderleri gör →
-          </a>
+          </Link>
         </header>
 
         <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-[1fr_1fr]">

@@ -1,5 +1,5 @@
+import Link from 'next/link';
 import { displayName, type LandingPayload } from './landing-data';
-import { StoreBadges, storeUrls } from './store-links';
 
 export function Hero({ data }: { data: LandingPayload | null }) {
   const stats = data?.stats;
@@ -17,26 +17,28 @@ export function Hero({ data }: { data: LandingPayload | null }) {
         <div className="flex flex-col justify-center">
           <div className="inline-flex w-fit items-center gap-2 rounded-full border border-brand/30 bg-brand/10 px-3 py-1 text-[11px] text-brand">
             <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-brand" />
-            iOS + Android'de canlı · 10.000$ sanal kasa
+            10.000$ sanal kasa · üye olunca anında
           </div>
           <h1 className="mt-5 text-[40px] font-semibold leading-[1.05] tracking-tight md:text-[56px] lg:text-[64px]">
             Kripto işlemini <span className="text-brand">trader'lara</span> bırak.
           </h1>
           <p className="mt-5 max-w-[540px] text-base text-fg-muted md:text-lg">
             Bottomup, Türkiye'nin en çok takip edilen kripto analistlerinin
-            setup'larını canlı yayınlıyor. iOS ve Android'de indir, takımını
-            kur, 10.000$ sanal kasada dene — hazır olduğunda OKX üzerinden
-            gerçek kopya trade'e geç.
+            setup'larını canlı yayınlıyor. Ücretsiz üye ol, takımını kur,
+            10.000$ sanal kasada dene — hazır olduğunda OKX üzerinden gerçek
+            kopya trade'e geç.
           </p>
 
-          <div className="mt-7 flex flex-col gap-3">
-            <StoreBadges variant="primary" />
-            <a
-              href="#features"
-              className="w-fit text-xs text-fg-muted hover:text-fg"
+          <div className="mt-7 flex flex-wrap items-center gap-3">
+            <Link
+              href="/signup"
+              className="btn-primary animate-glow px-5 py-3 text-base"
             >
-              Nasıl çalışıyor? →
-            </a>
+              Ücretsiz üye ol — 10.000$ kasa hediye
+            </Link>
+            <Link href="/signin" className="btn-ghost px-5 py-3 text-base">
+              Giriş yap
+            </Link>
           </div>
 
           {stats ? (
@@ -102,14 +104,12 @@ export function Hero({ data }: { data: LandingPayload | null }) {
                   Üye ol, takımını kur, performansı gör
                 </div>
               </div>
-              <a
-                href={storeUrls.ios}
-                target="_blank"
-                rel="noreferrer"
+              <Link
+                href="/signup"
                 className="rounded-md bg-brand px-3 py-1.5 text-[11px] font-semibold text-white hover:bg-brand-dark"
               >
-                İndir →
-              </a>
+                Başla →
+              </Link>
             </div>
           </div>
         </div>

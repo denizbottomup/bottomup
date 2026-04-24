@@ -1,4 +1,4 @@
-import { storeUrls } from './store-links';
+import Link from 'next/link';
 
 const PLANS = [
   {
@@ -70,9 +70,8 @@ export function PricingSection() {
             Bir setup, bir kopya trade — kendini amorti eder
           </h2>
           <p className="mt-3 text-sm text-fg-muted">
-            App Store ve Google Play üzerinden satın alırsın. 10.000$ sanal
-            kasa üyelikle birlikte gelir. İstediğin zaman mağaza üzerinden
-            iptal edersin.
+            Önce 10.000$ sanal kasayla dene. İşin memnun edince üyelikle canlıya
+            geç. İstediğin zaman iptal et — tarafından başka bir şey çekilmez.
           </p>
         </header>
 
@@ -144,10 +143,8 @@ function PlanCard({ plan }: { plan: (typeof PLANS)[number] }) {
         ))}
       </ul>
 
-      <a
-        href={storeUrls.ios}
-        target="_blank"
-        rel="noreferrer"
+      <Link
+        href={`/signup?plan=${plan.code}`}
         className={`mt-6 inline-flex items-center justify-center rounded-lg px-4 py-3 text-sm font-semibold transition ${
           plan.highlight
             ? 'bg-brand text-white hover:bg-brand-dark'
@@ -155,7 +152,7 @@ function PlanCard({ plan }: { plan: (typeof PLANS)[number] }) {
         }`}
       >
         {plan.cta}
-      </a>
+      </Link>
     </div>
   );
 }

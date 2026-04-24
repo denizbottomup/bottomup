@@ -5,7 +5,7 @@ import { useState } from 'react';
 const QA: Array<{ q: string; a: string }> = [
   {
     q: 'Bottomup nasıl başlıyor?',
-    a: 'App Store veya Google Play\'den ücretsiz indir, telefon numaranla kayıt ol. Hesabın açılır açılmaz 10.000$ sanal kasa yüklenir, hiçbir ödeme bilgisi istenmez.',
+    a: 'Bupcore.ai üzerinden ücretsiz üye ol — e-posta, Google, Apple veya telefon numaranla tek adımda. Hesabın açılır açılmaz 10.000$ sanal kasa yüklenir, hiçbir ödeme bilgisi istenmez.',
   },
   {
     q: '10.000$ sanal kasa nasıl çalışıyor?',
@@ -32,8 +32,8 @@ const QA: Array<{ q: string; a: string }> = [
     a: 'Şu an OKX destekleniyor. 2026 içinde Binance ve Bybit geliyor. Setup\'ları borsadan bağımsız olarak her yerde görebilirsin; sadece kopya trade OKX üzerinden.',
   },
   {
-    q: 'Web uygulaması var mı?',
-    a: 'Şu an iOS ve Android\'de yayında. Web uygulaması aktif geliştirme aşamasında — yakında bu sayfadan giriş yapıp tarayıcıdan da kullanabileceksin. Hesabın otomatik senkronlanacak.',
+    q: 'Mobil uygulamada var mı?',
+    a: 'Evet. iOS ve Android uygulamaları App Store ve Google Play\'de mevcut. Aynı hesapla hem web hem mobilden giriş yapabilirsin — tüm veriler senkron.',
   },
 ];
 
