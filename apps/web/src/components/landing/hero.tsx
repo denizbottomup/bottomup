@@ -26,9 +26,8 @@ export function Hero({ data }: { data: LandingPayload | null }) {
             <span className="block cyber-gradient">Smart Money.</span>
           </h1>
           <p className="mx-auto mt-6 max-w-2xl text-base text-fg-muted md:text-lg">
-            One marketplace for elite human traders, algorithmic bots, and
-            autonomous AI agents. Every signal audited by Foxy AI before it
-            reaches your wallet.
+            Automated portfolio management that lets anyone mirror elite
+            traders and AI agents via a decentralized marketplace.
           </p>
 
           <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
