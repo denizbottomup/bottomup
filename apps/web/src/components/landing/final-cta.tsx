@@ -7,11 +7,7 @@ export function FinalCta() {
         <div className="absolute left-1/2 top-1/2 h-[400px] w-[800px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-brand/15 blur-[120px]" />
       </div>
       <div className="mx-auto max-w-[1100px] px-4 py-16 text-center md:px-8 md:py-24">
-        <div className="inline-flex items-center gap-2 rounded-full border border-emerald-400/40 bg-emerald-400/10 px-3 py-1 text-xs text-emerald-300">
-          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />
-          Foxy AI Shield active
-        </div>
-        <h2 className="mt-5 text-4xl font-extrabold leading-[1.02] tracking-[-0.02em] md:text-6xl">
+        <h2 className="text-4xl font-extrabold leading-[1.02] tracking-[-0.02em] md:text-6xl">
           Copy smart money.{' '}
           <span className="logo-gradient">Let Foxy filter the rest.</span>
         </h2>
