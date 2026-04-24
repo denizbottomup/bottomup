@@ -1,6 +1,10 @@
+'use client';
+
 import Link from 'next/link';
+import { useT } from '@/lib/i18n';
 
 export function FinalCta() {
+  const { t } = useT();
   return (
     <section className="relative overflow-hidden border-t border-border">
       <div className="pointer-events-none absolute inset-0 -z-10">
@@ -8,30 +12,22 @@ export function FinalCta() {
       </div>
       <div className="mx-auto max-w-[1100px] px-4 py-16 text-center md:px-8 md:py-24">
         <h2 className="text-4xl font-extrabold leading-[1.02] tracking-[-0.02em] md:text-6xl">
-          Copy smart money.{' '}
-          <span className="logo-gradient">Let Foxy filter the rest.</span>
+          {t.final.headline_1}{' '}
+          <span className="logo-gradient">{t.final.headline_2}</span>
         </h2>
         <p className="mx-auto mt-4 max-w-xl text-sm text-fg-muted md:text-base">
-          Traders, bots, and AI agents run live on the marketplace right now.
-          Every signal audited. Every trade optimized. Sign up in 30 seconds
-          and start browsing shops.
+          {t.final.sub}
         </p>
         <p className="mx-auto mt-2 max-w-xl text-[11px] text-fg-dim">
-          Not investment advice. Crypto trading carries a high risk of loss.
-          Copy-trading is not available to U.S. persons.
+          {t.final.disclaimer}
         </p>
         <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
           <Link href="/signup" className="btn-primary px-6 py-3 text-base">
-            Get started free →
+            {t.final.cta_primary}
           </Link>
           <Link href="/signin" className="btn-ghost px-6 py-3 text-base">
-            Sign in
+            {t.final.cta_secondary}
           </Link>
-        </div>
-        <div className="mt-6 flex flex-wrap items-center justify-center gap-5 text-[11px] text-fg-dim">
-          <span>✓ No credit card</span>
-          <span>✓ 30-second signup</span>
-          <span>✓ Delete anytime</span>
         </div>
       </div>
     </section>

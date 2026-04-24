@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import { AuthProvider } from '@/lib/auth-context';
+import { LocaleProvider } from '@/lib/i18n';
 import { CookieBanner } from '@/components/cookie-banner';
 import { GtmNoScript, GtmScript } from '@/components/gtm';
 import './globals.css';
@@ -53,8 +54,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body>
         <GtmNoScript />
-        <AuthProvider>{children}</AuthProvider>
-        <CookieBanner />
+        <LocaleProvider>
+          <AuthProvider>{children}</AuthProvider>
+          <CookieBanner />
+        </LocaleProvider>
       </body>
     </html>
   );

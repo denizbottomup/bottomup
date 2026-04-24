@@ -1,7 +1,11 @@
+'use client';
+
 import Link from 'next/link';
+import { useT } from '@/lib/i18n';
 import type { LandingPayload } from './landing-data';
 
 export function Hero({ data }: { data: LandingPayload | null }) {
+  const { t } = useT();
   void data;
 
   return (
@@ -15,12 +19,11 @@ export function Hero({ data }: { data: LandingPayload | null }) {
       <div className="mx-auto max-w-[1400px] px-4 pb-16 pt-14 md:px-8 md:pb-24 md:pt-24">
         <div className="mx-auto max-w-5xl text-center">
           <h1 className="text-[48px] font-extrabold leading-[0.95] tracking-[-0.03em] md:text-[84px] lg:text-[104px]">
-            <span className="block">The App Store of</span>
-            <span className="block logo-gradient">Smart Money.</span>
+            <span className="block">{t.hero.headline_1}</span>
+            <span className="block logo-gradient">{t.hero.headline_2}</span>
           </h1>
           <p className="mx-auto mt-6 max-w-2xl text-base text-fg-muted md:text-lg">
-            Automated portfolio management that lets anyone mirror elite
-            traders and AI agents via a decentralized marketplace.
+            {t.hero.subtitle}
           </p>
 
           <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
@@ -28,13 +31,13 @@ export function Hero({ data }: { data: LandingPayload | null }) {
               href="/signup"
               className="btn-primary animate-glow px-6 py-3.5 text-base font-semibold"
             >
-              Start free →
+              {t.hero.cta_primary}
             </Link>
             <a
               href="#foxy"
               className="btn-ghost px-6 py-3.5 text-base font-semibold"
             >
-              How Foxy protects you
+              {t.hero.cta_secondary}
             </a>
           </div>
 
@@ -49,13 +52,13 @@ export function Hero({ data }: { data: LandingPayload | null }) {
         <div className="mx-auto mt-16 max-w-5xl">
           <div className="relative rounded-2xl border border-border bg-bg-card/60 p-[1px] backdrop-blur corner-ticks">
             <div className="grid grid-cols-2 divide-x divide-border rounded-[calc(1rem-1px)] bg-bg-card/80 md:grid-cols-4">
-              <Kpi label="Trade volume" value="$1.59B" sub="Lifetime" />
-              <Kpi label="Downloads" value="107K+" sub="$0 CAC" />
-              <Kpi label="MAU" value="18.4K" sub="DAU/MAU 24%" />
+              <Kpi label={t.hero.kpi_volume} value="$1.59B" sub={t.hero.kpi_volume_sub} />
+              <Kpi label={t.hero.kpi_downloads} value="107K+" sub={t.hero.kpi_downloads_sub} />
+              <Kpi label={t.hero.kpi_mau} value="18.4K" sub={t.hero.kpi_mau_sub} />
               <Kpi
-                label="Trustpilot"
+                label={t.hero.kpi_trustpilot}
                 value="4.4 / 5"
-                sub="Excellent"
+                sub={t.hero.kpi_trustpilot_sub}
                 tone="success"
               />
             </div>

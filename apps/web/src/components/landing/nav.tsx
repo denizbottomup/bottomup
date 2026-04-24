@@ -3,8 +3,11 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { Logo } from '@/components/logo';
+import { useT } from '@/lib/i18n';
+import { LanguageSwitcher } from './language-switcher';
 
 export function LandingNav() {
+  const { t } = useT();
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -28,29 +31,30 @@ export function LandingNav() {
           <Logo variant="lockup" size="sm" />
           <nav className="hidden items-center gap-6 text-sm text-fg-muted md:flex">
             <a href="#foxy" className="hover:text-fg transition">
-              Foxy AI
+              {t.nav.foxy}
             </a>
             <a href="#marketplace" className="hover:text-fg transition">
-              Marketplace
+              {t.nav.marketplace}
             </a>
             <a href="#mcp" className="hover:text-fg transition">
-              MCP Suite
+              {t.nav.mcp}
             </a>
             <a href="#leaderboard" className="hover:text-fg transition">
-              Traders
+              {t.nav.traders}
             </a>
             <a href="#pricing" className="hover:text-fg transition">
-              Pricing
+              {t.nav.pricing}
             </a>
           </nav>
         </div>
 
         <div className="hidden items-center gap-2 md:flex">
+          <LanguageSwitcher />
           <Link href="/signin" className="btn-ghost">
-            Sign in
+            {t.nav.signin}
           </Link>
           <Link href="/signup" className="btn-primary">
-            Get started free
+            {t.nav.signup}
           </Link>
         </div>
 
@@ -80,26 +84,29 @@ export function LandingNav() {
         <div className="border-t border-border bg-bg md:hidden">
           <nav className="flex flex-col p-4 text-sm">
             <a href="#foxy" className="py-2 text-fg-muted" onClick={() => setMobileOpen(false)}>
-              Foxy AI
+              {t.nav.foxy}
             </a>
             <a href="#marketplace" className="py-2 text-fg-muted" onClick={() => setMobileOpen(false)}>
-              Marketplace
+              {t.nav.marketplace}
             </a>
             <a href="#mcp" className="py-2 text-fg-muted" onClick={() => setMobileOpen(false)}>
-              MCP Suite
+              {t.nav.mcp}
             </a>
             <a href="#leaderboard" className="py-2 text-fg-muted" onClick={() => setMobileOpen(false)}>
-              Traders
+              {t.nav.traders}
             </a>
             <a href="#pricing" className="py-2 text-fg-muted" onClick={() => setMobileOpen(false)}>
-              Pricing
+              {t.nav.pricing}
             </a>
             <div className="mt-3 flex flex-col gap-2 border-t border-border pt-3">
+              <div className="flex justify-center pb-2">
+                <LanguageSwitcher />
+              </div>
               <Link href="/signin" className="btn-ghost justify-center">
-                Sign in
+                {t.nav.signin}
               </Link>
               <Link href="/signup" className="btn-primary justify-center">
-                Get started free
+                {t.nav.signup}
               </Link>
             </div>
           </nav>

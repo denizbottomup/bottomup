@@ -1,4 +1,9 @@
+'use client';
+
+import { useT } from '@/lib/i18n';
+
 export function MobilePreviewSection() {
+  const { t } = useT();
   return (
     <section className="relative overflow-hidden bg-black">
       <div className="pointer-events-none absolute inset-0 -z-10">
@@ -8,34 +13,32 @@ export function MobilePreviewSection() {
 
       <div className="mx-auto grid max-w-[1400px] grid-cols-1 items-center gap-8 px-4 pb-8 pt-8 md:px-8 md:pb-14 md:pt-14 lg:grid-cols-[1fr_620px] lg:gap-14">
         <div className="order-2 lg:order-1">
-          <div className="mono-label">In your pocket</div>
+          <div className="mono-label">{t.mobile.label}</div>
           <h2 className="mt-2 text-3xl font-extrabold tracking-[-0.02em] md:text-5xl">
-            Signals, simulations, and{' '}
-            <span className="logo-gradient">live copy trading</span> — all in
-            the app.
+            {t.mobile.headline_1}{' '}
+            <span className="logo-gradient">{t.mobile.headline_2}</span>{' '}
+            {t.mobile.headline_3}
           </h2>
           <p className="mt-4 max-w-xl text-sm text-fg-muted md:text-base">
-            Follow the traders you picked, see Foxy's verdict next to every
-            setup, and get pushed the moment something new hits the
-            marketplace. No juggling tabs, no missed alerts.
+            {t.mobile.body}
           </p>
 
           <ul className="mt-6 grid grid-cols-1 gap-2 text-sm text-fg md:grid-cols-2">
             <li className="flex items-start gap-2">
               <Tick />
-              <span>Real-time push on every new setup</span>
+              <span>{t.mobile.bullet_push}</span>
             </li>
             <li className="flex items-start gap-2">
               <Tick />
-              <span>Foxy AI risk score on every card</span>
+              <span>{t.mobile.bullet_score}</span>
             </li>
             <li className="flex items-start gap-2">
               <Tick />
-              <span>One-tap copy trade on connected OKX</span>
+              <span>{t.mobile.bullet_copy}</span>
             </li>
             <li className="flex items-start gap-2">
               <Tick />
-              <span>Portfolio simulator with virtual $10,000</span>
+              <span>{t.mobile.bullet_sim}</span>
             </li>
           </ul>
         </div>
