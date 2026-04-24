@@ -97,6 +97,12 @@ export default function FeedPage() {
         </div>
         <div className="flex items-center gap-3">
           <Link
+            href="/app/setup/search"
+            className="rounded-md bg-white/5 px-3 py-1.5 text-xs font-medium text-fg-muted ring-1 ring-white/10 transition hover:text-fg"
+          >
+            Ara
+          </Link>
+          <Link
             href="/app/setup/new"
             className="rounded-md bg-brand/15 px-3 py-1.5 text-xs font-medium text-brand ring-1 ring-brand/30 transition hover:bg-brand/20"
           >

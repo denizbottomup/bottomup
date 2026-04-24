@@ -10,6 +10,7 @@ import { WatchlistModule } from './watchlist/watchlist.module.js';
 import { CopyTradeModule } from './copytrade/copytrade.module.js';
 import { SearchModule } from './search/search.module.js';
 import { AnalyticsModule } from './analytics/analytics.module.js';
+import { MiscModule } from './misc/misc.module.js';
 import { PrismaModule } from './common/prisma.module.js';
 
 @Module({
@@ -26,6 +27,7 @@ import { PrismaModule } from './common/prisma.module.js';
     CopyTradeModule,
     SearchModule,
     AnalyticsModule,
+    MiscModule,
   ],
 })
 export class AppModule implements NestModule {

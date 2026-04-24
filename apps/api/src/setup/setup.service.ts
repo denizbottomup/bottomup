@@ -47,6 +47,7 @@ export interface SetupDetail {
   note: string | null;
   tags: string[];
   clap_count: number;
+  image_success: string | null;
   created_at: Date | null;
   updated_at: Date | null;
   last_acted_at: Date | null;
@@ -235,7 +236,7 @@ export class SetupService {
               s.is_tp1, s.is_tp2, s.is_tp3, s.is_stop,
               s.close_price, s.close_date, s.activation_date,
               s.tp1_date, s.tp2_date, s.tp3_date, s.stop_date,
-              s.note, s.tags, s.clap_count,
+              s.note, s.tags, s.clap_count, s.image_success,
               s.created_at, s.updated_at, s.last_acted_at,
               u.id::text       AS trader_id,
               u.name           AS trader_name,
@@ -309,6 +310,7 @@ export class SetupService {
       note: (r.note as string | null) ?? null,
       tags: Array.isArray(r.tags) ? (r.tags as string[]) : [],
       clap_count: intOr(r.clap_count, 0),
+      image_success: (r.image_success as string | null) ?? null,
       created_at: date(r.created_at),
       updated_at: date(r.updated_at),
       last_acted_at: date(r.last_acted_at),
@@ -408,6 +410,257 @@ export class SetupService {
       setupId,
       row.trader_id ?? '',
       content,
+    );
+    return { ok: true };
+  }
+
+  /**
+   * POST /setup/search — mobile's full-text-ish setup browser. Accepts a
+   * JSON body with filter hints and walks the setup table with the same
+   * join surface used by the feed so the row cards render identically.
+   */
+  async search(
+    viewer: AuthedUser,
+    body: {
+      query?: string;
+      coin_name?: string;
+      tag?: string;
+      category?: 'spot' | 'futures';
+      position?: 'long' | 'short';
+      status?: string | string[];
+      trader_id?: string;
+      only_followed?: boolean;
+      order_by?: 'last_acted_at' | 'created_at' | 'clap_count';
+      limit?: number;
+      skip?: number;
+    },
+  ): Promise<{ items: SetupDetail[]; total: number }> {
+    const viewerId = await this.resolveViewerId(viewer);
+    const q = String(body?.query ?? '').trim();
+    const coin = body?.coin_name
+      ? String(body.coin_name).trim().toUpperCase()
+      : '';
+    const tag = body?.tag ? String(body.tag).trim() : '';
+    const category =
+      body?.category === 'futures' || body?.category === 'spot'
+        ? body.category
+        : null;
+    const position =
+      body?.position === 'long' || body?.position === 'short'
+        ? body.position
+        : null;
+    const statuses = Array.isArray(body?.status)
+      ? (body.status as string[])
+      : body?.status
+        ? [String(body.status)]
+        : [];
+    const validStatuses = [
+      'incoming',
+      'active',
+      'cancelled',
+      'stopped',
+      'success',
+      'closed',
+    ];
+    const safeStatuses = statuses.filter((s) => validStatuses.includes(s));
+    const onlyFollowed = Boolean(body?.only_followed);
+    const traderId = body?.trader_id ? String(body.trader_id) : '';
+    const orderBy =
+      body?.order_by === 'created_at' || body?.order_by === 'clap_count'
+        ? body.order_by
+        : 'last_acted_at';
+    const limit = Math.max(1, Math.min(100, Math.floor(body?.limit ?? 25)));
+    const skip = Math.max(0, Math.min(2000, Math.floor(body?.skip ?? 0)));
+
+    const conds: string[] = ['s.is_deleted = FALSE'];
+    const params: unknown[] = [viewerId];
+    const bind = (v: unknown): string => {
+      params.push(v);
+      return `$${params.length}`;
+    };
+    if (q) {
+      const ilikeTerm = `%${q.replace(/[%_]/g, (m) => `\\${m}`)}%`;
+      conds.push(
+        `(s.coin_name ILIKE ${bind(ilikeTerm)} OR s.note ILIKE ${bind(ilikeTerm)})`,
+      );
+    }
+    if (coin) conds.push(`s.coin_name = ${bind(coin)}`);
+    if (tag) conds.push(`${bind(tag)} = ANY(s.tags)`);
+    if (category) conds.push(`s.category = ${bind(category)}::categories_type`);
+    if (position) conds.push(`s.position = ${bind(position)}::positions_type`);
+    if (safeStatuses.length > 0) {
+      const placeholders = safeStatuses
+        .map((s) => `${bind(s)}::statuses_type`)
+        .join(',');
+      conds.push(`s.status IN (${placeholders})`);
+    }
+    if (traderId) conds.push(`s.trader_id = ${bind(traderId)}::uuid`);
+    if (onlyFollowed) {
+      conds.push(
+        `EXISTS (SELECT 1 FROM follow_notify f
+                   WHERE f.user_id = $1::uuid
+                     AND f.trader_id = s.trader_id
+                     AND f.follow = TRUE
+                     AND f.is_deleted = FALSE)`,
+      );
+    }
+
+    const where = conds.join(' AND ');
+    const orderCol =
+      orderBy === 'created_at'
+        ? 's.created_at'
+        : orderBy === 'clap_count'
+          ? 's.clap_count'
+          : 's.last_acted_at';
+
+    const totalRows = await this.prisma.$queryRawUnsafe<Array<{ n: number }>>(
+      `SELECT COUNT(*)::int AS n FROM setup s WHERE ${where}`,
+      ...params,
+    );
+    const total = Number(totalRows[0]?.n ?? 0);
+
+    const rows = await this.prisma.$queryRawUnsafe<Array<Record<string, unknown>>>(
+      `SELECT s.id::text AS id,
+              s.status::text AS status,
+              s.sub_status,
+              s.category::text AS category,
+              s.position::text AS position,
+              s.order_type::text AS order_type,
+              s.coin_name,
+              s.entry_value, s.entry_value_end,
+              s.stop_value, s.profit_taking_1, s.profit_taking_2, s.profit_taking_3,
+              s.initial_entry_value, s.initial_entry_value_end, s.initial_stop_value,
+              s.initial_profit_taking_1, s.initial_profit_taking_2, s.initial_profit_taking_3,
+              s.r_value, s.initial_rr, s.risk_ratio, s.open_leverage,
+              s.is_tp1, s.is_tp2, s.is_tp3, s.is_stop,
+              s.close_price, s.close_date, s.activation_date,
+              s.tp1_date, s.tp2_date, s.tp3_date, s.stop_date,
+              s.note, s.tags, s.clap_count, s.image_success,
+              s.created_at, s.updated_at, s.last_acted_at,
+              u.id::text       AS trader_id,
+              u.name           AS trader_name,
+              u.first_name     AS trader_first_name,
+              u.last_name      AS trader_last_name,
+              u.image          AS trader_image,
+              COALESCE(u.is_trending, FALSE) AS trader_is_trending,
+              c.code           AS coin_code,
+              c.name           AS coin_display_name,
+              c.image          AS coin_image
+         FROM setup s
+         LEFT JOIN "user" u ON u.id = s.trader_id
+         LEFT JOIN coin c ON c.code = s.coin_name AND c.is_deleted = FALSE
+        WHERE ${where}
+        ORDER BY ${orderCol} DESC NULLS LAST
+        LIMIT ${limit} OFFSET ${skip}`,
+      ...params,
+    );
+
+    const items = rows.map((r) => this.mapDetailRow(r, false, false, false));
+    return { items, total };
+  }
+
+  private mapDetailRow(
+    r: Record<string, unknown>,
+    clapped: boolean,
+    reported: boolean,
+    follows: boolean,
+  ): SetupDetail {
+    return {
+      id: r.id as string,
+      status: r.status as SetupDetail['status'],
+      sub_status: (r.sub_status as string | null) ?? null,
+      category: (r.category as SetupDetail['category']) ?? 'spot',
+      position: (r.position as SetupDetail['position']) ?? null,
+      order_type: String(r.order_type ?? 'limit'),
+      coin_name: r.coin_name as string,
+      entry_value: Number(r.entry_value ?? 0),
+      entry_value_end: num(r.entry_value_end),
+      stop_value: num(r.stop_value),
+      profit_taking_1: num(r.profit_taking_1),
+      profit_taking_2: num(r.profit_taking_2),
+      profit_taking_3: num(r.profit_taking_3),
+      initial_entry_value: num(r.initial_entry_value),
+      initial_entry_value_end: num(r.initial_entry_value_end),
+      initial_stop_value: num(r.initial_stop_value),
+      initial_profit_taking_1: num(r.initial_profit_taking_1),
+      initial_profit_taking_2: num(r.initial_profit_taking_2),
+      initial_profit_taking_3: num(r.initial_profit_taking_3),
+      r_value: num(r.r_value),
+      initial_rr: (r.initial_rr as string | null) ?? null,
+      risk_ratio: (r.risk_ratio as string | null) ?? null,
+      open_leverage: num(r.open_leverage),
+      is_tp1: r.is_tp1 == null ? null : Boolean(r.is_tp1),
+      is_tp2: r.is_tp2 == null ? null : Boolean(r.is_tp2),
+      is_tp3: r.is_tp3 == null ? null : Boolean(r.is_tp3),
+      is_stop: r.is_stop == null ? null : Boolean(r.is_stop),
+      close_price: num(r.close_price),
+      close_date: date(r.close_date),
+      activation_date: date(r.activation_date),
+      tp1_date: date(r.tp1_date),
+      tp2_date: date(r.tp2_date),
+      tp3_date: date(r.tp3_date),
+      stop_date: date(r.stop_date),
+      note: (r.note as string | null) ?? null,
+      tags: Array.isArray(r.tags) ? (r.tags as string[]) : [],
+      clap_count: intOr(r.clap_count, 0),
+      image_success: (r.image_success as string | null) ?? null,
+      created_at: date(r.created_at),
+      updated_at: date(r.updated_at),
+      last_acted_at: date(r.last_acted_at),
+      trader: {
+        id: String(r.trader_id ?? ''),
+        name: (r.trader_name as string | null) ?? null,
+        first_name: (r.trader_first_name as string | null) ?? null,
+        last_name: (r.trader_last_name as string | null) ?? null,
+        image: (r.trader_image as string | null) ?? null,
+        is_trending: Boolean(r.trader_is_trending),
+      },
+      coin: {
+        code: String(r.coin_code ?? r.coin_name ?? ''),
+        display_name: (r.coin_display_name as string | null) ?? null,
+        image: (r.coin_image as string | null) ?? null,
+      },
+      viewer: {
+        clapped,
+        reported,
+        follows_trader: follows,
+      },
+    };
+  }
+
+  /**
+   * PATCH /setup/:id/success_image — trader attaches a screenshot after
+   * their setup closes (TP hit, stop hit, manual close). Image is a URL
+   * string; we store it on the setup row and emit a setup_event so the
+   * timeline reflects the upload.
+   */
+  async setSuccessImage(
+    viewer: AuthedUser,
+    setupId: string,
+    body: { image?: string | null; success_image?: string | null },
+  ): Promise<{ ok: true }> {
+    await this.assertOwner(viewer, setupId);
+    const raw = body?.success_image ?? body?.image ?? null;
+    const image = raw == null || raw === '' ? null : String(raw).slice(0, 2000);
+    if (image != null && !/^https?:\/\//i.test(image)) {
+      throw new BadRequestException('success_image must be a valid URL');
+    }
+    await this.prisma.$executeRawUnsafe(
+      `UPDATE setup
+          SET image_success = $2,
+              last_acted_at = NOW(),
+              updated_at = NOW()
+        WHERE id = $1::uuid`,
+      setupId,
+      image,
+    );
+    await this.prisma.$executeRawUnsafe(
+      `INSERT INTO setup_events
+         (setup_id, trader_id, event_time, changed_column, old_value, new_value, action)
+       SELECT s.id, s.trader_id, NOW(), 'success_image', NULL, $2, 'update'
+         FROM setup s WHERE s.id = $1::uuid`,
+      setupId,
+      image,
     );
     return { ok: true };
   }

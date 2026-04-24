@@ -56,6 +56,7 @@ interface SetupDetail {
   note: string | null;
   tags: string[];
   clap_count: number;
+  image_success: string | null;
   created_at: string | null;
   updated_at: string | null;
   trader: TraderRef;
@@ -122,6 +123,7 @@ export default function SetupDetailPage() {
   const [editOpen, setEditOpen] = useState(false);
   const [editDraft, setEditDraft] = useState<EditDraft | null>(null);
   const [editPending, setEditPending] = useState(false);
+  const [imagePromptOpen, setImagePromptOpen] = useState(false);
 
   useEffect(() => {
     if (!setupId) return;
@@ -193,6 +195,25 @@ export default function SetupDetailPage() {
       setClapPending(false);
     }
   }, [detail]);
+
+  const submitSuccessImage = useCallback(
+    async (url: string) => {
+      if (!detail) return;
+      try {
+        await api<{ ok: true }>(`/setup/${detail.id}/success_image`, {
+          method: 'PATCH',
+          body: JSON.stringify({ success_image: url.trim() || null }),
+        });
+        setDetail((prev) =>
+          prev ? { ...prev, image_success: url.trim() || null } : prev,
+        );
+        setImagePromptOpen(false);
+      } catch (x) {
+        setErr(x instanceof ApiError ? `${x.status} ${x.message}` : (x as Error).message);
+      }
+    },
+    [detail],
+  );
 
   const openEdit = useCallback(() => {
     if (!detail) return;
@@ -373,6 +394,15 @@ export default function SetupDetailPage() {
                     onClick={openEdit}
                   />
                   <ManageItem
+                    label={detail.image_success ? 'Başarı görselini değiştir' : 'Başarı görseli ekle'}
+                    tone="emerald"
+                    disabled={managePending}
+                    onClick={() => {
+                      setManageOpen(false);
+                      setImagePromptOpen(true);
+                    }}
+                  />
+                  <ManageItem
                     label="Başarıyla kapat"
                     tone="emerald"
                     disabled={managePending}
@@ -472,6 +502,17 @@ export default function SetupDetailPage() {
             {detail.note}
           </div>
         ) : null}
+
+        {detail.image_success ? (
+          <div className="mt-4 overflow-hidden rounded-xl ring-1 ring-white/10">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={detail.image_success}
+              alt="Başarı görüntüsü"
+              className="max-h-80 w-full object-contain bg-black/40"
+            />
+          </div>
+        ) : null}
       </header>
 
       {/* Chart + Foxy */}
@@ -559,6 +600,14 @@ export default function SetupDetailPage() {
         />
       ) : null}
 
+      {imagePromptOpen ? (
+        <SuccessImageSheet
+          current={detail?.image_success ?? null}
+          onCancel={() => setImagePromptOpen(false)}
+          onSubmit={submitSuccessImage}
+        />
+      ) : null}
+
       {/* Edit sheet — owner only */}
       {editOpen && editDraft ? (
         <EditSheet
@@ -570,6 +619,81 @@ export default function SetupDetailPage() {
           onSave={() => void saveEdit()}
         />
       ) : null}
+    </div>
+  );
+}
+
+function SuccessImageSheet({
+  current,
+  onCancel,
+  onSubmit,
+}: {
+  current: string | null;
+  onCancel: () => void;
+  onSubmit: (url: string) => void;
+}) {
+  const [url, setUrl] = useState(current ?? '');
+  return (
+    <div
+      className="fixed inset-0 z-40 flex items-end justify-center bg-black/60 backdrop-blur-sm md:items-center"
+      onClick={onCancel}
+    >
+      <div
+        className="w-full max-w-md rounded-t-2xl border border-white/10 bg-bg-card p-5 md:rounded-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="mb-3 flex items-center justify-between">
+          <h3 className="text-sm font-semibold text-fg">Başarı görseli</h3>
+          <button
+            onClick={onCancel}
+            className="text-lg leading-none text-fg-dim hover:text-fg"
+            aria-label="Kapat"
+          >
+            ×
+          </button>
+        </div>
+        <p className="text-[11px] text-fg-muted">
+          Kapanışı kanıtlayan ekran görüntüsü URL'ini yapıştır. Sadece http(s) kabul edilir.
+        </p>
+        <label className="mt-3 block text-xs text-fg-muted">
+          Görsel URL'i
+          <input
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            placeholder="https://…"
+            className="mt-1 w-full rounded-lg border border-border bg-bg-card px-3 py-2 text-sm text-fg placeholder:text-fg-dim focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
+          />
+        </label>
+        {url ? (
+          <div className="mt-3 overflow-hidden rounded-xl ring-1 ring-white/10">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={url}
+              alt="Önizleme"
+              className="max-h-60 w-full object-contain bg-black/40"
+            />
+          </div>
+        ) : null}
+        <div className="mt-4 flex items-center justify-end gap-2">
+          <button onClick={onCancel} className="btn-ghost text-sm">
+            Vazgeç
+          </button>
+          {current ? (
+            <button
+              onClick={() => onSubmit('')}
+              className="rounded-lg bg-white/5 px-3 py-2 text-sm text-fg-muted ring-1 ring-white/10 hover:text-rose-300"
+            >
+              Kaldır
+            </button>
+          ) : null}
+          <button
+            onClick={() => onSubmit(url)}
+            className="rounded-lg bg-brand px-3 py-2 text-sm font-medium text-white ring-1 ring-brand hover:bg-brand-dark"
+          >
+            Kaydet
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

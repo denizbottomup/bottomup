@@ -10,6 +10,9 @@ const GROUPS: Array<{
     title: 'Hesap',
     items: [
       { href: '/app/profile', label: 'Profil', desc: 'İsim, bio, sosyal linkler.' },
+      { href: '/app/profile/following', label: 'Takip ettiklerim' },
+      { href: '/app/profile/archive', label: 'Arşivim' },
+      { href: '/app/profile/subscription', label: 'Aboneliklerim' },
       { href: '/app/settings/blocked', label: 'Engellenenler' },
       { href: '/app/settings/voucher', label: 'Kupon kodu' },
     ],
@@ -18,6 +21,7 @@ const GROUPS: Array<{
     title: 'Uygulama',
     items: [
       { href: '/app/notifications', label: 'Bildirimler' },
+      { href: '/app/settings/plans', label: 'Planları incele' },
       { href: '/app/settings/about', label: 'Hakkında' },
     ],
   },
@@ -25,16 +29,14 @@ const GROUPS: Array<{
     title: 'Yardım',
     items: [
       { href: '/app/settings/help', label: 'Yardım konuları' },
-      {
-        href: 'https://www.bottomup.app/term_of_services',
-        label: 'Kullanım şartları',
-        external: true,
-      },
-      {
-        href: 'https://www.bottomup.app/privacy_policy',
-        label: 'Gizlilik',
-        external: true,
-      },
+      { href: '/app/settings/terms', label: 'Kullanım şartları' },
+      { href: '/app/settings/privacy', label: 'Gizlilik' },
+    ],
+  },
+  {
+    title: 'Tehlikeli bölge',
+    items: [
+      { href: '/app/settings/delete-account', label: 'Hesabı sil', desc: 'Bu işlem geri alınamaz.' },
     ],
   },
 ];

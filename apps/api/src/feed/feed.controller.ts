@@ -104,6 +104,27 @@ export class FeedController {
     const items = await this.feed.listCalendar(interval, clampLimit(limitRaw));
     return { items };
   }
+
+  /**
+   * Mobile version gate. The Flutter app polls this during boot to
+   * decide whether to surface a soft "update available" card or force
+   * the user onto the latest build. We report the current 3.0 build as
+   * the minimum so legacy 2.2.1 clients see a nudge.
+   */
+  @Get('/canupdate')
+  canUpdate(): {
+    latest: string;
+    minimum: string;
+    force_update: boolean;
+    url: string | null;
+  } {
+    return {
+      latest: '2.2.1',
+      minimum: '2.2.1',
+      force_update: false,
+      url: null,
+    };
+  }
 }
 
 function clampLimit(raw?: string): number {

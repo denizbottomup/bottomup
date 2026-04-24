@@ -55,6 +55,33 @@ export interface TraderEarningRow {
   product_code: string | null;
 }
 
+export interface FollowedTrader {
+  id: string;
+  name: string | null;
+  first_name: string | null;
+  last_name: string | null;
+  image: string | null;
+  is_trending: boolean;
+  monthly_roi: string | null;
+  followers: number;
+}
+
+export interface ArchiveSetupRow {
+  id: string;
+  coin_name: string;
+  status: string;
+  position: string | null;
+  category: string;
+  entry_value: number;
+  close_price: number | null;
+  r_value: number | null;
+  trader_id: string | null;
+  trader_name: string | null;
+  trader_image: string | null;
+  coin_image: string | null;
+  close_date: Date | null;
+}
+
 export interface TraderEarningSummary {
   total_earned: number;
   total_paid: number;
@@ -288,6 +315,203 @@ export class UserService {
         WHERE id = $1::uuid
           AND user_id = $2::uuid`,
       notificationId,
+      viewerId,
+    );
+    return { ok: true };
+  }
+
+  async listFollowers(
+    viewer: AuthedUser,
+  ): Promise<{ items: Array<{ id: string; name: string | null; first_name: string | null; last_name: string | null; image: string | null }> }> {
+    const viewerId = await this.resolveViewerId(viewer);
+    const rows = await this.prisma.$queryRawUnsafe<Array<Record<string, unknown>>>(
+      `SELECT u.id::text AS id, u.name, u.first_name, u.last_name, u.image
+         FROM follow_notify f
+         JOIN "user" u ON u.id = f.user_id AND u.is_deleted = FALSE
+        WHERE f.trader_id = $1::uuid
+          AND f.follow = TRUE
+          AND f.is_deleted = FALSE
+        ORDER BY f.updated_at DESC NULLS LAST
+        LIMIT 500`,
+      viewerId,
+    );
+    return {
+      items: rows.map((r) => ({
+        id: r.id as string,
+        name: (r.name as string | null) ?? null,
+        first_name: (r.first_name as string | null) ?? null,
+        last_name: (r.last_name as string | null) ?? null,
+        image: (r.image as string | null) ?? null,
+      })),
+    };
+  }
+
+  async listFollowing(viewer: AuthedUser): Promise<{ items: FollowedTrader[] }> {
+    const viewerId = await this.resolveViewerId(viewer);
+    const rows = await this.prisma.$queryRawUnsafe<Array<Record<string, unknown>>>(
+      `SELECT u.id::text AS id, u.name, u.first_name, u.last_name, u.image,
+              COALESCE(u.is_trending, FALSE) AS is_trending,
+              u.monthly_roi,
+              (SELECT COUNT(*)::int FROM follow_notify f2
+                 WHERE f2.trader_id = u.id
+                   AND f2.follow = TRUE
+                   AND f2.is_deleted = FALSE) AS followers
+         FROM follow_notify f
+         JOIN "user" u ON u.id = f.trader_id AND u.is_deleted = FALSE
+        WHERE f.user_id = $1::uuid
+          AND f.follow = TRUE
+          AND f.is_deleted = FALSE
+          AND COALESCE(f.block, FALSE) = FALSE
+        ORDER BY f.updated_at DESC NULLS LAST
+        LIMIT 200`,
+      viewerId,
+    );
+    const items: FollowedTrader[] = rows.map((r) => ({
+      id: r.id as string,
+      name: (r.name as string | null) ?? null,
+      first_name: (r.first_name as string | null) ?? null,
+      last_name: (r.last_name as string | null) ?? null,
+      image: (r.image as string | null) ?? null,
+      is_trending: Boolean(r.is_trending),
+      monthly_roi: (r.monthly_roi as string | null) ?? null,
+      followers: Number(r.followers ?? 0),
+    }));
+    return { items };
+  }
+
+  /**
+   * Archive = setups the viewer clapped or watchlisted, regardless of
+   * status. Mobile shows this under Profile → "Arşivim". We union the two
+   * sources so it covers both engagement signals.
+   */
+  async listArchive(
+    viewer: AuthedUser,
+    limit: number,
+  ): Promise<{ items: ArchiveSetupRow[] }> {
+    const viewerId = await this.resolveViewerId(viewer);
+    const capped = Math.max(1, Math.min(200, Math.floor(limit)));
+    const rows = await this.prisma.$queryRawUnsafe<Array<Record<string, unknown>>>(
+      `SELECT s.id::text       AS id,
+              s.coin_name       AS coin_name,
+              s.status::text    AS status,
+              s.position::text  AS position,
+              s.category::text  AS category,
+              s.entry_value     AS entry_value,
+              s.close_price     AS close_price,
+              s.r_value         AS r_value,
+              s.trader_id::text AS trader_id,
+              u.name            AS trader_name,
+              u.image           AS trader_image,
+              c.image           AS coin_image,
+              s.close_date      AS close_date
+         FROM setup s
+         LEFT JOIN "user" u ON u.id = s.trader_id
+         LEFT JOIN coin c ON c.code = s.coin_name AND c.is_deleted = FALSE
+        WHERE s.is_deleted = FALSE
+          AND (
+            EXISTS (SELECT 1 FROM clap cp
+                     WHERE cp.setup_id = s.id
+                       AND cp.user_id = $1::uuid
+                       AND cp.is_deleted = FALSE)
+            OR EXISTS (SELECT 1 FROM watch_list w
+                        WHERE w.setup_id = s.id
+                          AND w.user_id = $1::uuid
+                          AND w.is_deleted = FALSE)
+          )
+        ORDER BY s.last_acted_at DESC NULLS LAST
+        LIMIT ${capped}`,
+      viewerId,
+    );
+    const items: ArchiveSetupRow[] = rows.map((r) => ({
+      id: r.id as string,
+      coin_name: r.coin_name as string,
+      status: r.status as string,
+      position: (r.position as string | null) ?? null,
+      category: (r.category as string) ?? 'spot',
+      entry_value: Number(r.entry_value ?? 0),
+      close_price: r.close_price == null ? null : Number(r.close_price),
+      r_value: r.r_value == null ? null : Number(r.r_value),
+      trader_id: (r.trader_id as string | null) ?? null,
+      trader_name: (r.trader_name as string | null) ?? null,
+      trader_image: (r.trader_image as string | null) ?? null,
+      coin_image: (r.coin_image as string | null) ?? null,
+      close_date: (r.close_date as Date | null) ?? null,
+    }));
+    return { items };
+  }
+
+  /**
+   * Suggested traders for onboarding — trending accounts with active
+   * setups that the viewer doesn't already follow. Simple heuristic;
+   * mobile uses a similar trending+exclude-followed query.
+   */
+  async listSuggestions(viewer: AuthedUser, limit = 12): Promise<{ items: FollowedTrader[] }> {
+    const viewerId = await this.resolveViewerId(viewer);
+    const capped = Math.max(1, Math.min(40, Math.floor(limit)));
+    const rows = await this.prisma.$queryRawUnsafe<Array<Record<string, unknown>>>(
+      `SELECT u.id::text AS id, u.name, u.first_name, u.last_name, u.image,
+              COALESCE(u.is_trending, FALSE) AS is_trending,
+              u.monthly_roi,
+              (SELECT COUNT(*)::int FROM follow_notify f2
+                 WHERE f2.trader_id = u.id
+                   AND f2.follow = TRUE
+                   AND f2.is_deleted = FALSE) AS followers
+         FROM "user" u
+        WHERE u.is_trader = TRUE
+          AND u.is_active = TRUE
+          AND u.is_deleted = FALSE
+          AND u.id <> $1::uuid
+          AND NOT EXISTS (
+            SELECT 1 FROM follow_notify f
+             WHERE f.user_id = $1::uuid
+               AND f.trader_id = u.id
+               AND f.follow = TRUE
+               AND f.is_deleted = FALSE
+          )
+          AND EXISTS (
+            SELECT 1 FROM setup s
+             WHERE s.trader_id = u.id
+               AND s.is_deleted = FALSE
+               AND s.status IN ('incoming'::statuses_type,'active'::statuses_type)
+          )
+        ORDER BY COALESCE(u.is_trending, FALSE) DESC,
+                 (SELECT COUNT(*) FROM follow_notify f3
+                   WHERE f3.trader_id = u.id
+                     AND f3.follow = TRUE
+                     AND f3.is_deleted = FALSE) DESC
+        LIMIT ${capped}`,
+      viewerId,
+    );
+    const items: FollowedTrader[] = rows.map((r) => ({
+      id: r.id as string,
+      name: (r.name as string | null) ?? null,
+      first_name: (r.first_name as string | null) ?? null,
+      last_name: (r.last_name as string | null) ?? null,
+      image: (r.image as string | null) ?? null,
+      is_trending: Boolean(r.is_trending),
+      monthly_roi: (r.monthly_roi as string | null) ?? null,
+      followers: Number(r.followers ?? 0),
+    }));
+    return { items };
+  }
+
+  /**
+   * Soft-delete of the current viewer. Matches mobile DELETE /user/me —
+   * flips is_deleted + is_active, nukes follows, and schedules hard-delete
+   * server-side (out-of-scope for MVP; the row is just hidden).
+   */
+  async deleteMe(viewer: AuthedUser): Promise<{ ok: true }> {
+    const viewerId = await this.resolveViewerId(viewer);
+    await this.prisma.$executeRawUnsafe(
+      `UPDATE "user"
+          SET is_deleted = TRUE, is_active = FALSE, updated_at = NOW()
+        WHERE id = $1::uuid`,
+      viewerId,
+    );
+    await this.prisma.$executeRawUnsafe(
+      `UPDATE follow_notify
+          SET is_deleted = TRUE, updated_at = NOW()
+        WHERE user_id = $1::uuid AND is_deleted = FALSE`,
       viewerId,
     );
     return { ok: true };

@@ -42,9 +42,11 @@ interface HotCoin {
 }
 
 type Market = 'futures' | 'spot';
+type Period = 'monthly' | 'alltime';
 
 export default function AnalyticsPage() {
   const [market, setMarket] = useState<Market>('futures');
+  const [period, setPeriod] = useState<Period>('monthly');
   const [leaderboard, setLeaderboard] = useState<LeaderboardRow[] | null>(null);
   const [latest, setLatest] = useState<LatestSetup[] | null>(null);
   const [hot, setHot] = useState<HotCoin[] | null>(null);
@@ -55,7 +57,12 @@ export default function AnalyticsPage() {
     setErr(null);
     setLeaderboard(null);
     setLatest(null);
-    const lbPath = market === 'futures' ? 'futures-leaderboard' : 'spot-leaderboard';
+    const lbPath =
+      market === 'futures'
+        ? period === 'alltime'
+          ? 'futures-leaderboard-aggregated'
+          : 'futures-leaderboard'
+        : 'spot-leaderboard';
     const lsPath = market === 'futures' ? 'futures-latest-setup' : 'spot-latest-setup';
     Promise.all([
       api<{ items: LeaderboardRow[] }>(`/analytic/${lbPath}?limit=20`),
@@ -76,15 +83,31 @@ export default function AnalyticsPage() {
       alive = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [market]);
+  }, [market, period]);
 
   return (
     <div className="mx-auto max-w-7xl px-6 py-6">
       <div className="flex items-center justify-between">
         <h1 className="text-base font-semibold text-fg">Analitik</h1>
-        <div className="flex items-center gap-1 rounded-lg bg-white/5 p-1 ring-1 ring-white/10">
-          <MarketBtn active={market === 'futures'} onClick={() => setMarket('futures')} label="Futures" />
-          <MarketBtn active={market === 'spot'} onClick={() => setMarket('spot')} label="Spot" />
+        <div className="flex items-center gap-2">
+          {market === 'futures' ? (
+            <div className="flex items-center gap-1 rounded-lg bg-white/5 p-1 ring-1 ring-white/10">
+              <MarketBtn
+                active={period === 'monthly'}
+                onClick={() => setPeriod('monthly')}
+                label="Aylık"
+              />
+              <MarketBtn
+                active={period === 'alltime'}
+                onClick={() => setPeriod('alltime')}
+                label="Tüm zamanlar"
+              />
+            </div>
+          ) : null}
+          <div className="flex items-center gap-1 rounded-lg bg-white/5 p-1 ring-1 ring-white/10">
+            <MarketBtn active={market === 'futures'} onClick={() => setMarket('futures')} label="Futures" />
+            <MarketBtn active={market === 'spot'} onClick={() => setMarket('spot')} label="Spot" />
+          </div>
         </div>
       </div>
 

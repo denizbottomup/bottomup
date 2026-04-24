@@ -234,12 +234,14 @@ export default function ProfilePage() {
         <div className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-2">
           <QuickLink href="/app/watchlist" label="Watchlist" />
           <QuickLink href="/app/notifications" label="Bildirimler" />
-          <QuickLink href="/app/analysts?tab=following" label="Takip ettiklerim" />
+          <QuickLink href="/app/profile/following" label="Takip ettiklerim" />
+          <QuickLink href="/app/profile/archive" label="Arşivim" />
           <QuickLink href="/app/together" label="Kopya trade" />
           <QuickLink href="/app/profile/subscription" label="Aboneliklerim" />
           {me.is_trader ? (
             <>
               <QuickLink href="/app/profile/trader" label="Trader profili" />
+              <QuickLink href="/app/profile/followers" label="Takipçilerim" />
               <QuickLink href="/app/profile/earnings" label="Trader kazançlarım" />
             </>
           ) : null}

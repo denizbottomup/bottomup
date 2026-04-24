@@ -50,6 +50,46 @@ export class AnalyticsService {
     return this.leaderboard('spot', limit);
   }
 
+  /**
+   * Aggregated futures leaderboard — mobile's "all-time" view. Same join
+   * surface as futuresLeaderboard but orders by total_pnl from
+   * trader_setup_pnl_performance instead of the monthly rolling stat.
+   */
+  async futuresLeaderboardAggregated(limit = 20): Promise<LeaderboardRow[]> {
+    const capped = Math.max(1, Math.min(50, Math.floor(limit)));
+    const rows = await this.prisma.$queryRawUnsafe<Array<Record<string, unknown>>>(
+      `SELECT u.id::text AS trader_id, u.name, u.first_name, u.last_name, u.image,
+              ts.monthly_pnl, ts.monthly_roi, ts.win_rate,
+              COALESCE(
+                (SELECT SUM(pnl) FROM trader_setup_pnl_performance p
+                  WHERE p.trader_id = u.id),
+                0
+              ) AS total_pnl,
+              (SELECT COUNT(*)::int FROM follow_notify f
+                WHERE f.trader_id = u.id AND f.follow = TRUE AND f.is_deleted = FALSE) AS followers
+         FROM "user" u
+         LEFT JOIN trader_stats ts ON ts.trader_id = u.id
+        WHERE u.is_trader = TRUE AND u.is_deleted = FALSE AND u.is_active = TRUE
+          AND EXISTS (SELECT 1 FROM setup s
+                       WHERE s.trader_id = u.id
+                         AND s.is_deleted = FALSE
+                         AND s.category = 'futures'::categories_type)
+        ORDER BY total_pnl DESC NULLS LAST
+        LIMIT ${capped}`,
+    );
+    return rows.map((r) => ({
+      trader_id: r.trader_id as string,
+      name: (r.name as string | null) ?? null,
+      first_name: (r.first_name as string | null) ?? null,
+      last_name: (r.last_name as string | null) ?? null,
+      image: (r.image as string | null) ?? null,
+      monthly_pnl: num(r.total_pnl),
+      monthly_roi: num(r.monthly_roi),
+      win_rate: num(r.win_rate),
+      followers: Number(r.followers ?? 0),
+    }));
+  }
+
   private async leaderboard(
     category: 'spot' | 'futures',
     limit: number,

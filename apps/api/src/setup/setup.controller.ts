@@ -77,6 +77,23 @@ export class SetupController {
     return this.setups.unclap(viewer, setupId);
   }
 
+  @Post('search')
+  search(
+    @CurrentUser() viewer: AuthedUser,
+    @Body() body: Parameters<SetupService['search']>[1],
+  ): ReturnType<SetupService['search']> {
+    return this.setups.search(viewer, body ?? {});
+  }
+
+  @Patch(':setupId/success_image')
+  successImage(
+    @CurrentUser() viewer: AuthedUser,
+    @Param('setupId') setupId: string,
+    @Body() body: { image?: string | null; success_image?: string | null },
+  ): Promise<{ ok: true }> {
+    return this.setups.setSuccessImage(viewer, setupId, body ?? {});
+  }
+
   @Patch(':setupId')
   edit(
     @CurrentUser() viewer: AuthedUser,

@@ -102,12 +102,9 @@ function NewsCard({ n }: { n: NewsItem }) {
         ? 'bg-rose-400/10 text-rose-300 ring-rose-400/30'
         : 'bg-white/5 text-fg-muted ring-white/10';
 
-  const href = n.news_url ?? '#';
   return (
     <a
-      href={href}
-      target="_blank"
-      rel="noreferrer"
+      href={`/app/news/${n.id}`}
       className="group overflow-hidden rounded-2xl border border-white/10 bg-white/[0.02] transition hover:border-white/20"
     >
       {img ? (

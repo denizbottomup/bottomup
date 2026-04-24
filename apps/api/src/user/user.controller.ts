@@ -3,6 +3,8 @@ import { FirebaseAuthGuard } from '../common/guards/firebase-auth.guard.js';
 import { CurrentUser, type AuthedUser } from '../common/decorators/current-user.decorator.js';
 import {
   UserService,
+  type ArchiveSetupRow,
+  type FollowedTrader,
   type NotificationRow,
   type SubscriptionRow,
   type TraderEarningRow,
@@ -48,6 +50,41 @@ export class UserController {
     @Param('id') id: string,
   ): Promise<{ ok: true }> {
     return this.users.markNotificationRead(user, id);
+  }
+
+  @Delete('/me')
+  deleteMe(@CurrentUser() user: AuthedUser): Promise<{ ok: true }> {
+    return this.users.deleteMe(user);
+  }
+
+  @Get('/me/follows')
+  follows(@CurrentUser() user: AuthedUser): Promise<{ items: FollowedTrader[] }> {
+    return this.users.listFollowing(user);
+  }
+
+  @Get('/me/followers')
+  followers(
+    @CurrentUser() user: AuthedUser,
+  ): ReturnType<UserService['listFollowers']> {
+    return this.users.listFollowers(user);
+  }
+
+  @Get('/me/suggestion')
+  suggestion(
+    @CurrentUser() user: AuthedUser,
+    @Query('limit') limitRaw?: string,
+  ): Promise<{ items: FollowedTrader[] }> {
+    const limit = Number.parseInt(limitRaw ?? '12', 10);
+    return this.users.listSuggestions(user, Number.isFinite(limit) ? limit : 12);
+  }
+
+  @Get('/me/archive')
+  archive(
+    @CurrentUser() user: AuthedUser,
+    @Query('limit') limitRaw?: string,
+  ): Promise<{ items: ArchiveSetupRow[] }> {
+    const limit = Number.parseInt(limitRaw ?? '80', 10);
+    return this.users.listArchive(user, Number.isFinite(limit) ? limit : 80);
   }
 
   @Get('/me/subscriptions')

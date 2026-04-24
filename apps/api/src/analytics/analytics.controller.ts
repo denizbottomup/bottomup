@@ -21,6 +21,17 @@ export class AnalyticsController {
     return { items };
   }
 
+  @Get('/futures-leaderboard-aggregated')
+  async futuresLeaderboardAggregated(
+    @Query('limit') limitRaw?: string,
+  ): Promise<{ items: LeaderboardRow[] }> {
+    const limit = Number.parseInt(limitRaw ?? '20', 10);
+    const items = await this.a.futuresLeaderboardAggregated(
+      Number.isFinite(limit) ? limit : 20,
+    );
+    return { items };
+  }
+
   @Get('/spot-leaderboard')
   async spotLeaderboard(
     @Query('limit') limitRaw?: string,
