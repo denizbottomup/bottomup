@@ -1,5 +1,9 @@
+'use client';
+
 import Link from 'next/link';
+import { useState } from 'react';
 import { displayName, type LandingPayload } from './landing-data';
+import { TraderDetailModal } from './trader-detail-modal';
 
 export function LeaderboardSection({
   traders,
@@ -7,6 +11,10 @@ export function LeaderboardSection({
   traders: LandingPayload['top_traders'];
 }) {
   const shown = traders.filter((t) => t.monthly_trades > 0).slice(0, 6);
+  const [active, setActive] = useState<
+    | { analyst: string; displayName: string }
+    | null
+  >(null);
 
   return (
     <section id="leaderboard" className="relative overflow-hidden">
@@ -20,9 +28,9 @@ export function LeaderboardSection({
               <span className="logo-gradient">Where are they now?</span>
             </h2>
             <p className="mt-3 max-w-2xl text-sm text-fg-muted md:text-base">
-              Every trader starts the month with a virtual $10,000. Equal
-              $1,000 slot per closed trade. Long/short aware. Numbers update
-              as they trade.
+              Every trader starts the month with a virtual $10,000. Tap a
+              card for the full analytics dashboard — equity curve, R
+              distribution, monthly P&L, coin breakdown.
             </p>
           </div>
           <Link
@@ -40,11 +48,27 @@ export function LeaderboardSection({
         ) : (
           <div className="mt-10 grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
             {shown.map((t, i) => (
-              <TraderCard key={t.trader_id} trader={t} rank={i + 1} />
+              <TraderCard
+                key={t.trader_id}
+                trader={t}
+                rank={i + 1}
+                onOpen={() => {
+                  const name = displayName(t);
+                  setActive({ analyst: name, displayName: name });
+                }}
+              />
             ))}
           </div>
         )}
       </div>
+
+      {active ? (
+        <TraderDetailModal
+          analyst={active.analyst}
+          displayName={active.displayName}
+          onClose={() => setActive(null)}
+        />
+      ) : null}
     </section>
   );
 }
@@ -52,9 +76,11 @@ export function LeaderboardSection({
 function TraderCard({
   trader,
   rank,
+  onOpen,
 }: {
   trader: LandingPayload['top_traders'][0];
   rank: number;
+  onOpen: () => void;
 }) {
   const name = displayName(trader);
   const winRate =
@@ -69,7 +95,11 @@ function TraderCard({
     : 'from-rose-400/40 via-rose-400/10';
 
   return (
-    <div className="group relative overflow-hidden rounded-2xl border border-border bg-bg-card p-[1px] transition hover:border-white/20">
+    <button
+      type="button"
+      onClick={onOpen}
+      className="group relative overflow-hidden rounded-2xl border border-border bg-bg-card p-[1px] text-left transition hover:border-white/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60"
+    >
       <div
         className={`pointer-events-none absolute inset-0 -z-10 bg-gradient-to-br ${accent} to-transparent opacity-0 transition group-hover:opacity-100`}
       />
@@ -150,18 +180,20 @@ function TraderCard({
         </div>
 
         <div className="mt-4 flex items-center justify-between text-[11px] text-fg-dim">
-          <span
-            className={`flex items-center gap-1 ${
-              returnTone
-            }`}
-          >
-            <span className={`h-1.5 w-1.5 rounded-full ${positive ? 'bg-emerald-400 animate-pulse' : 'bg-rose-400'}`} />
+          <span className={`flex items-center gap-1 ${returnTone}`}>
+            <span
+              className={`h-1.5 w-1.5 rounded-full ${
+                positive ? 'bg-emerald-400 animate-pulse' : 'bg-rose-400'
+              }`}
+            />
             {positive ? 'Live' : 'Drawdown'}
           </span>
-          <span>Foxy-audited signals only</span>
+          <span className="text-fg-muted transition group-hover:text-brand">
+            View full analytics →
+          </span>
         </div>
       </div>
-    </div>
+    </button>
   );
 }
 
