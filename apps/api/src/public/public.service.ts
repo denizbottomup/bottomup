@@ -110,47 +110,54 @@ export class PublicService {
   }
 
   /**
-   * Monthly leaderboard, aligned with the admin panel's canonical
-   * formula: PnL = Σ r_value × $100. Each trader starts the month
-   * with a virtual $10,000; every setup closed in the current month
-   * adds r_value × $100 to their balance. Wins are setups with
-   * positive r_value (break-even / negative count as non-wins).
+   * Monthly futures leaderboard. Mirrors the Metabase `pnl_setup6`
+   * query the admin panel uses:
+   *
+   *   - Join trader_setup_pnl_performance to setup
+   *   - Only count trades with status ∈ {success, stopped}. Manual
+   *     `closed` positions are excluded (not a real win/loss).
+   *   - Category is fixed to futures (same as admin view).
+   *   - Win-rate = success / (success + stopped)
+   *   - Balance = $10,000 + SUM(estimated_pnl) — net of fees, matches
+   *     the 'net_pnl' column admins see.
    */
   private async topTraders(limit: number): Promise<LandingTrader[]> {
     const capped = Math.max(1, Math.min(20, limit));
     const rows = await this.prisma.$queryRawUnsafe<Array<Record<string, unknown>>>(
       `WITH monthly AS (
          SELECT s.trader_id,
-                COUNT(*)::int AS trades,
-                COUNT(*) FILTER (WHERE s.r_value > 0)::int AS wins,
-                COALESCE(SUM(s.r_value), 0) AS total_r
-           FROM setup s
+                COUNT(*) FILTER (WHERE s.status = 'success'::statuses_type)::int AS success,
+                COUNT(*) FILTER (WHERE s.status = 'stopped'::statuses_type)::int AS stopped,
+                COALESCE(SUM(p.estimated_pnl), 0) AS net_pnl,
+                COALESCE(SUM(p.estimated_pnl_rate), 0) AS net_r
+           FROM trader_setup_pnl_performance p
+           JOIN setup s ON s.id = p.setup_id
           WHERE s.is_deleted = FALSE
+            AND s.category = 'futures'::categories_type
+            AND s.status IN ('success'::statuses_type,'stopped'::statuses_type)
             AND s.close_date >= DATE_TRUNC('month', NOW())
-            AND s.status IN ('success'::statuses_type,'closed'::statuses_type,'stopped'::statuses_type)
-            AND s.r_value IS NOT NULL
           GROUP BY s.trader_id
        )
        SELECT u.id::text AS trader_id, u.name, u.first_name, u.last_name, u.image,
               (SELECT COUNT(*)::int FROM follow_notify f
                 WHERE f.trader_id = u.id AND f.follow = TRUE AND f.is_deleted = FALSE) AS followers,
-              COALESCE(m.trades, 0) AS trades,
-              COALESCE(m.wins, 0)   AS wins,
-              COALESCE(m.total_r, 0) AS total_r
+              COALESCE(m.success + m.stopped, 0) AS trades,
+              COALESCE(m.success, 0) AS wins,
+              COALESCE(m.net_pnl, 0) AS net_pnl,
+              COALESCE(m.net_r, 0) AS net_r
          FROM "user" u
          LEFT JOIN monthly m ON m.trader_id = u.id
         WHERE u.is_trader = TRUE AND u.is_active = TRUE AND u.is_deleted = FALSE
-          AND m.trades IS NOT NULL AND m.trades > 0
-        ORDER BY m.total_r DESC NULLS LAST
+          AND m.success + m.stopped > 0
+        ORDER BY m.net_pnl DESC NULLS LAST
         LIMIT ${capped}`,
     );
-    const DOLLAR_PER_R = 100;
     const STARTING = 10000;
     return rows.map((r) => {
       const trades = Number(r.trades ?? 0);
       const wins = Number(r.wins ?? 0);
-      const totalR = Number(r.total_r ?? 0);
-      const balance = STARTING + DOLLAR_PER_R * totalR;
+      const netPnl = Number(r.net_pnl ?? 0);
+      const balance = STARTING + netPnl;
       const returnPct = ((balance - STARTING) / STARTING) * 100;
       return {
         trader_id: r.trader_id as string,
