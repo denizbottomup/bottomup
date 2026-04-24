@@ -13,6 +13,7 @@ import { AnalyticsModule } from './analytics/analytics.module.js';
 import { MarketIntelModule } from './market-intel/market-intel.module.js';
 import { MiscModule } from './misc/misc.module.js';
 import { OkxModule } from './okx/okx.module.js';
+import { PublicModule } from './public/public.module.js';
 import { PrismaModule } from './common/prisma.module.js';
 
 @Module({
@@ -32,6 +33,7 @@ import { PrismaModule } from './common/prisma.module.js';
     MarketIntelModule,
     MiscModule,
     OkxModule,
+    PublicModule,
   ],
 })
 export class AppModule implements NestModule {
