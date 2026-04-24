@@ -32,6 +32,11 @@ export function LeaderboardSection({
               card for the full analytics dashboard — equity curve, R
               distribution, monthly P&L, coin breakdown.
             </p>
+            <p className="mt-2 max-w-2xl text-[11px] text-fg-dim">
+              Simulated results. Hypothetical performance has inherent
+              limitations. Past performance is not indicative of future
+              results.
+            </p>
           </div>
           <Link
             href="/signup"

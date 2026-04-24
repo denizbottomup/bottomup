@@ -4,6 +4,14 @@ import { useState } from 'react';
 
 const QA: Array<{ q: string; a: string }> = [
   {
+    q: 'Is BottomUP financial advice?',
+    a: "No. BottomUP is not a registered investment adviser, broker-dealer, or money services business. Everything on the platform — signals, Foxy AI verdicts, MCP outputs, leaderboard balances — is informational and educational only. Past performance (real or simulated) is not indicative of future results. Every trading decision and every loss is yours alone. See our Risk Disclosure for the full picture.",
+  },
+  {
+    q: 'Is copy trading available to U.S. persons?',
+    a: "Not today. The OKX exchange does not serve retail accounts in the United States, so BottomUP can't route live copy-trade orders for U.S. persons. You're welcome to use the social, analytics, and simulation features. When we launch a U.S.-compliant broker integration we'll announce it.",
+  },
+  {
     q: 'What is BottomUP, in one sentence?',
     a: 'The App Store of smart money — a marketplace where you subscribe to human traders, algorithmic bots, and AI agents, with every signal audited by our proprietary AI firewall before it reaches your wallet.',
   },

@@ -16,6 +16,10 @@ export function FinalCta() {
           Every signal audited. Every trade optimized. Sign up in 30 seconds
           and start browsing shops.
         </p>
+        <p className="mx-auto mt-2 max-w-xl text-[11px] text-fg-dim">
+          Not investment advice. Crypto trading carries a high risk of loss.
+          Copy-trading is not available to U.S. persons.
+        </p>
         <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
           <Link href="/signup" className="btn-primary px-6 py-3 text-base">
             Get started free →

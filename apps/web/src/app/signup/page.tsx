@@ -100,13 +100,19 @@ export default function SignUpPage() {
         </button>
         <p className="text-xs text-fg-dim text-center">
           By continuing you agree to our{' '}
-          <a href="https://www.bottomup.app/term_of_services" target="_blank" rel="noreferrer" className="underline hover:text-fg">
-            terms
-          </a>{' '}
-          and{' '}
-          <a href="https://www.bottomup.app/privacy_policy" target="_blank" rel="noreferrer" className="underline hover:text-fg">
-            privacy policy
-          </a>.
+          <Link href="/terms" className="underline hover:text-fg">
+            Terms
+          </Link>
+          ,{' '}
+          <Link href="/privacy" className="underline hover:text-fg">
+            Privacy Policy
+          </Link>
+          , and{' '}
+          <Link href="/risk-disclosure" className="underline hover:text-fg">
+            Risk Disclosure
+          </Link>
+          , and confirm you are 18+ and not located in an OFAC-sanctioned
+          region. Copy-trading is not available to U.S. persons.
         </p>
       </form>
     </AuthCard>

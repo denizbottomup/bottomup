@@ -107,34 +107,49 @@ export function LandingFooter() {
             </div>
             <ul className="mt-3 space-y-2 text-sm text-fg-muted">
               <li>
-                <a
-                  href="https://www.bottomup.app/term_of_services"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="hover:text-fg"
-                >
+                <Link href="/terms" className="hover:text-fg">
                   Terms of service
-                </a>
+                </Link>
               </li>
               <li>
-                <a
-                  href="https://www.bottomup.app/privacy_policy"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="hover:text-fg"
-                >
+                <Link href="/privacy" className="hover:text-fg">
                   Privacy
-                </a>
+                </Link>
+              </li>
+              <li>
+                <Link href="/risk-disclosure" className="hover:text-fg">
+                  Risk disclosure
+                </Link>
               </li>
             </ul>
           </div>
         </div>
 
-        <div className="mt-10 flex flex-col items-center justify-between gap-3 border-t border-border pt-6 text-[11px] text-fg-dim md:flex-row">
-          <div>© {year} BottomUP · All rights reserved.</div>
+        <div className="mt-10 rounded-2xl border border-border bg-bg-card/40 p-5 text-[11px] leading-relaxed text-fg-dim">
+          <strong className="text-fg">Important disclosures.</strong>{' '}
+          BottomUP, Inc. is a Delaware corporation. BottomUP is not a
+          registered investment adviser, broker-dealer, commodity pool
+          operator, commodity trading advisor, or money services business.
+          All content on the Service — including signals, Foxy AI verdicts,
+          and creator strategies — is provided for informational and
+          educational purposes only and is not individualized investment,
+          legal, or tax advice. Past performance, simulated performance, and
+          hypothetical results (including any &ldquo;$10,000 virtual
+          portfolio&rdquo; figures) are not indicative of future results.
+          Trading crypto-assets, and in particular using leverage or
+          derivatives, involves a high risk of total loss. Copy-trading
+          functionality is not currently offered to U.S. persons. Residents
+          of OFAC-sanctioned regions are ineligible. See our{' '}
+          <Link href="/risk-disclosure" className="text-fg-muted underline hover:text-fg">
+            Risk Disclosure
+          </Link>{' '}
+          for full details.
+        </div>
+
+        <div className="mt-6 flex flex-col items-center justify-between gap-3 border-t border-border pt-6 text-[11px] text-fg-dim md:flex-row">
+          <div>© {year} BottomUP, Inc. · All rights reserved.</div>
           <div className="text-center md:text-right">
-            BottomUP does not provide financial advice. Trading decisions are
-            yours alone.
+            1209 Orange St, Wilmington, DE 19801, USA
           </div>
         </div>
       </div>

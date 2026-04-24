@@ -84,8 +84,14 @@ export function PricingSection() {
         </div>
 
         <p className="mt-8 text-center text-[11px] text-fg-dim">
-          All plans billed in USD. Pay via credit card or App Store / Google
-          Play. Cancel anytime — full refund if anything goes wrong.
+          All plans billed in USD and auto-renew at the end of each period
+          unless cancelled. Cancel anytime from your account or via your app
+          store. Partial periods are not pro-rated. Not a substitute for
+          investment advice — see the{' '}
+          <a href="/risk-disclosure" className="underline hover:text-fg">
+            Risk Disclosure
+          </a>
+          . Copy-trading is not offered to U.S. persons.
         </p>
       </div>
     </section>
