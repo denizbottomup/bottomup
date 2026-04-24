@@ -9,7 +9,7 @@ const QA: Array<{ q: string; a: string }> = [
   },
   {
     q: 'How is Foxy AI different from regular copy trading?',
-    a: "Platforms like eToro or 3Commas just mirror whatever the trader (or bot) sends. If the trader revenge-trades with 50x leverage, so do you. Foxy intercepts every signal, scores it 0–100 across 225 data sources, and blocks the trade at the firewall if risk is too high — even if you subscribed. It's audit, not mirror.",
+    a: "Traditional copy-trading just mirrors whatever the trader (or bot) sends. If they revenge-trade with 50x leverage, so do you. Foxy intercepts every signal, scores it 0–100 across 225 data sources, and blocks the trade at the firewall if risk is too high — even if you subscribed. It's audit, not mirror.",
   },
   {
     q: 'What are MCPs?',

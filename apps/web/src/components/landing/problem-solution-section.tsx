@@ -5,7 +5,7 @@ const ROWS: Array<{
   {
     problem: {
       title: 'Blind-copying trap',
-      body: 'eToro-style platforms just mirror human errors and unverified black-box bots. Zero active risk mitigation.',
+      body: 'Copy-trading platforms just mirror human errors and unverified black-box bots. Zero active risk mitigation.',
     },
     solution: {
       title: 'Foxy AI firewall',
