@@ -14,13 +14,7 @@ export function Hero({ data }: { data: LandingPayload | null }) {
 
       <div className="mx-auto max-w-[1400px] px-4 pb-16 pt-14 md:px-8 md:pb-24 md:pt-24">
         <div className="mx-auto max-w-5xl text-center">
-          <div className="inline-flex items-center gap-2 rounded-full border border-emerald-400/30 bg-emerald-400/[0.08] px-3 py-1 font-mono text-[10px] uppercase tracking-widest text-emerald-300 backdrop-blur">
-            <ShieldIcon />
-            Foxy AI Shield · active
-            <span className="mx-1 h-1 w-1 rounded-full bg-emerald-400/60" />
-            225 data sources
-          </div>
-          <h1 className="mt-7 text-[48px] font-extrabold leading-[0.95] tracking-[-0.03em] md:text-[84px] lg:text-[104px]">
+          <h1 className="text-[48px] font-extrabold leading-[0.95] tracking-[-0.03em] md:text-[84px] lg:text-[104px]">
             <span className="block">The App Store of</span>
             <span className="block logo-gradient">Smart Money.</span>
           </h1>
@@ -120,17 +114,3 @@ function Kpi({
   );
 }
 
-function ShieldIcon() {
-  return (
-    <svg
-      width="11"
-      height="11"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2.5"
-    >
-      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-    </svg>
-  );
-}
