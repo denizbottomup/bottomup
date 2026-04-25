@@ -1,14 +1,16 @@
 import { ImageResponse } from 'next/og';
 
 /**
- * Auto-generated 1200×630 OG image rendered at build time. This is
- * what shows up when bupcore.ai is shared on Twitter/X, LinkedIn,
- * iMessage, Slack, Discord, Telegram, etc.
+ * Auto-generated 1200×630 OG image. Runs on Node (not Edge) because
+ * Railway's standalone Next server doesn't support the Edge runtime —
+ * declaring `runtime = 'edge'` here previously caused every share
+ * link to 502 on social-card scrape. ImageResponse works fine on
+ * Node, just slightly slower per request.
  *
  * Ship a real designed image into /public/og.png later — Next will
  * prefer the static file over this route once it exists.
  */
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 export const alt = 'BottomUP — AI-protected copy trading marketplace';
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
