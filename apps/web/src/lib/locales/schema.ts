@@ -161,7 +161,9 @@ export interface Dict {
     billed_upfront: string;
     save_13: string;
     save_20: string;
-    plans: Array<{ name: string; cta: string; features: string[] }>;
+    /** Subtext shown under the price for the free tier (e.g. "Forever free"). */
+    free_label: string;
+    plans: Array<{ name: string; features: string[] }>;
     footer: string;
   };
   faq: {

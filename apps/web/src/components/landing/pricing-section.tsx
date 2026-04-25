@@ -2,12 +2,23 @@
 
 import { useT } from '@/lib/i18n';
 
-// Prices mirror the live App Store Connect tiers (US, USD) for the
-// "Plans" subscription group on app id 1661474993:
+// Tiers mirror the live App Store Connect "Plans" subscription group on
+// app id 1661474993. Free tier is the in-app free experience (limited
+// Foxy AI quota + 20% trader-signal visibility); the rest are
+// auto-renewing subscriptions in USD.
+//   free          → $0 / forever  (5 Foxy/day, 20% setup visibility)
 //   monthly       → $49.99 / month
 //   3 months      → $129.99 total ($43.33 / month, ~13% off monthly)
 //   6 months      → $239.99 total ($40.00 / month, ~20% off monthly)
 const PLAN_META = [
+  {
+    code: 'free',
+    price: 0,
+    priceLabel: '$0',
+    total: null as number | null,
+    highlight: false,
+    saveKey: null as 'save_13' | 'save_20' | null,
+  },
   {
     code: 'monthly',
     price: 49.99,
@@ -57,7 +68,7 @@ export function PricingSection() {
           </p>
         </header>
 
-        <div className="mx-auto mt-10 grid max-w-6xl grid-cols-1 gap-4 md:grid-cols-3">
+        <div className="mx-auto mt-10 grid max-w-6xl grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
           {plans.map((p) => (
             <PlanCard
               key={p.code}
@@ -65,6 +76,7 @@ export function PricingSection() {
               mostPopular={t.pr.most_popular}
               billedMonthly={t.pr.billed_monthly}
               billedUpfront={t.pr.billed_upfront}
+              freeLabel={t.pr.free_label}
               saveLabel={
                 p.saveKey === 'save_13'
                   ? t.pr.save_13
@@ -99,14 +111,17 @@ function PlanCard({
   mostPopular,
   billedMonthly,
   billedUpfront,
+  freeLabel,
   saveLabel,
 }: {
   plan: Plan;
   mostPopular: string;
   billedMonthly: string;
   billedUpfront: string;
+  freeLabel: string;
   saveLabel: string | null;
 }) {
+  const isFree = plan.price === 0;
   return (
     <div
       className={`relative flex flex-col rounded-2xl border p-6 transition ${
@@ -125,9 +140,13 @@ function PlanCard({
       </div>
       <div className="mt-2 flex items-baseline gap-1">
         <span className="text-4xl font-semibold text-fg">{plan.priceLabel}</span>
-        <span className="text-sm text-fg-muted">/ mo</span>
+        {isFree ? null : (
+          <span className="text-sm text-fg-muted">/ mo</span>
+        )}
       </div>
-      {plan.total != null ? (
+      {isFree ? (
+        <div className="mt-1 text-[11px] text-fg-dim">{freeLabel}</div>
+      ) : plan.total != null ? (
         <div className="mt-1 text-[11px] text-fg-dim">
           {billedUpfront.replace('{total}', `$${plan.total}`)}{' '}
           {saveLabel ? (

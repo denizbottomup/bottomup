@@ -105,6 +105,14 @@ export function StructuredData({ locale = 'en' }: { locale?: LocaleCode }) {
         offers: [
           {
             '@type': 'Offer',
+            name: 'Free',
+            price: '0',
+            priceCurrency: 'USD',
+            description:
+              'Free tier: 5 Foxy AI risk audits per day, 20% trader-signal visibility, live market dashboard, sentiment-tagged news, community chat.',
+          },
+          {
+            '@type': 'Offer',
             name: 'Monthly',
             price: '49.99',
             priceCurrency: 'USD',
@@ -115,6 +123,8 @@ export function StructuredData({ locale = 'en' }: { locale?: LocaleCode }) {
               billingDuration: 'P1M',
               unitText: 'month',
             },
+            description:
+              'Unlimited Foxy AI risk audits, 100% trader-signal visibility, full marketplace, all 9 MCP agents, OKX copy trading.',
           },
           {
             '@type': 'Offer',
@@ -128,6 +138,8 @@ export function StructuredData({ locale = 'en' }: { locale?: LocaleCode }) {
               billingDuration: 'P3M',
               unitText: '3 months',
             },
+            description:
+              'Everything in Monthly, 13% lower per-month, quarterly performance report, priority support.',
           },
           {
             '@type': 'Offer',
@@ -141,6 +153,8 @@ export function StructuredData({ locale = 'en' }: { locale?: LocaleCode }) {
               billingDuration: 'P6M',
               unitText: '6 months',
             },
+            description:
+              'Everything in Quarterly, 20% lower per-month, $BUP token rewards, early TradFi access, 1:1 strategy consult, founders badge.',
           },
         ],
         keywords: [

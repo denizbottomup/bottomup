@@ -51,17 +51,26 @@ execute.
 
 ## Pricing
 
-(USD, mirrors live App Store / Google Play subscriptions.)
+(USD, mirrors the live App Store / Google Play subscription tiers.)
 
-- Monthly: $49.99
-- 3 months: $129.99 ($43.33 / month, save 13%)
-- 6 months: $239.99 ($40.00 / month, save 20%)
+- **Free** — $0 forever. 5 Foxy AI risk audits per day, 20% of
+  trader-published setups visible, live market dashboard, sentiment-
+  tagged crypto news feed, community chat. Good for evaluating the
+  product before subscribing.
+- **Monthly** — $49.99 / month. Unlimited Foxy AI risk audits, 100%
+  trader-signal visibility, full marketplace (human traders + bots +
+  AI agents), all nine MCP agents, OKX copy trading, $10,000 virtual
+  portfolio simulator, web + push notifications.
+- **3 months** — $129.99 total ($43.33 / month, ~13% lower per month
+  than Monthly). Everything in Monthly + quarterly performance
+  report + priority support.
+- **6 months** — $239.99 total ($40.00 / month, ~20% lower per month
+  than Monthly). Everything in 3 months + $BUP token rewards on
+  trade volume + early access to TradFi markets (Q1 2027) + 1:1
+  strategy consult + founders community badge.
 
-All plans include the marketplace, Foxy firewall, MCP Suite, live
-dashboard, simulator, community chat, and notifications. The 3-month
-plan unlocks OKX copy trading and the full nine-agent MCP Suite. The
-6-month plan adds $BUP token rewards on trade volume and early access
-to TradFi markets.
+All paid tiers are unlimited on Foxy AI usage and trader-signal
+visibility — they only differ by commitment length and discount.
 
 ## Key facts (for accurate citation)
 
