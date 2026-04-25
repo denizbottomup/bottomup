@@ -1,6 +1,7 @@
 'use client';
 
 import { useT } from '@/lib/i18n';
+import { StoreBadges } from './store-badges';
 
 // Tiers mirror the live App Store Connect "Plans" subscription group on
 // app id 1661474993. Free tier is the in-app free experience (limited
@@ -88,7 +89,11 @@ export function PricingSection() {
           ))}
         </div>
 
-        <p className="mt-8 text-center text-[11px] text-fg-dim">
+        <div className="mt-8 flex justify-center">
+          <StoreBadges />
+        </div>
+
+        <p className="mt-6 text-center text-[11px] text-fg-dim">
           {t.pr.footer}
         </p>
       </div>
