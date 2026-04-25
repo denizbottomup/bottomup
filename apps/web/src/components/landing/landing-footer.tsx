@@ -96,6 +96,11 @@ export function LandingFooter() {
                   Blog
                 </Link>
               </li>
+              <li>
+                <Link href="/press" className="hover:text-fg">
+                  Press
+                </Link>
+              </li>
             </ul>
           </div>
 
