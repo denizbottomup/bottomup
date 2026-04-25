@@ -98,32 +98,46 @@ export function TraderDetailModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center overflow-y-auto bg-black/80 backdrop-blur-md md:items-center md:p-6"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/80 backdrop-blur-md md:items-center md:p-6"
       onClick={onClose}
     >
+      {/* Modal is the scroll container, NOT the backdrop. Outer div
+          stays viewport-pinned via `fixed inset-0`; the URL bar can
+          shrink/grow underneath without ever stranding the close
+          button above the visible area. `100dvh` honors the mobile
+          dynamic-viewport so the modal resizes when Safari/Chrome
+          show or hide their address bar. */}
       <div
-        className="relative my-0 w-full max-w-4xl overflow-hidden bg-bg-card shadow-2xl md:my-0 md:rounded-2xl md:border md:border-border"
+        className="relative flex w-full max-w-4xl flex-col bg-bg-card shadow-2xl max-h-[100dvh] md:max-h-[90vh] md:rounded-2xl md:border md:border-border"
         onClick={(e) => e.stopPropagation()}
       >
-        <button
-          onClick={onClose}
-          aria-label="Close"
-          className="absolute right-4 top-4 z-20 flex h-9 w-9 items-center justify-center rounded-full bg-black/60 text-lg text-fg ring-1 ring-white/10 backdrop-blur hover:bg-black/80"
-        >
-          ×
-        </button>
+        {/* Sticky header — always visible at the top of the modal
+            regardless of scroll position. Solves the "X button
+            disappears under the URL bar after scrolling on the
+            second card" report. */}
+        <div className="sticky top-0 z-30 flex items-center justify-end border-b border-border bg-bg-card/95 px-3 py-2.5 backdrop-blur">
+          <button
+            onClick={onClose}
+            aria-label="Close"
+            className="flex h-9 w-9 items-center justify-center rounded-full bg-black/60 text-lg text-fg ring-1 ring-white/10 hover:bg-black/80"
+          >
+            ×
+          </button>
+        </div>
 
-        {err ? (
-          <div className="p-8 text-center text-sm text-rose-300">
-            Couldn't load trader: {err}
-          </div>
-        ) : !data ? (
-          <div className="flex items-center justify-center p-20 text-sm text-fg-dim">
-            Loading…
-          </div>
-        ) : (
-          <DetailBody data={data} displayName={displayName} />
-        )}
+        <div className="overflow-y-auto overscroll-contain">
+          {err ? (
+            <div className="p-8 text-center text-sm text-rose-300">
+              Couldn't load trader: {err}
+            </div>
+          ) : !data ? (
+            <div className="flex items-center justify-center p-20 text-sm text-fg-dim">
+              Loading…
+            </div>
+          ) : (
+            <DetailBody data={data} displayName={displayName} />
+          )}
+        </div>
       </div>
     </div>
   );
@@ -193,7 +207,7 @@ function DetailBody({
         </div>
       </header>
 
-      <div className="max-h-[70vh] overflow-y-auto px-6 py-6 md:px-8">
+      <div className="px-6 py-6 md:px-8">
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
           <Kpi
             label="Trades"

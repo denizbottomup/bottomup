@@ -1,6 +1,10 @@
+// App Store slug changed (bottomup-social → bottomup-sofi-trade-finance);
+// the old slug 301-redirects but mobile Safari's App Store handoff
+// occasionally drops on the redirect, leaving the user on the web
+// page. Pin the current slug + country code to avoid that.
 const IOS_URL =
   process.env.NEXT_PUBLIC_IOS_URL ||
-  'https://apps.apple.com/tr/app/bottomup-social/id1661474993';
+  'https://apps.apple.com/tr/app/bottomup-sofi-trade-finance/id1661474993';
 const ANDROID_URL =
   process.env.NEXT_PUBLIC_ANDROID_URL ||
   'https://play.google.com/store/apps/details?id=com.bottomup.bottomupapp';
