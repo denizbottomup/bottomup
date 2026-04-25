@@ -1,4 +1,3 @@
-import type Anthropic from '@anthropic-ai/sdk';
 import type { Job, Queue } from 'bullmq';
 import type { Logger } from 'pino';
 import type { Pool } from 'pg';
@@ -29,10 +28,9 @@ const LOCALE_BY_CODE = new Map(TARGET_LOCALES.map((l) => [l.code, l]));
  */
 export function makeNewsTranslateProcessor(opts: {
   pool: Pool;
-  client: Anthropic;
   log: Logger;
 }) {
-  const { pool, client, log } = opts;
+  const { pool, log } = opts;
   return async (job: Job<NewsTranslateJobData>): Promise<NewsTranslateJobResult> => {
     const { newsId, locale } = job.data;
     const meta = LOCALE_BY_CODE.get(locale);
@@ -61,7 +59,6 @@ export function makeNewsTranslateProcessor(opts: {
     }
 
     const out = await translateArticle(
-      client,
       meta as TranslateLocale,
       { title: row.title, text: row.text },
       log,
@@ -90,7 +87,7 @@ export async function enqueueMissingTranslations(opts: {
   pool: Pool;
   queue: Queue<NewsTranslateJobData, NewsTranslateJobResult>;
   log: Logger;
-  /** Cap per tick so we don't blow Anthropic rate limits. */
+  /** Cap per tick so we don't blow translation provider rate limits. */
   perTickLimit?: number;
 }): Promise<{ enqueued: number }> {
   const { pool, queue, log, perTickLimit = 60 } = opts;

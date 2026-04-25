@@ -13,7 +13,6 @@ import {
   type NewsTranslateJobData,
   type NewsTranslateJobResult,
 } from './news-translator/index.js';
-import { getAnthropic } from './news-translator/anthropic-client.js';
 
 /**
  * Workers bootstrap. Each processor is a stub for now — MVP lands with
@@ -23,8 +22,12 @@ const workersEnvSchema = workersSchema.extend({
   // Legacy prod Postgres we replicate FROM (umay.bottomup.app).
   LEGACY_DATABASE_URL: z.string().url().optional(),
   REPLICATOR_INTERVAL_MS: z.coerce.number().int().positive().default(10_000),
-  // News translator (Anthropic Haiku) — disabled if key is unset.
-  ANTHROPIC_API_KEY: z.string().min(10).optional(),
+  // News translator runs on Google Translate's free widget endpoint.
+  // No API key required. Set to 'false' to disable in CI / local dev.
+  NEWS_TRANSLATOR_ENABLED: z
+    .string()
+    .default('true')
+    .transform((v) => v.toLowerCase() !== 'false'),
   NEWS_TRANSLATOR_INTERVAL_MS: z.coerce
     .number()
     .int()
@@ -66,12 +69,12 @@ async function main(): Promise<void> {
 
   // ─── News translator ──────────────────────────────────────────────
   // Translates new articles into all 9 non-English locales as soon as
-  // they arrive, writing into the `news_text` table. Disabled cleanly
-  // when ANTHROPIC_API_KEY is unset (e.g. in CI).
+  // they arrive, writing into the `news_text` table. Backed by Google
+  // Translate's free widget endpoint — no API key, no signup. Set
+  // NEWS_TRANSLATOR_ENABLED=false to disable in CI.
   let newsTranslatorTimer: NodeJS.Timeout | null = null;
   let newsTranslatorPool: Pool | null = null;
-  if (env.ANTHROPIC_API_KEY) {
-    const client = getAnthropic(env.ANTHROPIC_API_KEY);
+  if (env.NEWS_TRANSLATOR_ENABLED) {
     newsTranslatorPool = new Pool({ connectionString: env.DATABASE_URL });
     const queue = new Queue<NewsTranslateJobData, NewsTranslateJobResult>(
       QUEUE_NAMES.newsTranslate,
@@ -82,13 +85,12 @@ async function main(): Promise<void> {
         QUEUE_NAMES.newsTranslate,
         makeNewsTranslateProcessor({
           pool: newsTranslatorPool,
-          client,
           log: log.child({ component: 'news-translator' }),
         }),
         connection,
-        // Anthropic per-key concurrency: 5 keeps us under any tier
-        // limits and avoids burning bursts of tokens.
-        5,
+        // 3 concurrent translations keeps us comfortably under the
+        // unofficial Google endpoint's rate-limit window.
+        3,
       ),
     );
 
@@ -117,7 +119,7 @@ async function main(): Promise<void> {
       'news-translator: enabled',
     );
   } else {
-    log.info('news-translator: disabled (set ANTHROPIC_API_KEY to enable)');
+    log.info('news-translator: disabled (NEWS_TRANSLATOR_ENABLED=false)');
   }
 
   // ─── Legacy DB replicator ──────────────────────────────────────────
