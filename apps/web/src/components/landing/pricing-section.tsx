@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { useT } from '@/lib/i18n';
 
 const PLAN_META = [
@@ -35,7 +34,6 @@ export function PricingSection() {
   const plans = PLAN_META.map((m, i) => ({
     ...m,
     name: t.pr.plans[i]?.name ?? '',
-    cta: t.pr.plans[i]?.cta ?? '',
     features: t.pr.plans[i]?.features ?? [],
   }));
   return (
@@ -89,7 +87,6 @@ interface Plan {
   total: number | null;
   highlight: boolean;
   features: string[];
-  cta: string;
 }
 
 function PlanCard({
@@ -156,17 +153,6 @@ function PlanCard({
           </li>
         ))}
       </ul>
-
-      <Link
-        href={`/signup?plan=${plan.code}`}
-        className={`mt-6 inline-flex items-center justify-center rounded-lg px-4 py-3 text-sm font-semibold transition ${
-          plan.highlight
-            ? 'bg-brand text-white hover:bg-brand-dark'
-            : 'border border-border bg-bg-card text-fg hover:bg-bg-elev'
-        }`}
-      >
-        {plan.cta}
-      </Link>
     </div>
   );
 }

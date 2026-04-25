@@ -48,12 +48,12 @@ const DICTS: Record<LocaleCode, Dict> = {
   ar,
 };
 
-const ORG_ID = 'https://bupcore.ai/#organization';
-const APP_ID = 'https://bupcore.ai/#software';
+const ORG_ID = 'https://bottomup.app/#organization';
+const APP_ID = 'https://bottomup.app/#software';
 
 export function StructuredData({ locale = 'en' }: { locale?: LocaleCode }) {
   const t = DICTS[locale];
-  const url = locale === 'en' ? 'https://bupcore.ai' : `https://bupcore.ai/${locale}`;
+  const url = locale === 'en' ? 'https://bottomup.app' : `https://bottomup.app/${locale}`;
   const data = {
     '@context': 'https://schema.org',
     '@graph': [
@@ -62,8 +62,8 @@ export function StructuredData({ locale = 'en' }: { locale?: LocaleCode }) {
         '@id': ORG_ID,
         name: 'BottomUP',
         legalName: 'BottomUP, Inc.',
-        url: 'https://bupcore.ai',
-        logo: 'https://bupcore.ai/logos/logomark-color.png',
+        url: 'https://bottomup.app',
+        logo: 'https://bottomup.app/logos/logomark-color.png',
         foundingDate: '2024',
         description:
           'BottomUP is a Delaware-incorporated marketplace for AI-protected social copy trading: human traders, algorithmic bots, and AI agents publish strategies that anyone can subscribe to, with every signal audited by the Foxy AI risk firewall before it reaches the user wallet.',

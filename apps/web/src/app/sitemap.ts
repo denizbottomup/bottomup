@@ -1,7 +1,7 @@
 import type { MetadataRoute } from 'next';
 import { LOCALES } from '@/lib/locale-config';
 
-const BASE = 'https://bupcore.ai';
+const BASE = 'https://bottomup.app';
 
 /**
  * Public sitemap. Each locale variant of the landing page is listed

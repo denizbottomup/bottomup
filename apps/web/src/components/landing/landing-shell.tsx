@@ -1,5 +1,4 @@
 import { FaqSection } from './faq-section';
-import { FinalCta } from './final-cta';
 import { FoxyFirewallSection } from './foxy-firewall-section';
 import { Hero } from './hero';
 import { IntroVideoSection } from './intro-video-section';
@@ -55,7 +54,6 @@ export async function LandingShell({ locale }: { locale: LocaleCode }) {
 
       <PricingSection />
       <FaqSection />
-      <FinalCta />
       <LandingFooter />
     </div>
   );

@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { Logo } from '@/components/logo';
 import { useT } from '@/lib/i18n';
@@ -50,12 +49,6 @@ export function LandingNav() {
 
         <div className="hidden items-center gap-2 md:flex">
           <LanguageSwitcher />
-          <Link href="/signin" className="btn-ghost">
-            {t.nav.signin}
-          </Link>
-          <Link href="/signup" className="btn-primary">
-            {t.nav.signup}
-          </Link>
         </div>
 
         <button
@@ -98,16 +91,8 @@ export function LandingNav() {
             <a href="#pricing" className="py-2 text-fg-muted" onClick={() => setMobileOpen(false)}>
               {t.nav.pricing}
             </a>
-            <div className="mt-3 flex flex-col gap-2 border-t border-border pt-3">
-              <div className="flex justify-center pb-2">
-                <LanguageSwitcher />
-              </div>
-              <Link href="/signin" className="btn-ghost justify-center">
-                {t.nav.signin}
-              </Link>
-              <Link href="/signup" className="btn-primary justify-center">
-                {t.nav.signup}
-              </Link>
+            <div className="mt-3 flex justify-center border-t border-border pt-3">
+              <LanguageSwitcher />
             </div>
           </nav>
         </div>

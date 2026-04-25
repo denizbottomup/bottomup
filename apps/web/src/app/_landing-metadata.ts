@@ -25,7 +25,10 @@ const DICTS: Record<LocaleCode, Dict> = {
   ar,
 };
 
-const SITE = 'https://bupcore.ai';
+// Primary canonical for the marketing site. bupcore.ai is the lab
+// alias — same code, same deploy — but every canonical link points
+// here so SEO equity consolidates on the older, more-trusted domain.
+const SITE = 'https://bottomup.app';
 
 /** Maps our 2-letter locale codes to OG `locale` BCP-47 tags. */
 const OG_LOCALE: Record<LocaleCode, string> = {

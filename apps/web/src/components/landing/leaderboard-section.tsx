@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { useState } from 'react';
 import { displayName, type LandingPayload } from './landing-data';
 import { TraderDetailModal } from './trader-detail-modal';
@@ -36,12 +35,6 @@ export function LeaderboardSection({
               {t.lb.disclaimer}
             </p>
           </div>
-          <Link
-            href="/signup"
-            className="btn-primary whitespace-nowrap px-5 py-3 text-base"
-          >
-            {t.lb.cta}
-          </Link>
         </header>
 
         {shown.length === 0 ? (

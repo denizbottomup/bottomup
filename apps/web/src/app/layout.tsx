@@ -28,7 +28,7 @@ const DESCRIPTION =
   'BottomUP is the App Store of smart money: a marketplace for AI-based portfolio management, automated copy trading, and algorithmic crypto bots. Every signal is audited by the Foxy AI risk firewall across 225 data sources before it reaches your wallet.';
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://bupcore.ai'),
+  metadataBase: new URL('https://bottomup.app'),
   title: {
     default: TITLE,
     template: '%s · BottomUP',
@@ -56,7 +56,7 @@ export const metadata: Metadata = {
     'crypto trade copying',
     'smart money crypto',
   ],
-  authors: [{ name: 'BottomUP, Inc.', url: 'https://bupcore.ai' }],
+  authors: [{ name: 'BottomUP, Inc.', url: 'https://bottomup.app' }],
   creator: 'BottomUP, Inc.',
   publisher: 'BottomUP, Inc.',
   category: 'finance',
@@ -69,7 +69,7 @@ export const metadata: Metadata = {
     // meta tags for every route, so we don't list `images` here.
     type: 'website',
     locale: 'en_US',
-    url: 'https://bupcore.ai',
+    url: 'https://bottomup.app',
     siteName: 'BottomUP',
     title: TITLE,
     description: DESCRIPTION,

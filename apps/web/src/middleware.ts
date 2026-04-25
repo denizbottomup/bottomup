@@ -1,17 +1,26 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-// bupcore.ai        = landing only. Locale-prefixed paths (/tr, /es,
-//                     /zh, ...) plus the canonical "/" stay here.
-//                     Everything else (auth, app, product) forwards to
-//                     trade.bupcore.ai.
+// bottomup.app      = primary marketing host. Locale-prefixed paths
+//                     (/tr, /es, /zh, ...) plus the canonical "/" stay
+//                     here. Everything else (auth, app, product) goes
+//                     to trade.bupcore.ai.
+// bupcore.ai        = secondary alias serving the same landing
+//                     content. Canonical link tags point back at
+//                     bottomup.app so SEO consolidates on the older,
+//                     more-trusted domain.
 // trade.bupcore.ai  = auth + product. "/" redirects to /signin (which
 //                     itself bounces to /app if the user is already
 //                     logged in).
 // localhost / preview domains fall through untouched so dev acts as a
 // single app.
 
-const LANDING_HOSTS = new Set(['bupcore.ai', 'www.bupcore.ai']);
+const LANDING_HOSTS = new Set([
+  'bottomup.app',
+  'www.bottomup.app',
+  'bupcore.ai',
+  'www.bupcore.ai',
+]);
 const TRADE_HOST = 'trade.bupcore.ai';
 
 /** Locales that get their own URL prefix. Default `en` lives at "/". */

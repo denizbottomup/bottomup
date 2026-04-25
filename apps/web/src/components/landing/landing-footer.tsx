@@ -87,16 +87,6 @@ export function LandingFooter() {
             </div>
             <ul className="mt-3 space-y-2 text-sm text-fg-muted">
               <li>
-                <Link href="/signup" className="hover:text-fg">
-                  {t.ft.signup}
-                </Link>
-              </li>
-              <li>
-                <Link href="/signin" className="hover:text-fg">
-                  {t.ft.signin}
-                </Link>
-              </li>
-              <li>
                 <a href="#faq" className="hover:text-fg">
                   {t.ft.faq}
                 </a>

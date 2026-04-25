@@ -19,7 +19,7 @@ export default function robots(): MetadataRoute.Robots {
         disallow: ['/account', '/api/'],
       },
     ],
-    sitemap: 'https://bupcore.ai/sitemap.xml',
-    host: 'https://bupcore.ai',
+    sitemap: 'https://bottomup.app/sitemap.xml',
+    host: 'https://bottomup.app',
   };
 }

@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { useT } from '@/lib/i18n';
 import type { LandingPayload } from './landing-data';
 import { StoreBadges } from './store-badges';
@@ -27,22 +26,7 @@ export function Hero({ data }: { data: LandingPayload | null }) {
             {t.hero.subtitle}
           </p>
 
-          <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
-            <Link
-              href="/signup"
-              className="btn-primary animate-glow px-6 py-3.5 text-base font-semibold"
-            >
-              {t.hero.cta_primary}
-            </Link>
-            <a
-              href="#foxy"
-              className="btn-ghost px-6 py-3.5 text-base font-semibold"
-            >
-              {t.hero.cta_secondary}
-            </a>
-          </div>
-
-          <div className="mt-6 flex justify-center">
+          <div className="mt-9 flex justify-center">
             <StoreBadges size="sm" />
           </div>
 
