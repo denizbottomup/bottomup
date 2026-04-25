@@ -98,5 +98,7 @@ export function middleware(req: NextRequest): NextResponse {
 }
 
 export const config = {
-  matcher: ['/((?!_next/|api/|favicon.ico|icon.png|logos/|.*\\..*).*)'],
+  matcher: [
+    '/((?!_next/|api/|favicon.ico|icon.png|logos/|opengraph-image|twitter-image|.*\\..*).*)',
+  ],
 };
