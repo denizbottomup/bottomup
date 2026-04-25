@@ -132,6 +132,9 @@ export function StructuredData({ locale = 'en' }: { locale?: LocaleCode }) {
           },
         ],
         sameAs: [
+          // Wikidata is the highest-trust entity binding Google + LLMs
+          // use for "what is BottomUP" / Knowledge Panel resolution.
+          'https://www.wikidata.org/wiki/Q139559065',
           'https://x.com/bottomupsocial',
           'https://t.me/BottomUPcommunity',
           'https://www.linkedin.com/company/bottomupsocial/',
