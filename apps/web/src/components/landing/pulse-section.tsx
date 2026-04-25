@@ -43,9 +43,97 @@ export function PulseSection({ pulse }: { pulse: LandingPayload['pulse'] }) {
         {pulse.liquidation.length > 0 || pulse.open_interest.length > 0 ? (
           <LiquidationTable pulse={pulse} tp={t.pulse} />
         ) : null}
+
+        <WhaleStrip positions={pulse.whale_positions} />
       </div>
     </section>
   );
+}
+
+/**
+ * Compact whale-watch strip — folded into the Pulse section instead
+ * of getting its own standalone block. Shows the top 5 currently-open
+ * Hyperliquid positions ($1M+) so the visitor sees that we surface
+ * the same wallet-level data Foxy is reading from, without donating
+ * a full screen of vertical real estate to it.
+ */
+function WhaleStrip({
+  positions,
+}: {
+  positions: LandingPayload['pulse']['whale_positions'];
+}) {
+  const { t } = useT();
+  if (positions.length === 0) return null;
+  const top = positions.slice(0, 5);
+  const totalNotional = positions.reduce(
+    (acc, p) => acc + Math.abs(p.position_value_usd),
+    0,
+  );
+  return (
+    <div className="mt-4 overflow-hidden rounded-2xl border border-border bg-bg-card">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-3">
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] uppercase tracking-wider text-fg-dim">
+            {t.whales.label}
+          </span>
+          <span className="rounded-full border border-brand/30 bg-brand/10 px-2 py-0.5 text-[10px] text-brand">
+            {t.whales.threshold}
+          </span>
+        </div>
+        <span className="font-mono text-[10px] text-fg-dim">
+          <span className="text-fg">{positions.length}</span> wallets ·{' '}
+          <span className="text-fg">{formatUsd(totalNotional)}</span> open
+        </span>
+      </div>
+      <div className="divide-y divide-white/5">
+        {top.map((p) => (
+          <WhaleRow key={`${p.user}:${p.symbol}`} pos={p} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function WhaleRow({
+  pos,
+}: {
+  pos: LandingPayload['pulse']['whale_positions'][number];
+}) {
+  const isLong = pos.side === 'long';
+  const pnlPositive = pos.unrealized_pnl >= 0;
+  const sideCls = isLong
+    ? 'bg-emerald-500/10 text-emerald-300 ring-emerald-500/30'
+    : 'bg-rose-500/10 text-rose-300 ring-rose-500/30';
+  return (
+    <div className="flex items-center gap-3 px-4 py-2 font-mono text-[11px]">
+      <span className="hidden w-28 text-fg-dim sm:inline">
+        {truncateAddress(pos.user)}
+      </span>
+      <span className="w-14 font-semibold text-fg">{pos.symbol}</span>
+      <span
+        className={`rounded px-1.5 py-0.5 text-[9px] uppercase tracking-wider ring-1 ${sideCls}`}
+      >
+        {isLong ? 'L' : 'S'}
+      </span>
+      <span className="text-fg-dim">{pos.leverage}x</span>
+      <span className="ml-auto font-semibold text-fg">
+        {formatUsd(Math.abs(pos.position_value_usd))}
+      </span>
+      <span
+        className={`hidden w-24 text-right md:inline ${
+          pnlPositive ? 'text-emerald-300' : 'text-rose-300'
+        }`}
+      >
+        {pnlPositive ? '+' : ''}
+        {formatUsd(pos.unrealized_pnl)}
+      </span>
+    </div>
+  );
+}
+
+function truncateAddress(addr: string): string {
+  if (!addr || addr.length < 12) return addr;
+  return `${addr.slice(0, 6)}…${addr.slice(-4)}`;
 }
 
 type PulseTp = Dict['pulse'];

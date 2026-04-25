@@ -15,7 +15,6 @@ import { ProblemSolutionSection } from './problem-solution-section';
 import { PulseSection } from './pulse-section';
 import { StructuredData } from './structured-data';
 import { TickerStrip } from './ticker-strip';
-import { WhalesSection } from './whales-section';
 import { fetchLanding } from './landing-data';
 import type { LocaleCode } from '@/lib/locale-config';
 
@@ -50,8 +49,6 @@ export async function LandingShell({ locale }: { locale: LocaleCode }) {
       <McpSuiteSection />
 
       {data ? <PulseSection pulse={data.pulse} /> : null}
-
-      {data ? <WhalesSection positions={data.pulse.whale_positions} /> : null}
 
       {data && data.news.length > 0 ? <NewsSection news={data.news} /> : null}
 
