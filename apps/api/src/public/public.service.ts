@@ -106,7 +106,7 @@ export class PublicService {
     private readonly intel: MarketIntelService,
   ) {}
 
-  async landing(): Promise<{
+  async landing(locale = 'en'): Promise<{
     stats: LandingStats;
     top_traders: LandingTrader[];
     latest_setups: LandingSetup[];
@@ -117,7 +117,7 @@ export class PublicService {
       this.stats(),
       this.topTraders(6),
       this.latestSetups(8),
-      this.latestNews(6),
+      this.latestNews(6, locale),
       this.intel.pulse().catch(() => ({
         fear_greed: null,
         fear_greed_history: [],
@@ -129,6 +129,15 @@ export class PublicService {
       })),
     ]);
     return { stats, top_traders: traders, latest_setups: setups, news, pulse };
+  }
+
+  /**
+   * News-only endpoint that the web app calls when the user switches
+   * locale — the rest of the landing payload is locale-agnostic so we
+   * don't refetch it.
+   */
+  async news(limit: number, locale: string): Promise<LandingNews[]> {
+    return this.latestNews(limit, locale);
   }
 
   private async stats(): Promise<LandingStats> {
@@ -459,26 +468,58 @@ export class PublicService {
     }));
   }
 
-  private async latestNews(limit: number): Promise<LandingNews[]> {
+  private async latestNews(limit: number, locale = 'en'): Promise<LandingNews[]> {
+    const cap = Math.max(1, Math.min(20, limit));
+    // English is the source language; for any other locale we LEFT JOIN
+    // the news_text translation table and COALESCE the title / text /
+    // full_text. If the translator hasn't caught up yet, the request
+    // gracefully falls back to the source-language copy.
+    const lang = String(locale ?? 'en').toLowerCase();
+    if (lang === 'en') {
+      const rows = await this.prisma.$queryRawUnsafe<Array<Record<string, unknown>>>(
+        `SELECT n.id::text AS id, n.title, n.text, n.source_name AS source,
+                COALESCE(n.thumbnail_url, n.image_url) AS image,
+                n.news_url AS url, n.date, n.sentiment,
+                COALESCE(n.tickers, ARRAY[]::text[]) AS tickers
+           FROM news n
+          WHERE n.is_deleted = FALSE
+          ORDER BY n.date DESC NULLS LAST
+          LIMIT ${cap}`,
+      );
+      return rows.map((r) => mapNewsRow(r));
+    }
+
     const rows = await this.prisma.$queryRawUnsafe<Array<Record<string, unknown>>>(
-      `SELECT id::text AS id, title, text, source_name AS source,
-              COALESCE(thumbnail_url, image_url) AS image,
-              news_url AS url, date, sentiment, COALESCE(tickers, ARRAY[]::text[]) AS tickers
-         FROM news
-        WHERE is_deleted = FALSE
-        ORDER BY date DESC NULLS LAST
-        LIMIT ${Math.max(1, Math.min(20, limit))}`,
+      `SELECT n.id::text AS id,
+              COALESCE(nt.title, n.title) AS title,
+              COALESCE(nt.text,  n.text)  AS text,
+              n.source_name AS source,
+              COALESCE(n.thumbnail_url, n.image_url) AS image,
+              n.news_url AS url, n.date, n.sentiment,
+              COALESCE(n.tickers, ARRAY[]::text[]) AS tickers
+         FROM news n
+         LEFT JOIN news_text nt
+                ON nt.news_id = n.id AND nt.language = $1
+        WHERE n.is_deleted = FALSE
+        ORDER BY n.date DESC NULLS LAST
+        LIMIT ${cap}`,
+      lang,
     );
-    return rows.map((r) => ({
-      id: r.id as string,
-      title: (r.title as string | null) ?? null,
-      text: (r.text as string | null) ?? null,
-      source: (r.source as string | null) ?? null,
-      image: (r.image as string | null) ?? null,
-      url: (r.url as string | null) ?? null,
-      date: (r.date as Date | null) ?? null,
-      sentiment: (r.sentiment as string | null) ?? null,
-      tickers: Array.isArray(r.tickers) ? (r.tickers as string[]).slice(0, 5) : [],
-    }));
+    return rows.map((r) => mapNewsRow(r));
   }
+
+}
+
+function mapNewsRow(r: Record<string, unknown>): LandingNews {
+  return {
+    id: r.id as string,
+    title: (r.title as string | null) ?? null,
+    text: (r.text as string | null) ?? null,
+    source: (r.source as string | null) ?? null,
+    image: (r.image as string | null) ?? null,
+    url: (r.url as string | null) ?? null,
+    date: (r.date as Date | null) ?? null,
+    sentiment: (r.sentiment as string | null) ?? null,
+    tickers: Array.isArray(r.tickers) ? (r.tickers as string[]).slice(0, 5) : [],
+  };
 }

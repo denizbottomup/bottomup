@@ -1,11 +1,19 @@
 import { loadEnv, workersSchema } from '@bottomup/config';
 import pino from 'pino';
-import type { ConnectionOptions, Worker } from 'bullmq';
+import { Queue, type ConnectionOptions, type Worker } from 'bullmq';
 import { z } from 'zod';
+import { Pool } from 'pg';
 import { QUEUE_NAMES, makeWorker } from './queues/index.js';
 import { Replicator } from './replicator/replicator.js';
 import { RealtimeBus } from './realtime-bus.js';
 import { BinanceTicker } from './ticker/binance-ticker.js';
+import {
+  enqueueMissingTranslations,
+  makeNewsTranslateProcessor,
+  type NewsTranslateJobData,
+  type NewsTranslateJobResult,
+} from './news-translator/index.js';
+import { getAnthropic } from './news-translator/anthropic-client.js';
 
 /**
  * Workers bootstrap. Each processor is a stub for now — MVP lands with
@@ -15,6 +23,14 @@ const workersEnvSchema = workersSchema.extend({
   // Legacy prod Postgres we replicate FROM (umay.bottomup.app).
   LEGACY_DATABASE_URL: z.string().url().optional(),
   REPLICATOR_INTERVAL_MS: z.coerce.number().int().positive().default(10_000),
+  // News translator (Anthropic Haiku) — disabled if key is unset.
+  ANTHROPIC_API_KEY: z.string().min(10).optional(),
+  NEWS_TRANSLATOR_INTERVAL_MS: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(60_000),
+  NEWS_TRANSLATOR_PER_TICK: z.coerce.number().int().positive().default(40),
 });
 
 async function main(): Promise<void> {
@@ -47,6 +63,62 @@ async function main(): Promise<void> {
       1,
     ),
   );
+
+  // ─── News translator ──────────────────────────────────────────────
+  // Translates new articles into all 9 non-English locales as soon as
+  // they arrive, writing into the `news_text` table. Disabled cleanly
+  // when ANTHROPIC_API_KEY is unset (e.g. in CI).
+  let newsTranslatorTimer: NodeJS.Timeout | null = null;
+  let newsTranslatorPool: Pool | null = null;
+  if (env.ANTHROPIC_API_KEY) {
+    const client = getAnthropic(env.ANTHROPIC_API_KEY);
+    newsTranslatorPool = new Pool({ connectionString: env.DATABASE_URL });
+    const queue = new Queue<NewsTranslateJobData, NewsTranslateJobResult>(
+      QUEUE_NAMES.newsTranslate,
+      { connection },
+    );
+    workers.push(
+      makeWorker<NewsTranslateJobData, NewsTranslateJobResult>(
+        QUEUE_NAMES.newsTranslate,
+        makeNewsTranslateProcessor({
+          pool: newsTranslatorPool,
+          client,
+          log: log.child({ component: 'news-translator' }),
+        }),
+        connection,
+        // Anthropic per-key concurrency: 5 keeps us under any tier
+        // limits and avoids burning bursts of tokens.
+        5,
+      ),
+    );
+
+    const enqueueTick = async (): Promise<void> => {
+      try {
+        const r = await enqueueMissingTranslations({
+          pool: newsTranslatorPool!,
+          queue,
+          log: log.child({ component: 'news-translator' }),
+          perTickLimit: env.NEWS_TRANSLATOR_PER_TICK,
+        });
+        if (r.enqueued > 0) {
+          log.info({ enqueued: r.enqueued }, 'news-translator: enqueued');
+        }
+      } catch (err) {
+        log.error({ err }, 'news-translator: tick crashed');
+      }
+    };
+    void enqueueTick();
+    newsTranslatorTimer = setInterval(
+      enqueueTick,
+      env.NEWS_TRANSLATOR_INTERVAL_MS,
+    );
+    log.info(
+      { intervalMs: env.NEWS_TRANSLATOR_INTERVAL_MS },
+      'news-translator: enabled',
+    );
+  } else {
+    log.info('news-translator: disabled (set ANTHROPIC_API_KEY to enable)');
+  }
 
   // ─── Legacy DB replicator ──────────────────────────────────────────
   // Pulls fresh rows from umay.bottomup.app every N ms into Railway
@@ -90,11 +162,13 @@ async function main(): Promise<void> {
   const shutdown = async (signal: string): Promise<void> => {
     log.info({ signal }, 'workers: shutting down');
     if (replicatorInterval) clearInterval(replicatorInterval);
+    if (newsTranslatorTimer) clearInterval(newsTranslatorTimer);
     ticker?.stop();
     await Promise.all([
       ...workers.map((w) => w.close()),
       replicator?.stop() ?? Promise.resolve(),
       realtime?.stop() ?? Promise.resolve(),
+      newsTranslatorPool?.end() ?? Promise.resolve(),
     ]);
     process.exit(0);
   };

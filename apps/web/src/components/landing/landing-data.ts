@@ -74,15 +74,37 @@ const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE_URL ||
   'https://bottomupapi-production.up.railway.app';
 
-export async function fetchLanding(): Promise<LandingPayload | null> {
+export async function fetchLanding(locale = 'en'): Promise<LandingPayload | null> {
   try {
-    const res = await fetch(`${API_BASE}/public/landing`, {
-      next: { revalidate: 60 },
-    });
+    const res = await fetch(
+      `${API_BASE}/public/landing?locale=${encodeURIComponent(locale)}`,
+      { next: { revalidate: 60 } },
+    );
     if (!res.ok) return null;
     return (await res.json()) as LandingPayload;
   } catch {
     return null;
+  }
+}
+
+/**
+ * Locale-only news feed — used by the client when the user switches
+ * language. The rest of the landing payload is locale-agnostic so we
+ * don't refetch it.
+ */
+export async function fetchNews(
+  locale: string,
+  limit = 6,
+): Promise<LandingPayload['news']> {
+  try {
+    const res = await fetch(
+      `${API_BASE}/public/news?locale=${encodeURIComponent(locale)}&limit=${limit}`,
+      { cache: 'no-store' },
+    );
+    if (!res.ok) return [];
+    return (await res.json()) as LandingPayload['news'];
+  } catch {
+    return [];
   }
 }
 

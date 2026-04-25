@@ -1,14 +1,36 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import type { LandingPayload } from './landing-data';
+import { fetchNews, type LandingPayload } from './landing-data';
 import { useT } from '@/lib/i18n';
 
 type NewsItem = LandingPayload['news'][0];
 
 export function NewsSection({ news }: { news: LandingPayload['news'] }) {
-  const { t } = useT();
+  const { t, locale } = useT();
   const [active, setActive] = useState<NewsItem | null>(null);
+  // SSR pre-renders English copy; once the client mounts we refetch in
+  // the user's locale. If translations haven't been generated yet, the
+  // API gracefully falls back to the English source — so the cards
+  // never go blank.
+  const [items, setItems] = useState<NewsItem[]>(news);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (locale === 'en') {
+      setItems(news);
+      return () => {
+        cancelled = true;
+      };
+    }
+    void (async () => {
+      const fresh = await fetchNews(locale, 6);
+      if (!cancelled && fresh.length > 0) setItems(fresh);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [locale, news]);
 
   useEffect(() => {
     if (!active) return undefined;
@@ -24,7 +46,7 @@ export function NewsSection({ news }: { news: LandingPayload['news'] }) {
     };
   }, [active]);
 
-  if (news.length === 0) return null;
+  if (items.length === 0) return null;
 
   return (
     <section className="border-y border-border bg-bg-card/30">
@@ -43,7 +65,7 @@ export function NewsSection({ news }: { news: LandingPayload['news'] }) {
         </header>
 
         <div className="mt-10 grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
-          {news.slice(0, 6).map((n) => (
+          {items.slice(0, 6).map((n) => (
             <NewsCard key={n.id} n={n} onOpen={() => setActive(n)} />
           ))}
         </div>

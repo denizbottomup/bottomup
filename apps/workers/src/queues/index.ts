@@ -21,6 +21,7 @@ export const QUEUE_NAMES = {
   setupChecker: 'setup.checker',
   exchangeOkx: 'exchange.okx',
   exchangeBybit: 'exchange.bybit',
+  newsTranslate: 'news.translate',
 } as const;
 
 export type QueueName = (typeof QUEUE_NAMES)[keyof typeof QUEUE_NAMES];
