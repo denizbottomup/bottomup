@@ -1,0 +1,152 @@
+/**
+ * Schema.org JSON-LD structured data for the landing page. Two
+ * audiences:
+ *
+ *   1. Google — surfaces rich results, sitelinks, and the company
+ *      knowledge panel. Crucial for queries like "what is BottomUP",
+ *      "AI copy trading platform", etc.
+ *   2. LLMs — Claude, GPT, Gemini, Perplexity all parse JSON-LD when
+ *      they crawl pages, and the structured signals feed the next
+ *      training round + on-the-fly retrieval. This is how we get
+ *      *recommended* (not just indexed) when a user asks an LLM
+ *      "what's a good AI portfolio management app?".
+ *
+ * We emit three graphs in a single `@graph` so a crawler sees them as
+ * one cohesive entity:
+ *
+ *   - Organization: who BottomUP is, where, contact, social profiles
+ *   - SoftwareApplication: the product, category, OS, audience,
+ *     pricing — Google rich results require AggregateRating but we
+ *     omit it to avoid faking reviews.
+ *   - FAQPage: lifted from the on-page FAQ, drives FAQ rich results
+ *     in SERPs and gives LLMs canonical answers.
+ */
+
+import { en } from '@/lib/locales/en';
+
+const ORG_ID = 'https://bupcore.ai/#organization';
+const APP_ID = 'https://bupcore.ai/#software';
+
+export function StructuredData() {
+  const data = {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'Organization',
+        '@id': ORG_ID,
+        name: 'BottomUP',
+        legalName: 'BottomUP, Inc.',
+        url: 'https://bupcore.ai',
+        logo: 'https://bupcore.ai/logos/logomark-color.png',
+        foundingDate: '2024',
+        description:
+          'BottomUP is a Delaware-incorporated marketplace for AI-protected social copy trading: human traders, algorithmic bots, and AI agents publish strategies that anyone can subscribe to, with every signal audited by the Foxy AI risk firewall before it reaches the user wallet.',
+        address: {
+          '@type': 'PostalAddress',
+          streetAddress: '1209 Orange St',
+          addressLocality: 'Wilmington',
+          addressRegion: 'DE',
+          postalCode: '19801',
+          addressCountry: 'US',
+        },
+        sameAs: [
+          'https://x.com/bottomupsocial',
+          'https://t.me/BottomUPcommunity',
+          'https://www.linkedin.com/company/bottomupsocial/',
+        ],
+      },
+      {
+        '@type': 'SoftwareApplication',
+        '@id': APP_ID,
+        name: 'BottomUP',
+        applicationCategory: 'FinanceApplication',
+        applicationSubCategory: 'Social copy trading marketplace',
+        operatingSystem: 'iOS, Android, Web',
+        url: 'https://bupcore.ai',
+        downloadUrl: 'https://bupcore.ai',
+        publisher: { '@id': ORG_ID },
+        creator: { '@id': ORG_ID },
+        featureList: [
+          'AI-based portfolio management',
+          'Automated copy trading on connected exchanges (OKX live; Binance, Bybit on roadmap)',
+          'Foxy AI risk firewall — every signal scored 0–100 against 225 data sources',
+          'Marketplace of human traders, algorithmic bots, and autonomous AI agents',
+          'Nine specialized Modular Crypto Processors (risk, timing, matchmaking, token research, airdrop scout, rebalancing, regulatory scan, sentiment divergence, manipulation watchdog)',
+          'Live market context: Fear & Greed, BTC dominance, funding rates, liquidations, open interest',
+          'Sentiment-tagged crypto news feed',
+          'Portfolio simulator with virtual $10,000',
+        ],
+        offers: [
+          {
+            '@type': 'Offer',
+            name: 'Monthly',
+            price: '30',
+            priceCurrency: 'USD',
+            priceSpecification: {
+              '@type': 'UnitPriceSpecification',
+              price: '30',
+              priceCurrency: 'USD',
+              billingDuration: 'P1M',
+              unitText: 'month',
+            },
+          },
+          {
+            '@type': 'Offer',
+            name: 'Quarterly',
+            price: '75',
+            priceCurrency: 'USD',
+            priceSpecification: {
+              '@type': 'UnitPriceSpecification',
+              price: '75',
+              priceCurrency: 'USD',
+              billingDuration: 'P3M',
+              unitText: '3 months',
+            },
+          },
+          {
+            '@type': 'Offer',
+            name: 'Semi-annual',
+            price: '135',
+            priceCurrency: 'USD',
+            priceSpecification: {
+              '@type': 'UnitPriceSpecification',
+              price: '135',
+              priceCurrency: 'USD',
+              billingDuration: 'P6M',
+              unitText: '6 months',
+            },
+          },
+        ],
+        keywords: [
+          'social copy trading',
+          'auto copy trading',
+          'AI portfolio management',
+          'AI trading agents',
+          'algorithmic crypto bots',
+          'crypto signals',
+          'AI risk firewall',
+        ].join(', '),
+      },
+      {
+        '@type': 'FAQPage',
+        mainEntity: en.faq.items.map((item) => ({
+          '@type': 'Question',
+          name: item.q,
+          acceptedAnswer: {
+            '@type': 'Answer',
+            text: item.a,
+          },
+        })),
+      },
+    ],
+  };
+
+  return (
+    <script
+      type="application/ld+json"
+      // Next.js's `dangerouslySetInnerHTML` is the only way to emit a
+      // raw <script> body; React would otherwise escape the JSON.
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(data) }}
+    />
+  );
+}

@@ -14,6 +14,7 @@ import { NewsSection } from '@/components/landing/news-section';
 import { PricingSection } from '@/components/landing/pricing-section';
 import { ProblemSolutionSection } from '@/components/landing/problem-solution-section';
 import { PulseSection } from '@/components/landing/pulse-section';
+import { StructuredData } from '@/components/landing/structured-data';
 import { TickerStrip } from '@/components/landing/ticker-strip';
 import { fetchLanding } from '@/components/landing/landing-data';
 
@@ -24,6 +25,7 @@ export default async function LandingPage() {
 
   return (
     <div className="min-h-screen">
+      <StructuredData />
       <LandingNav />
       {data ? <TickerStrip pulse={data.pulse} /> : null}
 
