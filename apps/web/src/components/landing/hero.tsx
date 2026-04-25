@@ -16,15 +16,41 @@ import { StoreBadges } from './store-badges';
  */
 
 /**
- * Each entry becomes one phone-frame slide. Drop additional images
- * into /public/screens/ and append them here — the carousel only
- * shows controls when there are 2+ slides, so a single-image build
- * still looks identical to a static mockup.
+ * Each entry becomes one phone-frame slide. Order tells a product
+ * story: market overview → what traders are doing → who they are →
+ * how the user gets alerted → AI assist → news + macro context.
+ *
+ * Drop additional images into /public/screens/ and append them here —
+ * the carousel only shows controls when there are 2+ slides.
  */
 const HERO_SCREENS: ReadonlyArray<{ src: string; alt: string }> = [
   {
     src: '/screens/hero-app.png',
     alt: 'BottomUP iOS — live market dashboard with Foxy AI',
+  },
+  {
+    src: '/screens/setups.png',
+    alt: 'BottomUP iOS — live trader setups with entry, stop, take-profit',
+  },
+  {
+    src: '/screens/traders.png',
+    alt: 'BottomUP iOS — traders leaderboard with PNL and win-rate metrics',
+  },
+  {
+    src: '/screens/notifications.png',
+    alt: 'BottomUP iOS — real-time notifications feed of trader actions',
+  },
+  {
+    src: '/screens/bup-ai.png',
+    alt: 'BottomUP iOS — Bup.AI assistant building a balanced trade team',
+  },
+  {
+    src: '/screens/news.png',
+    alt: 'BottomUP iOS — sentiment-tagged crypto news feed',
+  },
+  {
+    src: '/screens/calendar.png',
+    alt: 'BottomUP iOS — macro economic calendar with impact ratings',
   },
 ];
 
