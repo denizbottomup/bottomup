@@ -3,10 +3,8 @@ import type { Dict } from './schema';
 export const es: Dict = {
   meta: {
     title: 'BottomUP — Marketplace de copy trading social con IA',
-    description:
-      'BottomUP es el App Store del dinero inteligente: gestión de carteras con IA, copy trading automático y bots cripto — auditados por Foxy AI.',
-    keywords:
-      'social trading, copy trading, copy trading automático, gestión de cartera con IA, bots de trading cripto, agentes de trading IA, firewall de riesgo IA, BottomUP, Foxy AI, OKX copy trading',
+    description: 'BottomUP es el App Store del dinero inteligente: gestión de carteras con IA, copy trading automático y bots cripto — auditados por Foxy AI.',
+    keywords: 'social trading, copy trading, copy trading automático, gestión de cartera con IA, bots de trading cripto, agentes de trading IA, firewall de riesgo IA, BottomUP, Foxy AI, OKX copy trading',
     og_image_alt: 'BottomUP — Marketplace de copy trading protegido por IA',
   },
   nav: {
@@ -21,8 +19,7 @@ export const es: Dict = {
   hero: {
     headline_1: 'La App Store del',
     headline_2: 'Smart Money.',
-    subtitle:
-      'Gestión automatizada de carteras que permite a cualquiera replicar a traders de élite y agentes de IA a través de un marketplace descentralizado.',
+    subtitle: 'Gestión automatizada de carteras que permite a cualquiera replicar a traders de élite y agentes de IA a través de un marketplace descentralizado.',
     cta_primary: 'Empezar gratis →',
     cta_secondary: 'Cómo Foxy te protege',
     kpi_volume: 'Volumen operado',
@@ -57,34 +54,27 @@ export const es: Dict = {
     label: 'La tesis',
     headline_1: 'El trading retail está roto.',
     headline_2: 'Lo reconstruimos.',
-    subtitle:
-      'Gestión automatizada de carteras que permite a cualquiera replicar a traders de élite y agentes de IA en un marketplace descentralizado — auditado de punta a punta por nuestro firewall de riesgo.',
+    subtitle: 'Gestión automatizada de carteras que permite a cualquiera replicar a traders de élite y agentes de IA en un marketplace descentralizado — auditado de punta a punta por nuestro firewall de riesgo.',
     before: 'Antes de BottomUP',
     with: 'Con BottomUP',
     rows: [
       {
         problem_title: 'Copias trades malos',
-        problem_body:
-          'Tu trader abre un revenge trade con 50x de apalancamiento — y tú también. Sin filtro, sin segunda opinión, sin freno.',
+        problem_body: 'Tu trader abre un revenge trade con 50x de apalancamiento — y tú también. Sin filtro, sin segunda opinión, sin freno.',
         solution_title: 'Un Chief of Risk con IA',
-        solution_body:
-          'Foxy AI audita cada señal con 225 fuentes de datos y bloquea las que no pasan — aunque tu trader las haya enviado.',
+        solution_body: 'Foxy AI audita cada señal con 225 fuentes de datos y bloquea las que no pasan — aunque tu trader las haya enviado.',
       },
       {
         problem_title: 'Tu alpha está disperso',
-        problem_body:
-          'Los mejores traders en Telegram. Los bots en Discord. Señales en tres exchanges. Pasas más tiempo cambiando de pestaña que operando.',
+        problem_body: 'Los mejores traders en Telegram. Los bots en Discord. Señales en tres exchanges. Pasas más tiempo cambiando de pestaña que operando.',
         solution_title: 'Una app, todas las estrategias',
-        solution_body:
-          'Traders humanos, bots y agentes de IA, todos en un marketplace. Te suscribes con Credits, las órdenes corren 24/7 en tu wallet.',
+        solution_body: 'Traders humanos, bots y agentes de IA, todos en un marketplace. Te suscribes con Credits, las órdenes corren 24/7 en tu wallet.',
       },
       {
         problem_title: 'Mercados en silos, tú en silos',
-        problem_body:
-          'Crypto en una app, acciones en otra, forex en otra. No puedes armar una tesis cruzada sin cinco logins.',
+        problem_body: 'Crypto en una app, acciones en otra, forex en otra. No puedes armar una tesis cruzada sin cinco logins.',
         solution_title: 'Multi-activo desde una terminal',
-        solution_body:
-          'Crypto hoy. Acciones, forex y commodities llegan en Q1 2027 sobre las mismas rieles — una cuenta, una vista de cartera.',
+        solution_body: 'Crypto hoy. Acciones, forex y commodities llegan en Q1 2027 sobre las mismas rieles — una cuenta, una vista de cartera.',
       },
     ],
   },
@@ -93,12 +83,20 @@ export const es: Dict = {
     headline_1: 'Cada operación',
     headline_2: 'auditada',
     headline_3: 'antes de llegar a tu wallet.',
-    subtitle:
-      'Foxy es una IA propietaria entrenada con 225 fuentes de datos. Cuando un trader, bot o agente publica una señal, Foxy la puntúa de 0 a 100 con técnicas, fundamentales, noticias, profundidad del order book y el patrón de riesgo del creador. Si el puntaje es rojo, la operación se bloquea — aunque estés suscrito.',
+    subtitle: 'Foxy es una IA propietaria entrenada con 225 fuentes de datos. Cuando un trader, bot o agente publica una señal, Foxy la puntúa de 0 a 100 con técnicas, fundamentales, noticias, profundidad del order book y el patrón de riesgo del creador. Si el puntaje es rojo, la operación se bloquea — aunque estés suscrito.',
     pillars: [
-      { title: 'Auditar', body: 'Cada señal entrante es interceptada y puntuada en 225 fuentes antes de ejecutarse.' },
-      { title: 'Bloquear', body: 'Las operaciones que cruzan tu sobre de riesgo se detienen en el firewall — no después de la pérdida.' },
-      { title: 'Optimizar', body: 'Las órdenes de entrada/salida se afinan para reducir slippage y aumentar el P&L neto.' },
+      {
+        title: 'Auditar',
+        body: 'Cada señal entrante es interceptada y puntuada en 225 fuentes antes de ejecutarse.',
+      },
+      {
+        title: 'Bloquear',
+        body: 'Las operaciones que cruzan tu sobre de riesgo se detienen en el firewall — no después de la pérdida.',
+      },
+      {
+        title: 'Optimizar',
+        body: 'Las órdenes de entrada/salida se afinan para reducir slippage y aumentar el P&L neto.',
+      },
     ],
     signal_flow: 'Flujo de señal',
     trader_node: 'Trader / Bot / Agente IA',
@@ -117,8 +115,7 @@ export const es: Dict = {
     label: 'El marketplace',
     headline_1: 'Tres tipos de estrategia.',
     headline_2: 'Un marketplace.',
-    subtitle:
-      'Los creadores abren tiendas. Los usuarios se suscriben con BottomUP Credits. Las estrategias se ejecutan 24/7 directamente en tu wallet conectado — cada orden pasa primero por Foxy.',
+    subtitle: 'Los creadores abren tiendas. Los usuarios se suscriben con BottomUP Credits. Las estrategias se ejecutan 24/7 directamente en tu wallet conectado — cada orden pasa primero por Foxy.',
     golive: 'Lanzamiento marketplace · Mayo 2026',
     shops: [
       {
@@ -151,20 +148,30 @@ export const es: Dict = {
     ],
     credits_label: 'BottomUP Credits · cómo funciona la micro-economía',
     steps: [
-      { title: 'Compra Credits', body: 'Tarjeta o cripto. Los Credits son la moneda universal en cada tienda.' },
-      { title: 'Suscríbete a tiendas', body: 'Elige los traders, bots o agentes en los que confías. Cancela cuando quieras.' },
-      { title: 'Foxy audita señales', body: 'Cada orden se puntúa de 0 a 100 antes de salir del firewall.' },
-      { title: 'Wallet ejecuta', body: 'Las órdenes aprobadas van directo a tu wallet conectado, 24/7.' },
+      {
+        title: 'Compra Credits',
+        body: 'Tarjeta o cripto. Los Credits son la moneda universal en cada tienda.',
+      },
+      {
+        title: 'Suscríbete a tiendas',
+        body: 'Elige los traders, bots o agentes en los que confías. Cancela cuando quieras.',
+      },
+      {
+        title: 'Foxy audita señales',
+        body: 'Cada orden se puntúa de 0 a 100 antes de salir del firewall.',
+      },
+      {
+        title: 'Wallet ejecuta',
+        body: 'Las órdenes aprobadas van directo a tu wallet conectado, 24/7.',
+      },
     ],
   },
   lb: {
     label: 'Ranking en vivo',
     headline_1: '$10.000 el día uno.',
     headline_2: '¿Dónde están ahora?',
-    subtitle:
-      'Cada trader comienza el mes con $10.000 virtuales. Toca una tarjeta para el dashboard completo — curva de equity, distribución de R, P&L mensual, desglose por moneda.',
-    disclaimer:
-      'Resultados simulados. El desempeño hipotético tiene limitaciones inherentes. El desempeño pasado no indica resultados futuros.',
+    subtitle: 'Cada trader comienza el mes con $10.000 virtuales. Toca una tarjeta para el dashboard completo — curva de equity, distribución de R, P&L mensual, desglose por moneda.',
+    disclaimer: 'Resultados simulados. El desempeño hipotético tiene limitaciones inherentes. El desempeño pasado no indica resultados futuros.',
     cta: 'Explorar el marketplace →',
     empty: 'No hay trades cerrados este mes — vuelve pronto.',
     balance_label: 'Balance virtual',
@@ -181,19 +188,45 @@ export const es: Dict = {
     label: 'MCP Suite',
     headline_1: 'Nueve',
     headline_2: 'Modular Crypto Processors, trabajando juntos.',
-    subtitle:
-      'Cada MCP es un agente IA especializado que convierte el caos de información en insight accionable. Corren en paralelo con Foxy — tus operaciones llegan pre-auditadas, pre-temporizadas y pre-alineadas con tu estrategia.',
+    subtitle: 'Cada MCP es un agente IA especializado que convierte el caos de información en insight accionable. Corren en paralelo con Foxy — tus operaciones llegan pre-auditadas, pre-temporizadas y pre-alineadas con tu estrategia.',
     coming_soon: 'Próximamente · Q2 2026',
     cards: [
-      { title: 'Mitigación de riesgo', body: 'Marca revenge trading, apalancamiento excesivo y tamaños de posición inseguros en cada trader que sigues, en tiempo real.' },
-      { title: 'Timing de operación', body: 'Observa profundidad del order book, eventos macro (FOMC, CPI, ETFs) y slippage histórico para recomendar la mejor ventana de entrada y salida.' },
-      { title: 'Matchmaking', body: 'Perfila tu apetito de riesgo y te empareja con estilos compatibles — scalper, momentum o swing de largo plazo.' },
-      { title: 'Research de tokens', body: 'Examina la salud del contrato, actividad de devs, comportamiento de ballenas y picos sociales. Genera hipótesis, no ruido.' },
-      { title: 'Scout de launch & airdrops', body: 'Monitorea nuevos deployments, actividad de testnet y buzz de Telegram. Te avisa del alpha temprano e identifica wallets elegibles para airdrops.' },
-      { title: 'Rebalanceo de cartera', body: 'Detecta sobreexposición y riesgo de correlación sectorial según el mercado se mueve. Sugiere hedges o rotación antes del drawdown.' },
-      { title: 'Escaneo regulatorio', body: 'Ingesta feeds de noticias, cambios de políticas de exchange y señales legales regionales. Alerta sobre riesgo de compliance — delistings, sanciones — antes de que duela.' },
-      { title: 'Divergencia de sentiment', body: 'Captura alpha oculto cuando on-chain es bullish pero Twitter/Reddit es bearish. Ideal para posicionarte antes que la multitud.' },
-      { title: 'Watchdog de manipulación', body: 'Rastrea actividad de wallets de influencers, timing de promos y patrones de amplificación. Marca pumps coordinados y hype viral pago.' },
+      {
+        title: 'Mitigación de riesgo',
+        body: 'Marca revenge trading, apalancamiento excesivo y tamaños de posición inseguros en cada trader que sigues, en tiempo real.',
+      },
+      {
+        title: 'Timing de operación',
+        body: 'Observa profundidad del order book, eventos macro (FOMC, CPI, ETFs) y slippage histórico para recomendar la mejor ventana de entrada y salida.',
+      },
+      {
+        title: 'Matchmaking',
+        body: 'Perfila tu apetito de riesgo y te empareja con estilos compatibles — scalper, momentum o swing de largo plazo.',
+      },
+      {
+        title: 'Research de tokens',
+        body: 'Examina la salud del contrato, actividad de devs, comportamiento de ballenas y picos sociales. Genera hipótesis, no ruido.',
+      },
+      {
+        title: 'Scout de launch & airdrops',
+        body: 'Monitorea nuevos deployments, actividad de testnet y buzz de Telegram. Te avisa del alpha temprano e identifica wallets elegibles para airdrops.',
+      },
+      {
+        title: 'Rebalanceo de cartera',
+        body: 'Detecta sobreexposición y riesgo de correlación sectorial según el mercado se mueve. Sugiere hedges o rotación antes del drawdown.',
+      },
+      {
+        title: 'Escaneo regulatorio',
+        body: 'Ingesta feeds de noticias, cambios de políticas de exchange y señales legales regionales. Alerta sobre riesgo de compliance — delistings, sanciones — antes de que duela.',
+      },
+      {
+        title: 'Divergencia de sentiment',
+        body: 'Captura alpha oculto cuando on-chain es bullish pero Twitter/Reddit es bearish. Ideal para posicionarte antes que la multitud.',
+      },
+      {
+        title: 'Watchdog de manipulación',
+        body: 'Rastrea actividad de wallets de influencers, timing de promos y patrones de amplificación. Marca pumps coordinados y hype viral pago.',
+      },
     ],
   },
   pulse: {
@@ -201,8 +234,7 @@ export const es: Dict = {
     headline_1: 'Los mismos datos que usa',
     headline_2: 'Foxy.',
     headline_3: '',
-    subtitle:
-      'CoinGlass, CoinGecko y los futuros de Binance alimentan el firewall Foxy en tiempo real. Ves exactamente la misma superficie: Fear & Greed, dominancia BTC, funding cross-exchange, sesgo long/short, liquidaciones 24h y cambio en open interest.',
+    subtitle: 'CoinGlass, CoinGecko y los futuros de Binance alimentan el firewall Foxy en tiempo real. Ves exactamente la misma superficie: Fear & Greed, dominancia BTC, funding cross-exchange, sesgo long/short, liquidaciones 24h y cambio en open interest.',
     auto: 'Auto-refresh · caché 5 min',
     fg: 'Índice Fear & Greed',
     dom: 'Dominancia BTC',
@@ -219,20 +251,37 @@ export const es: Dict = {
     table_total: 'Total',
     table_split: 'Long/Short',
   },
+  whales: {
+    label: 'Avistamiento de ballenas',
+    headline_1: 'dinero real,',
+    headline_2: 'moviéndose ahora mismo.',
+    subtitle: 'Transmisión en vivo de cada billetera Hyperliquid que abre o cierra una posición de más de $1 millón. Cada fila es capital real: sin cuentas de demostración ni tablas de clasificación pagas. La misma superficie desde la que lee Foxy cuando puntúa la señal de su operador.',
+    threshold: '$1M+ nocional',
+    tab_alerts: 'Actividad reciente',
+    tab_positions: 'Principales posiciones abiertas',
+    side_long: 'Largo',
+    side_short: 'Corto',
+    notional: 'Hipotético',
+    entry: 'Entrada',
+    liquidation: 'líquido',
+    leverage: 'Aprovechar',
+    unrealized: 'PnL no realizado',
+    empty: 'No hay actividad de ballenas en este momento; vuelve a consultar en un minuto.',
+    source: 'Fuente: Hyperliquid · CoinGlass · actualizado cada minuto',
+    just_now: 'En este momento',
+  },
   news: {
     label: 'News feed',
     headline_1: 'Noticias cripto, etiquetadas por',
     headline_2: 'sentimiento.',
-    subtitle:
-      'Cada noticia etiquetada positiva/negativa y ligada a las monedas que mueve. Ábrelas aquí mismo — sin nueva pestaña, sin cambio de contexto.',
+    subtitle: 'Cada noticia etiquetada positiva/negativa y ligada a las monedas que mueve. Ábrelas aquí mismo — sin nueva pestaña, sin cambio de contexto.',
     no_summary: 'No hay resumen adicional disponible.',
   },
   pr: {
     label: 'Precios',
     headline_1: 'Un mal trade bloqueado',
     headline_2: 'paga el año.',
-    subtitle:
-      'Gratis sirve para revisiones diarias rápidas. Los planes pagos liberan auditorías Foxy AI ilimitadas y visibilidad total de cada setup publicado por traders — entre planes pagos solo cambia la duración del compromiso.',
+    subtitle: 'Gratis sirve para revisiones diarias rápidas. Los planes pagos liberan auditorías Foxy AI ilimitadas y visibilidad total de cada setup publicado por traders — entre planes pagos solo cambia la duración del compromiso.',
     most_popular: 'Más popular',
     billed_monthly: 'Facturación mensual, renueva',
     billed_upfront: '{total} por adelantado',
@@ -269,8 +318,7 @@ export const es: Dict = {
         ],
       },
     ],
-    footer:
-      'Todos los planes se facturan en USD y se renuevan al final del periodo salvo cancelación. Cancela desde tu cuenta o tu app store. No se prorratean periodos parciales. No es sustituto de asesoramiento de inversión — revisa la Declaración de Riesgo. El copy-trading no está disponible para residentes en EE. UU.',
+    footer: 'Todos los planes se facturan en USD y se renuevan al final del periodo salvo cancelación. Cancela desde tu cuenta o tu app store. No se prorratean periodos parciales. No es sustituto de asesoramiento de inversión — revisa la Declaración de Riesgo. El copy-trading no está disponible para residentes en EE. UU.',
   },
   faq: {
     label: 'Preguntas frecuentes',
@@ -326,12 +374,10 @@ export const es: Dict = {
     sub: 'Traders, bots y agentes IA están operando ahora mismo en el marketplace. Cada señal auditada. Cada operación optimizada. Regístrate en 30 segundos.',
     cta_primary: 'Empezar gratis →',
     cta_secondary: 'Entrar',
-    disclaimer:
-      'No es asesoramiento de inversión. Operar en cripto conlleva un alto riesgo de pérdida. El copy-trading no está disponible para residentes en EE. UU.',
+    disclaimer: 'No es asesoramiento de inversión. Operar en cripto conlleva un alto riesgo de pérdida. El copy-trading no está disponible para residentes en EE. UU.',
   },
   ft: {
-    tagline:
-      'La App Store del smart money. Traders de élite, agentes IA y bots algorítmicos — un marketplace, protegido por Foxy AI.',
+    tagline: 'La App Store del smart money. Traders de élite, agentes IA y bots algorítmicos — un marketplace, protegido por Foxy AI.',
     product: 'Producto',
     account: 'Cuenta',
     legal: 'Legal',
@@ -345,8 +391,7 @@ export const es: Dict = {
     terms: 'Términos de servicio',
     privacy: 'Privacidad',
     risk: 'Declaración de riesgo',
-    disclosure:
-      'BottomUP, Inc. es una corporación de Delaware. BottomUP no es un asesor de inversión registrado, broker-dealer, commodity pool operator, commodity trading advisor o money services business. Todo el contenido del Servicio — señales, veredictos Foxy AI y estrategias de creadores — se provee únicamente con fines informativos y educativos y no es asesoramiento de inversión, legal o fiscal individualizado. El desempeño pasado, simulado e hipotético (incluidas las cifras del "portafolio virtual de $10.000") no indica resultados futuros. Operar cripto, y en particular con apalancamiento o derivados, implica un alto riesgo de pérdida total. El copy-trading no está disponible para residentes de EE. UU. Los residentes de regiones sancionadas por la OFAC no son elegibles.',
+    disclosure: 'BottomUP, Inc. es una corporación de Delaware. BottomUP no es un asesor de inversión registrado, broker-dealer, commodity pool operator, commodity trading advisor o money services business. Todo el contenido del Servicio — señales, veredictos Foxy AI y estrategias de creadores — se provee únicamente con fines informativos y educativos y no es asesoramiento de inversión, legal o fiscal individualizado. El desempeño pasado, simulado e hipotético (incluidas las cifras del "portafolio virtual de $10.000") no indica resultados futuros. Operar cripto, y en particular con apalancamiento o derivados, implica un alto riesgo de pérdida total. El copy-trading no está disponible para residentes de EE. UU. Los residentes de regiones sancionadas por la OFAC no son elegibles.',
     copy: '© {year} BottomUP, Inc. · Todos los derechos reservados.',
     address: '1209 Orange St, Wilmington, DE 19801, EE. UU.',
   },

@@ -67,6 +67,33 @@ export interface LandingPayload {
       oi_usd: number;
       oi_change_24h_pct: number | null;
     }>;
+    /** Recent Hyperliquid whale events ($1M+ notional, ~last hour). */
+    whale_alerts: Array<{
+      user: string;
+      symbol: string;
+      side: 'long' | 'short';
+      position_size: number;
+      entry_price: number;
+      liq_price: number;
+      position_value_usd: number;
+      ts: number;
+    }>;
+    /** Currently-open Hyperliquid whale positions ($1M+ notional). */
+    whale_positions: Array<{
+      user: string;
+      symbol: string;
+      side: 'long' | 'short';
+      position_size: number;
+      entry_price: number;
+      mark_price: number;
+      liq_price: number;
+      leverage: number;
+      position_value_usd: number;
+      unrealized_pnl: number;
+      margin_mode: 'cross' | 'isolated';
+      opened_at: number;
+      updated_at: number;
+    }>;
   };
 }
 

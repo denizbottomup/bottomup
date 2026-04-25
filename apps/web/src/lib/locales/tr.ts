@@ -3,10 +3,8 @@ import type { Dict } from './schema';
 export const tr: Dict = {
   meta: {
     title: 'BottomUP — AI korumalı sosyal kopya trade marketplace’i',
-    description:
-      'BottomUP akıllı paranın App Store’u: AI tabanlı portföy yönetimi, otomatik kopya trade ve kripto trading botları — her sinyali Foxy AI denetler.',
-    keywords:
-      'sosyal trade, kopya trade, otomatik kopya trade, AI portföy yönetimi, kripto trading botu, AI trading agent, AI risk firewall, BottomUP, Foxy AI, OKX kopya trade',
+    description: 'BottomUP akıllı paranın App Store’u: AI tabanlı portföy yönetimi, otomatik kopya trade ve kripto trading botları — her sinyali Foxy AI denetler.',
+    keywords: 'sosyal trade, kopya trade, otomatik kopya trade, AI portföy yönetimi, kripto trading botu, AI trading agent, AI risk firewall, BottomUP, Foxy AI, OKX kopya trade',
     og_image_alt: 'BottomUP — AI korumalı kopya trade marketplace’i',
   },
   nav: {
@@ -21,8 +19,7 @@ export const tr: Dict = {
   hero: {
     headline_1: 'Akıllı Paranın',
     headline_2: 'App Store’u.',
-    subtitle:
-      'Herkesin, merkeziyetsiz bir marketplace üzerinden elit trader’ları ve AI agent’ları kopyalamasını sağlayan otomatik portföy yönetimi.',
+    subtitle: 'Herkesin, merkeziyetsiz bir marketplace üzerinden elit trader’ları ve AI agent’ları kopyalamasını sağlayan otomatik portföy yönetimi.',
     cta_primary: 'Ücretsiz başla →',
     cta_secondary: 'Foxy seni nasıl korur?',
     kpi_volume: 'İşlem hacmi',
@@ -57,34 +54,27 @@ export const tr: Dict = {
     label: 'Tezimiz',
     headline_1: 'Retail trading bozuk.',
     headline_2: 'Biz yeniden kurduk.',
-    subtitle:
-      'Herkesin, merkeziyetsiz bir marketplace üzerinden elit trader’ları ve AI agent’ları kopyalamasını sağlayan otomatik portföy yönetimi — uçtan uca tescilli risk firewall’ımız tarafından denetlenir.',
+    subtitle: 'Herkesin, merkeziyetsiz bir marketplace üzerinden elit trader’ları ve AI agent’ları kopyalamasını sağlayan otomatik portföy yönetimi — uçtan uca tescilli risk firewall’ımız tarafından denetlenir.',
     before: 'BottomUP’tan önce',
     with: 'BottomUP ile',
     rows: [
       {
         problem_title: 'Kötü işlemleri kopyalıyorsun',
-        problem_body:
-          'Trader’ın 50x kaldıraçla intikam trade yapıyor — sen de yapıyorsun. Filtre yok, ikinci bir görüş yok, duruş yok.',
+        problem_body: 'Trader’ın 50x kaldıraçla intikam trade yapıyor — sen de yapıyorsun. Filtre yok, ikinci bir görüş yok, duruş yok.',
         solution_title: 'AI risk yöneticisi',
-        solution_body:
-          'Foxy AI her sinyali 225 veri kaynağına karşı denetler ve geçmeyenleri engeller — trader’ın göndermiş olsa bile.',
+        solution_body: 'Foxy AI her sinyali 225 veri kaynağına karşı denetler ve geçmeyenleri engeller — trader’ın göndermiş olsa bile.',
       },
       {
         problem_title: 'Alpha’n dağınık',
-        problem_body:
-          'Trader’lar Telegram’da. Bot devler Discord’da. Sinyaller üç ayrı borsada. Sekme değiştirmeye işlem yapmaktan çok vakit harcıyorsun.',
+        problem_body: 'Trader’lar Telegram’da. Bot devler Discord’da. Sinyaller üç ayrı borsada. Sekme değiştirmeye işlem yapmaktan çok vakit harcıyorsun.',
         solution_title: 'Tek uygulama, tüm stratejiler',
-        solution_body:
-          'İnsan trader’lar, algo botlar ve AI agent’lar — hepsi tek marketplace’te. Credits ile abone ol, emirler 7/24 cüzdanında çalışır.',
+        solution_body: 'İnsan trader’lar, algo botlar ve AI agent’lar — hepsi tek marketplace’te. Credits ile abone ol, emirler 7/24 cüzdanında çalışır.',
       },
       {
         problem_title: 'Silo’lanmış piyasalar, silo’lanmış sen',
-        problem_body:
-          'Kripto bir app’te, hisseler başka bir app’te, forex başka yerde. Beş ayrı login olmadan varlıklar arası tez kuramıyorsun.',
+        problem_body: 'Kripto bir app’te, hisseler başka bir app’te, forex başka yerde. Beş ayrı login olmadan varlıklar arası tez kuramıyorsun.',
         solution_title: 'Tek terminal, çoklu varlık',
-        solution_body:
-          'Kripto şu an canlı. Hisseler, forex ve emtialar 2027 Q1’de aynı altyapıda — tek hesap, tek portföy görünümü.',
+        solution_body: 'Kripto şu an canlı. Hisseler, forex ve emtialar 2027 Q1’de aynı altyapıda — tek hesap, tek portföy görünümü.',
       },
     ],
   },
@@ -93,12 +83,20 @@ export const tr: Dict = {
     headline_1: 'Her işlem cüzdanına',
     headline_2: 'ulaşmadan',
     headline_3: 'denetlenir.',
-    subtitle:
-      '225 veri kaynağıyla eğitilmiş tescilli bir AI’dır Foxy. Bir trader, bot veya agent sinyal yayınladığında Foxy bunu teknik, temel, haber, order book derinliği ve trader’ın risk paterni üzerinden 0–100 arasında skorlar. Skor kırmızıysa işlem engellenir — sen abone olsan bile.',
+    subtitle: '225 veri kaynağıyla eğitilmiş tescilli bir AI’dır Foxy. Bir trader, bot veya agent sinyal yayınladığında Foxy bunu teknik, temel, haber, order book derinliği ve trader’ın risk paterni üzerinden 0–100 arasında skorlar. Skor kırmızıysa işlem engellenir — sen abone olsan bile.',
     pillars: [
-      { title: 'Denetle', body: 'Her gelen sinyal execution’dan önce 225 kaynakta yakalanır ve skorlanır.' },
-      { title: 'Engelle', body: 'Risk zarfını aşan işlemler kayıp yaşanmadan firewall’da durdurulur.' },
-      { title: 'Optimize et', body: 'Entry/exit emirleri slippage’ı azaltmak ve net P&L’i artırmak için ayarlanır.' },
+      {
+        title: 'Denetle',
+        body: 'Her gelen sinyal execution’dan önce 225 kaynakta yakalanır ve skorlanır.',
+      },
+      {
+        title: 'Engelle',
+        body: 'Risk zarfını aşan işlemler kayıp yaşanmadan firewall’da durdurulur.',
+      },
+      {
+        title: 'Optimize et',
+        body: 'Entry/exit emirleri slippage’ı azaltmak ve net P&L’i artırmak için ayarlanır.',
+      },
     ],
     signal_flow: 'Sinyal akışı',
     trader_node: 'Trader / Bot / AI agent',
@@ -117,8 +115,7 @@ export const tr: Dict = {
     label: 'Marketplace',
     headline_1: 'Üç strateji türü.',
     headline_2: 'Tek marketplace.',
-    subtitle:
-      'Creator’lar mağaza açar. Kullanıcılar BottomUP Credits ile abone olur. Stratejiler bağlı cüzdanında 7/24 çalışır — her emir önce Foxy tarafından denetlenir.',
+    subtitle: 'Creator’lar mağaza açar. Kullanıcılar BottomUP Credits ile abone olur. Stratejiler bağlı cüzdanında 7/24 çalışır — her emir önce Foxy tarafından denetlenir.',
     golive: 'Marketplace açılışı · Mayıs 2026',
     shops: [
       {
@@ -151,20 +148,30 @@ export const tr: Dict = {
     ],
     credits_label: 'BottomUP Credits · mikro-ekonomi nasıl çalışır',
     steps: [
-      { title: 'Credits al', body: 'Kredi kartı veya kripto. Credits, tüm mağazalarda geçerli evrensel para birimidir.' },
-      { title: 'Mağazalara abone ol', body: 'Güvendiğin trader, bot veya agent’ı seç. İstediğin zaman iptal et.' },
-      { title: 'Foxy sinyalleri denetler', body: 'Her emir firewall’dan çıkmadan 0–100 skorlanır.' },
-      { title: 'Cüzdan çalıştırır', body: 'Onaylanan emirler 7/24 bağlı cüzdanına düşer.' },
+      {
+        title: 'Credits al',
+        body: 'Kredi kartı veya kripto. Credits, tüm mağazalarda geçerli evrensel para birimidir.',
+      },
+      {
+        title: 'Mağazalara abone ol',
+        body: 'Güvendiğin trader, bot veya agent’ı seç. İstediğin zaman iptal et.',
+      },
+      {
+        title: 'Foxy sinyalleri denetler',
+        body: 'Her emir firewall’dan çıkmadan 0–100 skorlanır.',
+      },
+      {
+        title: 'Cüzdan çalıştırır',
+        body: 'Onaylanan emirler 7/24 bağlı cüzdanına düşer.',
+      },
     ],
   },
   lb: {
     label: 'Canlı sıralama',
     headline_1: '1. günde 10.000$.',
     headline_2: 'Şimdi neredeler?',
-    subtitle:
-      'Her trader aya sanal 10.000$ ile başlar. Bir karta dokun, tam analitik panoyu gör — equity eğrisi, R dağılımı, aylık P&L, coin kırılımı.',
-    disclaimer:
-      'Simüle edilmiş sonuçlar. Hipotetik performansın doğal sınırları vardır. Geçmiş performans gelecekteki sonuçların göstergesi değildir.',
+    subtitle: 'Her trader aya sanal 10.000$ ile başlar. Bir karta dokun, tam analitik panoyu gör — equity eğrisi, R dağılımı, aylık P&L, coin kırılımı.',
+    disclaimer: 'Simüle edilmiş sonuçlar. Hipotetik performansın doğal sınırları vardır. Geçmiş performans gelecekteki sonuçların göstergesi değildir.',
     cta: 'Marketplace’i gezin →',
     empty: 'Bu ay kapanan işlem yok — birazdan gel.',
     balance_label: 'Sanal bakiye',
@@ -181,19 +188,45 @@ export const tr: Dict = {
     label: 'MCP Seti',
     headline_1: 'Dokuz',
     headline_2: 'Modüler Crypto Processor, birlikte çalışır.',
-    subtitle:
-      'Her MCP, bilgi kaosunu eyleme dönüştüren uzman bir AI agent’tır. Foxy ile birlikte sürekli çalışırlar — işlemlerin denetlenmiş, zamanlamalı ve stratejine uygun gelir.',
+    subtitle: 'Her MCP, bilgi kaosunu eyleme dönüştüren uzman bir AI agent’tır. Foxy ile birlikte sürekli çalışırlar — işlemlerin denetlenmiş, zamanlamalı ve stratejine uygun gelir.',
     coming_soon: 'Yakında · 2026 Q2',
     cards: [
-      { title: 'Risk azaltma', body: 'Takip ettiğin her trader’da intikam trade, aşırı kaldıraç ve güvensiz pozisyon boyutlarını gerçek zamanlı işaretler.' },
-      { title: 'İşlem zamanlaması', body: 'Order book derinliği, makro olaylar (FOMC, TÜFE, ETF haberleri) ve tarihsel slippage’ı izleyerek en iyi giriş/çıkış penceresini önerir.' },
-      { title: 'Eşleştirme', body: 'Risk iştahını profilleyip uyumlu trader stillerini eşler — scalper, momentum veya uzun vadeli swing.' },
-      { title: 'Token araştırma', body: 'Kontrat sağlığı, geliştirici aktivitesi, whale cüzdan hareketleri ve sosyal yükselişleri inceler. Ham veri değil, yatırım hipotezi üretir.' },
-      { title: 'Launch & airdrop avcısı', body: 'Yeni deployment’ları, testnet aktivitesini ve Telegram buzz’ı izler. Alpha’yı erken haber verir, airdrop’a uygun cüzdanları tespit eder.' },
-      { title: 'Portföy rebalance', body: 'Piyasa hareket ettikçe aşırı maruziyet ve sektör korelasyon riskini tespit eder. Drawdown gelmeden hedge veya rotasyon önerir.' },
-      { title: 'Regülasyon taraması', body: 'Haber feed’lerini, borsa politika güncellemelerini ve bölgesel yasal sinyalleri toplar. Uyum riskini — delisting, yaptırımlar — gelmeden önce uyarır.' },
-      { title: 'Sentiment sapması', body: 'On-chain yükselirken Twitter/Reddit düşüş yönlü olduğunda gizli alpha’yı yakalar. Kalabalık uyanmadan erken pozisyon için birebir.' },
-      { title: 'Manipülasyon bekçisi', body: 'Influencer cüzdan aktivitesini, promosyon zamanlamasını ve yükselme paternlerini izler. Koordineli pump’ları ve ücretli viral hype’ı işaretler.' },
+      {
+        title: 'Risk azaltma',
+        body: 'Takip ettiğin her trader’da intikam trade, aşırı kaldıraç ve güvensiz pozisyon boyutlarını gerçek zamanlı işaretler.',
+      },
+      {
+        title: 'İşlem zamanlaması',
+        body: 'Order book derinliği, makro olaylar (FOMC, TÜFE, ETF haberleri) ve tarihsel slippage’ı izleyerek en iyi giriş/çıkış penceresini önerir.',
+      },
+      {
+        title: 'Eşleştirme',
+        body: 'Risk iştahını profilleyip uyumlu trader stillerini eşler — scalper, momentum veya uzun vadeli swing.',
+      },
+      {
+        title: 'Token araştırma',
+        body: 'Kontrat sağlığı, geliştirici aktivitesi, whale cüzdan hareketleri ve sosyal yükselişleri inceler. Ham veri değil, yatırım hipotezi üretir.',
+      },
+      {
+        title: 'Launch & airdrop avcısı',
+        body: 'Yeni deployment’ları, testnet aktivitesini ve Telegram buzz’ı izler. Alpha’yı erken haber verir, airdrop’a uygun cüzdanları tespit eder.',
+      },
+      {
+        title: 'Portföy rebalance',
+        body: 'Piyasa hareket ettikçe aşırı maruziyet ve sektör korelasyon riskini tespit eder. Drawdown gelmeden hedge veya rotasyon önerir.',
+      },
+      {
+        title: 'Regülasyon taraması',
+        body: 'Haber feed’lerini, borsa politika güncellemelerini ve bölgesel yasal sinyalleri toplar. Uyum riskini — delisting, yaptırımlar — gelmeden önce uyarır.',
+      },
+      {
+        title: 'Sentiment sapması',
+        body: 'On-chain yükselirken Twitter/Reddit düşüş yönlü olduğunda gizli alpha’yı yakalar. Kalabalık uyanmadan erken pozisyon için birebir.',
+      },
+      {
+        title: 'Manipülasyon bekçisi',
+        body: 'Influencer cüzdan aktivitesini, promosyon zamanlamasını ve yükselme paternlerini izler. Koordineli pump’ları ve ücretli viral hype’ı işaretler.',
+      },
     ],
   },
   pulse: {
@@ -201,8 +234,7 @@ export const tr: Dict = {
     headline_1: 'Foxy’nin kullandığı',
     headline_2: 'veri',
     headline_3: '— sana da açık.',
-    subtitle:
-      'CoinGlass, CoinGecko ve Binance vadeli, Foxy firewall’a gerçek zamanlı beslenir. Sen de birebir aynı yüzeyi görürsün: Fear & Greed, BTC dominance, borsa çaplı funding, long/short dengesi, 24s likidasyon ve open interest değişimi.',
+    subtitle: 'CoinGlass, CoinGecko ve Binance vadeli, Foxy firewall’a gerçek zamanlı beslenir. Sen de birebir aynı yüzeyi görürsün: Fear & Greed, BTC dominance, borsa çaplı funding, long/short dengesi, 24s likidasyon ve open interest değişimi.',
     auto: 'Otomatik yenilenir · 5 dk cache',
     fg: 'Fear & Greed Index',
     dom: 'BTC Dominance',
@@ -219,20 +251,38 @@ export const tr: Dict = {
     table_total: 'Toplam',
     table_split: 'Long/Short',
   },
+  whales: {
+    label: 'Balina takibi',
+    headline_1: 'Gerçek para,',
+    headline_2: 'şu an hareket ediyor.',
+    subtitle:
+      "$1M üstü pozisyon açan/kapatan her Hyperliquid cüzdanının canlı feed'i. Her satır gerçek sermaye — demo hesap yok, ücretli sıralama yok. Foxy'nin trader sinyalini skorlarken okuduğu aynı yüzey.",
+    threshold: '$1M+ nominal',
+    tab_alerts: 'Son hareketler',
+    tab_positions: 'En büyük açık pozisyonlar',
+    side_long: 'Long',
+    side_short: 'Short',
+    notional: 'Nominal',
+    entry: 'Giriş',
+    liquidation: 'Liq',
+    leverage: 'Kaldıraç',
+    unrealized: 'Realize edilmemiş PnL',
+    empty: 'Şu anda balina aktivitesi yok — birazdan tekrar gel.',
+    source: 'Kaynak: Hyperliquid · CoinGlass · her dakika yenilenir',
+    just_now: 'az önce',
+  },
   news: {
     label: 'Haber akışı',
     headline_1: 'Kripto haberleri,',
     headline_2: 'sentiment',
-    subtitle:
-      'Her haber pozitif/negatif olarak etiketlenir ve hareket ettirdiği coin’lere bağlıdır. İstediğin haberi burada aç — yeni sekme yok, bağlam kaybı yok.',
+    subtitle: 'Her haber pozitif/negatif olarak etiketlenir ve hareket ettirdiği coin’lere bağlıdır. İstediğin haberi burada aç — yeni sekme yok, bağlam kaybı yok.',
     no_summary: 'Bu haber için ek özet yok.',
   },
   pr: {
     label: 'Fiyatlandırma',
     headline_1: 'Engellenen bir kötü işlem',
     headline_2: 'yılı amorti eder.',
-    subtitle:
-      'Ücretsiz plan günlük hızlı bakış için yeter. Ücretli planlar sınırsız Foxy AI risk denetimi ve trader’ların paylaştığı setup’ların %100’üne erişim açar — ücretli planlar arasındaki tek fark commitment süresi.',
+    subtitle: 'Ücretsiz plan günlük hızlı bakış için yeter. Ücretli planlar sınırsız Foxy AI risk denetimi ve trader’ların paylaştığı setup’ların %100’üne erişim açar — ücretli planlar arasındaki tek fark commitment süresi.',
     most_popular: 'En popüler',
     billed_monthly: 'Aylık faturalanır, yenilenir',
     billed_upfront: '{total} peşin',
@@ -269,8 +319,7 @@ export const tr: Dict = {
         ],
       },
     ],
-    footer:
-      'Tüm planlar USD cinsinden faturalanır ve dönem sonunda iptal edilmezse otomatik yenilenir. İstediğin zaman hesap veya app store üzerinden iptal edebilirsin. Yarım dönem iadesi yoktur. Yatırım tavsiyesi değildir — Risk Açıklama’ya bak. Kopya trade ABD’de ikamet edenlere sunulmaz.',
+    footer: 'Tüm planlar USD cinsinden faturalanır ve dönem sonunda iptal edilmezse otomatik yenilenir. İstediğin zaman hesap veya app store üzerinden iptal edebilirsin. Yarım dönem iadesi yoktur. Yatırım tavsiyesi değildir — Risk Açıklama’ya bak. Kopya trade ABD’de ikamet edenlere sunulmaz.',
   },
   faq: {
     label: 'Sıkça sorulanlar',
@@ -326,12 +375,10 @@ export const tr: Dict = {
     sub: 'Trader’lar, botlar ve AI agent’lar şu an marketplace’te canlı. Her sinyal denetlenir, her işlem optimize edilir. 30 saniyede üye ol, mağazalara göz atmaya başla.',
     cta_primary: 'Ücretsiz başla →',
     cta_secondary: 'Giriş yap',
-    disclaimer:
-      'Yatırım tavsiyesi değildir. Kripto işlemleri yüksek kayıp riski taşır. Kopya trade, ABD’de ikamet edenlere sunulmaz.',
+    disclaimer: 'Yatırım tavsiyesi değildir. Kripto işlemleri yüksek kayıp riski taşır. Kopya trade, ABD’de ikamet edenlere sunulmaz.',
   },
   ft: {
-    tagline:
-      'Akıllı paranın App Store’u. Elit trader’lar, AI agent’lar ve algoritmik botlar — tek marketplace, Foxy AI korumasında.',
+    tagline: 'Akıllı paranın App Store’u. Elit trader’lar, AI agent’lar ve algoritmik botlar — tek marketplace, Foxy AI korumasında.',
     product: 'Ürün',
     account: 'Hesap',
     legal: 'Yasal',
@@ -345,8 +392,7 @@ export const tr: Dict = {
     terms: 'Kullanım şartları',
     privacy: 'Gizlilik',
     risk: 'Risk açıklaması',
-    disclosure:
-      'BottomUP, Inc. bir Delaware kuruluşudur. BottomUP kayıtlı bir yatırım danışmanı, broker-dealer, commodity pool operator, commodity trading advisor veya money services business değildir. Hizmetteki tüm içerik — sinyaller, Foxy AI yorumları ve creator stratejileri dahil — yalnızca bilgilendirme ve eğitim amaçlıdır; bireyselleştirilmiş yatırım, hukuk veya vergi tavsiyesi değildir. Geçmiş performans, simüle edilmiş performans ve hipotetik sonuçlar (herhangi bir "10.000$ sanal portföy" rakamı dahil) gelecekteki sonuçların göstergesi değildir. Kripto varlık alım-satımı, özellikle kaldıraç veya türev kullanımı, yüksek toplam kayıp riski içerir. Kopya trade işlevi şu anda ABD’de ikamet edenlere sunulmaz. OFAC yaptırımlı bölgelerin sakinleri uygun değildir.',
+    disclosure: 'BottomUP, Inc. bir Delaware kuruluşudur. BottomUP kayıtlı bir yatırım danışmanı, broker-dealer, commodity pool operator, commodity trading advisor veya money services business değildir. Hizmetteki tüm içerik — sinyaller, Foxy AI yorumları ve creator stratejileri dahil — yalnızca bilgilendirme ve eğitim amaçlıdır; bireyselleştirilmiş yatırım, hukuk veya vergi tavsiyesi değildir. Geçmiş performans, simüle edilmiş performans ve hipotetik sonuçlar (herhangi bir "10.000$ sanal portföy" rakamı dahil) gelecekteki sonuçların göstergesi değildir. Kripto varlık alım-satımı, özellikle kaldıraç veya türev kullanımı, yüksek toplam kayıp riski içerir. Kopya trade işlevi şu anda ABD’de ikamet edenlere sunulmaz. OFAC yaptırımlı bölgelerin sakinleri uygun değildir.',
     copy: '© {year} BottomUP, Inc. · Tüm hakları saklıdır.',
     address: '1209 Orange St, Wilmington, DE 19801, ABD',
   },

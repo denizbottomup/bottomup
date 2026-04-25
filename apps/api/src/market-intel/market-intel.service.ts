@@ -38,6 +38,45 @@ export interface MarketPulse {
   top_long_short: LongShortRow[];
   liquidation: LiquidationSummary[];
   open_interest: OpenInterestRow[];
+  whale_alerts: WhaleAlert[];
+  whale_positions: WhalePosition[];
+}
+
+/**
+ * Recent Hyperliquid whale event ($1M+ notional). Returned by
+ * /api/hyperliquid/whale-alert. Sign of `position_size` indicates
+ * direction (negative = short, positive = long).
+ */
+export interface WhaleAlert {
+  user: string;
+  symbol: string;
+  side: 'long' | 'short';
+  position_size: number;
+  entry_price: number;
+  liq_price: number;
+  position_value_usd: number;
+  ts: number;
+}
+
+/**
+ * Currently-open Hyperliquid whale position ($1M+ notional). Returned
+ * by /api/hyperliquid/whale-position — has unrealized PnL, leverage,
+ * and margin mode that the alert feed doesn't include.
+ */
+export interface WhalePosition {
+  user: string;
+  symbol: string;
+  side: 'long' | 'short';
+  position_size: number;
+  entry_price: number;
+  mark_price: number;
+  liq_price: number;
+  leverage: number;
+  position_value_usd: number;
+  unrealized_pnl: number;
+  margin_mode: 'cross' | 'isolated';
+  opened_at: number;
+  updated_at: number;
 }
 
 export interface LiquidationSummary {
@@ -97,13 +136,17 @@ export class MarketIntelService {
     return json.data as T;
   }
 
-  private async cached<T>(key: string, fetcher: () => Promise<T>): Promise<T> {
+  private async cached<T>(
+    key: string,
+    fetcher: () => Promise<T>,
+    ttlMs: number = this.TTL_MS,
+  ): Promise<T> {
     const now = Date.now();
     const slot = this.cache.get(key) as CacheSlot<T> | undefined;
     if (slot && slot.expires_at > now) return slot.value;
     try {
       const value = await fetcher();
-      this.cache.set(key, { value, expires_at: now + this.TTL_MS });
+      this.cache.set(key, { value, expires_at: now + ttlMs });
       return value;
     } catch (err) {
       if (slot) {
@@ -402,15 +445,104 @@ export class MarketIntelService {
     });
   }
 
+  /**
+   * Recent Hyperliquid whale events ($1M+ notional). Returns a feed
+   * of the most recent N opens/closes — useful as a "live activity"
+   * signal on the marketing site. Cached for 60s instead of the
+   * default 5min so the feed actually feels live.
+   */
+  async whaleAlerts(limit = 12): Promise<WhaleAlert[]> {
+    const capped = Math.max(1, Math.min(50, Math.floor(limit)));
+    return this.cached(`whale_alerts:${capped}`, async () => {
+      if (!this.cgKey) return [];
+      try {
+        const data = await this.cg<Array<Record<string, unknown>>>(
+          '/hyperliquid/whale-alert',
+        );
+        const rows: WhaleAlert[] = [];
+        for (const r of data) {
+          const size = Number(r.position_size ?? 0);
+          if (!Number.isFinite(size) || size === 0) continue;
+          rows.push({
+            user: String(r.user ?? ''),
+            symbol: String(r.symbol ?? ''),
+            side: size > 0 ? 'long' : 'short',
+            position_size: size,
+            entry_price: Number(r.entry_price ?? 0),
+            liq_price: Number(r.liq_price ?? 0),
+            position_value_usd: Number(r.position_value_usd ?? 0),
+            ts: Number(r.create_time ?? 0),
+          });
+        }
+        rows.sort((a, b) => b.ts - a.ts);
+        return rows.slice(0, capped);
+      } catch (err) {
+        this.log.warn(`whale alerts failed: ${(err as Error).message}`);
+        return [];
+      }
+    }, 60_000);
+  }
+
+  /**
+   * Currently-open Hyperliquid whale positions ($1M+ notional).
+   * Sorted by absolute USD notional descending — the "loudest"
+   * positions on the book right now.
+   */
+  async whalePositions(limit = 10): Promise<WhalePosition[]> {
+    const capped = Math.max(1, Math.min(50, Math.floor(limit)));
+    return this.cached(`whale_positions:${capped}`, async () => {
+      if (!this.cgKey) return [];
+      try {
+        const data = await this.cg<Array<Record<string, unknown>>>(
+          '/hyperliquid/whale-position',
+        );
+        const rows: WhalePosition[] = [];
+        for (const r of data) {
+          const size = Number(r.position_size ?? 0);
+          if (!Number.isFinite(size) || size === 0) continue;
+          const margin = String(r.margin_mode ?? 'cross') === 'isolated'
+            ? 'isolated'
+            : 'cross';
+          rows.push({
+            user: String(r.user ?? ''),
+            symbol: String(r.symbol ?? ''),
+            side: size > 0 ? 'long' : 'short',
+            position_size: size,
+            entry_price: Number(r.entry_price ?? 0),
+            mark_price: Number(r.mark_price ?? 0),
+            liq_price: Number(r.liq_price ?? 0),
+            leverage: Number(r.leverage ?? 0),
+            position_value_usd: Number(r.position_value_usd ?? 0),
+            unrealized_pnl: Number(r.unrealized_pnl ?? 0),
+            margin_mode: margin,
+            opened_at: Number(r.create_time ?? 0),
+            updated_at: Number(r.update_time ?? 0),
+          });
+        }
+        rows.sort(
+          (a, b) =>
+            Math.abs(b.position_value_usd) - Math.abs(a.position_value_usd),
+        );
+        return rows.slice(0, capped);
+      } catch (err) {
+        this.log.warn(`whale positions failed: ${(err as Error).message}`);
+        return [];
+      }
+    }, 60_000);
+  }
+
   async pulse(): Promise<MarketPulse> {
-    const [fg, dom, fr, ls, liq, oi] = await Promise.all([
-      this.fearGreed(14).catch(() => ({ current: null, history: [] })),
-      this.dominance().catch(() => null),
-      this.topFundingRates(8).catch(() => []),
-      this.longShort(6).catch(() => []),
-      this.liquidationSummary(6).catch(() => []),
-      this.openInterest(['BTC', 'ETH', 'SOL']).catch(() => []),
-    ]);
+    const [fg, dom, fr, ls, liq, oi, whaleAlerts, whalePositions] =
+      await Promise.all([
+        this.fearGreed(14).catch(() => ({ current: null, history: [] })),
+        this.dominance().catch(() => null),
+        this.topFundingRates(8).catch(() => []),
+        this.longShort(6).catch(() => []),
+        this.liquidationSummary(6).catch(() => []),
+        this.openInterest(['BTC', 'ETH', 'SOL']).catch(() => []),
+        this.whaleAlerts(12).catch(() => []),
+        this.whalePositions(8).catch(() => []),
+      ]);
     return {
       fear_greed: fg.current,
       fear_greed_history: fg.history,
@@ -419,6 +551,8 @@ export class MarketIntelService {
       top_long_short: ls,
       liquidation: liq,
       open_interest: oi,
+      whale_alerts: whaleAlerts,
+      whale_positions: whalePositions,
     };
   }
 }

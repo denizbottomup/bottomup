@@ -9,6 +9,8 @@ import {
   type LongShortRow,
   type MarketPulse,
   type OpenInterestRow,
+  type WhaleAlert,
+  type WhalePosition,
 } from './market-intel.service.js';
 
 @Controller('/analytic')
@@ -78,6 +80,28 @@ export class MarketIntelController {
       .filter(Boolean)
       .slice(0, 10);
     const items = await this.intel.openInterest(symbols);
+    return { items };
+  }
+
+  @Get('/whale-alerts')
+  async whaleAlerts(
+    @Query('limit') limitRaw?: string,
+  ): Promise<{ items: WhaleAlert[] }> {
+    const limit = Number.parseInt(limitRaw ?? '12', 10);
+    const items = await this.intel.whaleAlerts(
+      Number.isFinite(limit) ? limit : 12,
+    );
+    return { items };
+  }
+
+  @Get('/whale-positions')
+  async whalePositions(
+    @Query('limit') limitRaw?: string,
+  ): Promise<{ items: WhalePosition[] }> {
+    const limit = Number.parseInt(limitRaw ?? '10', 10);
+    const items = await this.intel.whalePositions(
+      Number.isFinite(limit) ? limit : 10,
+    );
     return { items };
   }
 }

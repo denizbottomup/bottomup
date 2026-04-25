@@ -3,10 +3,8 @@ import type { Dict } from './schema';
 export const zh: Dict = {
   meta: {
     title: 'BottomUP — AI 风控的社交跟单交易市场',
-    description:
-      'BottomUP 是聪明钱的应用商店：AI 投资组合管理、自动跟单交易、加密交易机器人 — 每个信号都由 Foxy AI 风控审核。',
-    keywords:
-      '社交交易, 跟单交易, 自动跟单交易, AI 投资组合管理, 加密交易机器人, AI 交易代理, AI 风控, BottomUP, Foxy AI, OKX 跟单交易',
+    description: 'BottomUP 是聪明钱的应用商店：AI 投资组合管理、自动跟单交易、加密交易机器人 — 每个信号都由 Foxy AI 风控审核。',
+    keywords: '社交交易, 跟单交易, 自动跟单交易, AI 投资组合管理, 加密交易机器人, AI 交易代理, AI 风控, BottomUP, Foxy AI, OKX 跟单交易',
     og_image_alt: 'BottomUP — AI 风控的跟单交易市场',
   },
   nav: {
@@ -21,8 +19,7 @@ export const zh: Dict = {
   hero: {
     headline_1: '聪明钱的',
     headline_2: 'App Store。',
-    subtitle:
-      '自动化投资组合管理,让任何人都能通过去中心化市场跟随顶级交易员和 AI agent。',
+    subtitle: '自动化投资组合管理,让任何人都能通过去中心化市场跟随顶级交易员和 AI agent。',
     cta_primary: '免费开始 →',
     cta_secondary: 'Foxy 如何保护你',
     kpi_volume: '交易额',
@@ -57,34 +54,27 @@ export const zh: Dict = {
     label: '我们的论点',
     headline_1: '散户交易已经坏掉。',
     headline_2: '我们重建了它。',
-    subtitle:
-      '自动化投资组合管理,让任何人都可以通过去中心化市场跟随顶级交易员和 AI agent — 由我们的风险防火墙端到端审计。',
+    subtitle: '自动化投资组合管理,让任何人都可以通过去中心化市场跟随顶级交易员和 AI agent — 由我们的风险防火墙端到端审计。',
     before: '使用 BottomUP 之前',
     with: '使用 BottomUP',
     rows: [
       {
         problem_title: '你复制糟糕的交易',
-        problem_body:
-          '你的交易员用 50 倍杠杆报复性交易 — 你也一样。没有过滤,没有第二意见,没有止损。',
+        problem_body: '你的交易员用 50 倍杠杆报复性交易 — 你也一样。没有过滤,没有第二意见,没有止损。',
         solution_title: 'AI 风险总监',
-        solution_body:
-          'Foxy AI 通过 225 个数据源审计每个信号并拦截未通过的 — 即使是你的交易员发送的。',
+        solution_body: 'Foxy AI 通过 225 个数据源审计每个信号并拦截未通过的 — 即使是你的交易员发送的。',
       },
       {
         problem_title: '你的 alpha 分散',
-        problem_body:
-          '顶级交易员在 Telegram。机器人开发者在 Discord。信号在三个交易所。切换标签比下单花更多时间。',
+        problem_body: '顶级交易员在 Telegram。机器人开发者在 Discord。信号在三个交易所。切换标签比下单花更多时间。',
         solution_title: '一个 app,所有策略',
-        solution_body:
-          '人类交易员、算法机器人和 AI agent — 全部在一个市场。用 Credits 订阅,订单 24/7 在你的钱包执行。',
+        solution_body: '人类交易员、算法机器人和 AI agent — 全部在一个市场。用 Credits 订阅,订单 24/7 在你的钱包执行。',
       },
       {
         problem_title: '市场孤立,你也孤立',
-        problem_body:
-          '加密在一个 app,股票在另一个,外汇在别处。没有五次登录就无法构建跨资产论点。',
+        problem_body: '加密在一个 app,股票在另一个,外汇在别处。没有五次登录就无法构建跨资产论点。',
         solution_title: '一个终端,多种资产',
-        solution_body:
-          '加密今天就有。股票、外汇和大宗商品将于 2027 年 Q1 到达相同轨道 — 一个账户,一个投资组合视图。',
+        solution_body: '加密今天就有。股票、外汇和大宗商品将于 2027 年 Q1 到达相同轨道 — 一个账户,一个投资组合视图。',
       },
     ],
   },
@@ -93,12 +83,20 @@ export const zh: Dict = {
     headline_1: '每笔交易',
     headline_2: '都经过审计',
     headline_3: '才能到达你的钱包。',
-    subtitle:
-      'Foxy 是我们自研的 AI,用 225 个数据源训练。当交易员、机器人或 agent 发布信号时,Foxy 根据技术面、基本面、新闻、订单簿深度和作者的风险模式打 0–100 分。分数为红色,交易被拦截 — 即使你已订阅。',
+    subtitle: 'Foxy 是我们自研的 AI,用 225 个数据源训练。当交易员、机器人或 agent 发布信号时,Foxy 根据技术面、基本面、新闻、订单簿深度和作者的风险模式打 0–100 分。分数为红色,交易被拦截 — 即使你已订阅。',
     pillars: [
-      { title: '审计', body: '每个进入的信号在执行前都被拦截并在 225 个来源中打分。' },
-      { title: '拦截', body: '超出你的风险承受能力的交易在防火墙处停止 — 而非损失之后。' },
-      { title: '优化', body: '入场/离场订单经过调整以减少滑点并提高净 P&L。' },
+      {
+        title: '审计',
+        body: '每个进入的信号在执行前都被拦截并在 225 个来源中打分。',
+      },
+      {
+        title: '拦截',
+        body: '超出你的风险承受能力的交易在防火墙处停止 — 而非损失之后。',
+      },
+      {
+        title: '优化',
+        body: '入场/离场订单经过调整以减少滑点并提高净 P&L。',
+      },
     ],
     signal_flow: '信号流',
     trader_node: '交易员 / 机器人 / AI agent',
@@ -117,8 +115,7 @@ export const zh: Dict = {
     label: '市场',
     headline_1: '三种策略。',
     headline_2: '一个市场。',
-    subtitle:
-      '创作者开店。用户用 BottomUP Credits 订阅。策略 24/7 在你连接的钱包中执行 — 每笔订单先经过 Foxy。',
+    subtitle: '创作者开店。用户用 BottomUP Credits 订阅。策略 24/7 在你连接的钱包中执行 — 每笔订单先经过 Foxy。',
     golive: '市场上线 · 2026 年 5 月',
     shops: [
       {
@@ -151,20 +148,30 @@ export const zh: Dict = {
     ],
     credits_label: 'BottomUP Credits · 微观经济如何运作',
     steps: [
-      { title: '购买 Credits', body: '信用卡或加密货币。Credits 是所有店铺的通用货币。' },
-      { title: '订阅店铺', body: '选择你信任的交易员、机器人或 agent。随时取消。' },
-      { title: 'Foxy 审计信号', body: '每笔订单在离开防火墙前都被打 0–100 分。' },
-      { title: '钱包执行', body: '批准的订单直接到你连接的钱包,24/7。' },
+      {
+        title: '购买 Credits',
+        body: '信用卡或加密货币。Credits 是所有店铺的通用货币。',
+      },
+      {
+        title: '订阅店铺',
+        body: '选择你信任的交易员、机器人或 agent。随时取消。',
+      },
+      {
+        title: 'Foxy 审计信号',
+        body: '每笔订单在离开防火墙前都被打 0–100 分。',
+      },
+      {
+        title: '钱包执行',
+        body: '批准的订单直接到你连接的钱包,24/7。',
+      },
     ],
   },
   lb: {
     label: '实时排行榜',
     headline_1: '第一天 $10,000。',
     headline_2: '他们现在在哪?',
-    subtitle:
-      '每位交易员以虚拟 $10,000 开始本月。点击卡片查看完整分析面板 — 净值曲线、R 分布、月度 P&L、币种细分。',
-    disclaimer:
-      '模拟结果。假设性业绩有其固有局限。过往表现不代表未来结果。',
+    subtitle: '每位交易员以虚拟 $10,000 开始本月。点击卡片查看完整分析面板 — 净值曲线、R 分布、月度 P&L、币种细分。',
+    disclaimer: '模拟结果。假设性业绩有其固有局限。过往表现不代表未来结果。',
     cta: '浏览市场 →',
     empty: '本月暂无已关闭的交易 — 稍后再来。',
     balance_label: '虚拟余额',
@@ -181,19 +188,45 @@ export const zh: Dict = {
     label: 'MCP Suite',
     headline_1: '九个',
     headline_2: 'Modular Crypto Processors,协同工作。',
-    subtitle:
-      '每个 MCP 都是专业的 AI agent,把信息混乱转化为可操作的洞察。与 Foxy 同步运行 — 你的交易到达时已经过审计、时机优化,并与你的策略匹配。',
+    subtitle: '每个 MCP 都是专业的 AI agent,把信息混乱转化为可操作的洞察。与 Foxy 同步运行 — 你的交易到达时已经过审计、时机优化,并与你的策略匹配。',
     coming_soon: '即将推出 · 2026 Q2',
     cards: [
-      { title: '风险缓解', body: '实时标记你关注的每位交易员的报复性交易、过高杠杆和不安全仓位规模。' },
-      { title: '交易时机', body: '观察订单簿深度、宏观事件(FOMC、CPI、ETF)和历史滑点,推荐最佳入场和离场窗口。' },
-      { title: '匹配', body: '为你的风险偏好建模,并配对相容的交易风格 — scalper、动量或长期 swing。' },
-      { title: '代币研究', body: '检查合约健康度、开发者活动、巨鲸钱包行为和社交激增。产生投资假设,而非原始噪音。' },
-      { title: '新币与空投侦察', body: '监控新部署、testnet 活动和 Telegram 热度。提前告知 alpha 并识别符合空投资格的钱包。' },
-      { title: '投资组合再平衡', body: '当市场移动时检测过度暴露和行业相关性风险。在回撤到来前建议对冲或轮换。' },
-      { title: '监管扫描', body: '拉取新闻、交易所政策更新和地区法律信号。在合规风险 — 下架、制裁 — 发生前提醒你。' },
-      { title: '情绪背离', body: '在链上看涨但 Twitter/Reddit 看跌时捕捉隐藏 alpha。完美适合在人群醒来前提前布局。' },
-      { title: '操纵监视', body: '跟踪意见领袖钱包活动、推广时机和放大模式。标记协调 pump 和付费病毒炒作。' },
+      {
+        title: '风险缓解',
+        body: '实时标记你关注的每位交易员的报复性交易、过高杠杆和不安全仓位规模。',
+      },
+      {
+        title: '交易时机',
+        body: '观察订单簿深度、宏观事件(FOMC、CPI、ETF)和历史滑点,推荐最佳入场和离场窗口。',
+      },
+      {
+        title: '匹配',
+        body: '为你的风险偏好建模,并配对相容的交易风格 — scalper、动量或长期 swing。',
+      },
+      {
+        title: '代币研究',
+        body: '检查合约健康度、开发者活动、巨鲸钱包行为和社交激增。产生投资假设,而非原始噪音。',
+      },
+      {
+        title: '新币与空投侦察',
+        body: '监控新部署、testnet 活动和 Telegram 热度。提前告知 alpha 并识别符合空投资格的钱包。',
+      },
+      {
+        title: '投资组合再平衡',
+        body: '当市场移动时检测过度暴露和行业相关性风险。在回撤到来前建议对冲或轮换。',
+      },
+      {
+        title: '监管扫描',
+        body: '拉取新闻、交易所政策更新和地区法律信号。在合规风险 — 下架、制裁 — 发生前提醒你。',
+      },
+      {
+        title: '情绪背离',
+        body: '在链上看涨但 Twitter/Reddit 看跌时捕捉隐藏 alpha。完美适合在人群醒来前提前布局。',
+      },
+      {
+        title: '操纵监视',
+        body: '跟踪意见领袖钱包活动、推广时机和放大模式。标记协调 pump 和付费病毒炒作。',
+      },
     ],
   },
   pulse: {
@@ -201,8 +234,7 @@ export const zh: Dict = {
     headline_1: 'Foxy 使用的',
     headline_2: '同一组数据。',
     headline_3: '',
-    subtitle:
-      'CoinGlass、CoinGecko 和 Binance 期货实时喂给 Foxy 防火墙。你看到完全相同的面板:Fear & Greed、BTC dominance、跨交易所资金费率、long/short 偏向、24h 爆仓和未平仓变化。',
+    subtitle: 'CoinGlass、CoinGecko 和 Binance 期货实时喂给 Foxy 防火墙。你看到完全相同的面板:Fear & Greed、BTC dominance、跨交易所资金费率、long/short 偏向、24h 爆仓和未平仓变化。',
     auto: '自动刷新 · 5 分钟缓存',
     fg: 'Fear & Greed 指数',
     dom: 'BTC Dominance',
@@ -219,20 +251,37 @@ export const zh: Dict = {
     table_total: '总计',
     table_split: 'Long/Short',
   },
+  whales: {
+    label: '观鲸',
+    headline_1: '真金白银，',
+    headline_2: '现在就搬家。',
+    subtitle: '每个 Hyperliquid 钱包开仓或平仓 100 万美元以上头寸的实时信息。每一行都是真实资本——没有模拟账户，没有付费排行榜。 Foxy 在对交易者信号进行评分时读取的数据与该表面相同。',
+    threshold: '名义价值 100 万美元以上',
+    tab_alerts: '最近的活动',
+    tab_positions: '最高未平仓头寸',
+    side_long: '长的',
+    side_short: '短的',
+    notional: '名义上的',
+    entry: '入口',
+    liquidation: '液体',
+    leverage: '杠杆作用',
+    unrealized: '未实现盈亏',
+    empty: '目前没有鲸鱼活动——请稍后再回来查看。',
+    source: '来源：Hyperliquid·CoinGlass·每分钟刷新',
+    just_now: '现在',
+  },
   news: {
     label: '新闻流',
     headline_1: '加密新闻,附',
     headline_2: '情绪标签。',
-    subtitle:
-      '每条新闻标注积极/消极,并链接到受其影响的币种。直接在这里打开 — 无新标签页,无上下文切换。',
+    subtitle: '每条新闻标注积极/消极,并链接到受其影响的币种。直接在这里打开 — 无新标签页,无上下文切换。',
     no_summary: '此文章没有额外摘要。',
   },
   pr: {
     label: '价格',
     headline_1: '一笔被拦截的糟糕交易',
     headline_2: '就能覆盖一整年。',
-    subtitle:
-      '免费版适合每日快速查看。付费计划解锁无限 Foxy AI 风险审核和 100% 交易员发布仓位的可见性 — 付费计划之间只是承诺时长不同。',
+    subtitle: '免费版适合每日快速查看。付费计划解锁无限 Foxy AI 风险审核和 100% 交易员发布仓位的可见性 — 付费计划之间只是承诺时长不同。',
     most_popular: '最受欢迎',
     billed_monthly: '按月计费,续订',
     billed_upfront: '{total} 预付',
@@ -269,8 +318,7 @@ export const zh: Dict = {
         ],
       },
     ],
-    footer:
-      '所有计划以 USD 计费,在每个周期结束时自动续订,除非取消。随时从账户或应用商店取消。部分周期不按比例计算。不可替代投资咨询 — 查看风险披露。跟单功能不向美国居民开放。',
+    footer: '所有计划以 USD 计费,在每个周期结束时自动续订,除非取消。随时从账户或应用商店取消。部分周期不按比例计算。不可替代投资咨询 — 查看风险披露。跟单功能不向美国居民开放。',
   },
   faq: {
     label: '常见问题',
@@ -326,12 +374,10 @@ export const zh: Dict = {
     sub: '交易员、机器人和 AI agent 此刻正在市场上运行。每个信号都被审计。30 秒完成注册。',
     cta_primary: '免费开始 →',
     cta_secondary: '登录',
-    disclaimer:
-      '不构成投资建议。加密货币交易存在高损失风险。跟单功能不向美国居民开放。',
+    disclaimer: '不构成投资建议。加密货币交易存在高损失风险。跟单功能不向美国居民开放。',
   },
   ft: {
-    tagline:
-      '聪明钱的 App Store。顶级交易员、AI agent 和算法机器人 — 一个市场,由 Foxy AI 保护。',
+    tagline: '聪明钱的 App Store。顶级交易员、AI agent 和算法机器人 — 一个市场,由 Foxy AI 保护。',
     product: '产品',
     account: '账户',
     legal: '法律',
@@ -345,8 +391,7 @@ export const zh: Dict = {
     terms: '服务条款',
     privacy: '隐私',
     risk: '风险披露',
-    disclosure:
-      'BottomUP, Inc. 是特拉华州公司。BottomUP 不是注册投资顾问、broker-dealer、commodity pool operator、commodity trading advisor 或 money services business。服务上的所有内容 — 包括信号、Foxy AI 判决和创作者策略 — 仅供信息和教育目的,不构成个性化的投资、法律或税务建议。过去的表现、模拟表现和假设性结果(包括任何"$10,000 虚拟投资组合"数字)不代表未来结果。交易加密资产,特别是使用杠杆或衍生品,涉及高全损风险。跟单功能目前不向美国居民提供。OFAC 制裁地区的居民不符合资格。',
+    disclosure: 'BottomUP, Inc. 是特拉华州公司。BottomUP 不是注册投资顾问、broker-dealer、commodity pool operator、commodity trading advisor 或 money services business。服务上的所有内容 — 包括信号、Foxy AI 判决和创作者策略 — 仅供信息和教育目的,不构成个性化的投资、法律或税务建议。过去的表现、模拟表现和假设性结果(包括任何"$10,000 虚拟投资组合"数字)不代表未来结果。交易加密资产,特别是使用杠杆或衍生品,涉及高全损风险。跟单功能目前不向美国居民提供。OFAC 制裁地区的居民不符合资格。',
     copy: '© {year} BottomUP, Inc. · 保留所有权利。',
     address: '1209 Orange St, Wilmington, DE 19801, USA',
   },

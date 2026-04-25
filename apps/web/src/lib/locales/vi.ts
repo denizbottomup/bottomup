@@ -3,10 +3,8 @@ import type { Dict } from './schema';
 export const vi: Dict = {
   meta: {
     title: 'BottomUP — Sàn copy trading xã hội được AI bảo vệ',
-    description:
-      'BottomUP là App Store của smart money: quản lý danh mục bằng AI, copy trading tự động và bot crypto — mọi tín hiệu đều được Foxy AI kiểm duyệt.',
-    keywords:
-      'social trading, copy trading, copy trading tự động, quản lý danh mục AI, bot trading crypto, AI trading agent, tường lửa rủi ro AI, BottomUP, Foxy AI, OKX copy trading',
+    description: 'BottomUP là App Store của smart money: quản lý danh mục bằng AI, copy trading tự động và bot crypto — mọi tín hiệu đều được Foxy AI kiểm duyệt.',
+    keywords: 'social trading, copy trading, copy trading tự động, quản lý danh mục AI, bot trading crypto, AI trading agent, tường lửa rủi ro AI, BottomUP, Foxy AI, OKX copy trading',
     og_image_alt: 'BottomUP — Sàn copy trading được AI bảo vệ',
   },
   nav: {
@@ -21,8 +19,7 @@ export const vi: Dict = {
   hero: {
     headline_1: 'App Store của',
     headline_2: 'Smart Money.',
-    subtitle:
-      'Quản lý danh mục tự động cho phép bất kỳ ai sao chép các trader hàng đầu và AI agent qua một marketplace phi tập trung.',
+    subtitle: 'Quản lý danh mục tự động cho phép bất kỳ ai sao chép các trader hàng đầu và AI agent qua một marketplace phi tập trung.',
     cta_primary: 'Bắt đầu miễn phí →',
     cta_secondary: 'Foxy bảo vệ bạn như thế nào',
     kpi_volume: 'Khối lượng giao dịch',
@@ -57,34 +54,27 @@ export const vi: Dict = {
     label: 'Luận điểm',
     headline_1: 'Giao dịch bán lẻ đang hỏng.',
     headline_2: 'Chúng tôi xây lại nó.',
-    subtitle:
-      'Quản lý danh mục tự động cho phép bất kỳ ai sao chép trader hàng đầu và AI agent qua marketplace phi tập trung — kiểm toán đầu cuối bởi firewall rủi ro của chúng tôi.',
+    subtitle: 'Quản lý danh mục tự động cho phép bất kỳ ai sao chép trader hàng đầu và AI agent qua marketplace phi tập trung — kiểm toán đầu cuối bởi firewall rủi ro của chúng tôi.',
     before: 'Trước BottomUP',
     with: 'Với BottomUP',
     rows: [
       {
         problem_title: 'Bạn sao chép lệnh tệ',
-        problem_body:
-          'Trader của bạn revenge trade với đòn bẩy 50x — bạn cũng vậy. Không bộ lọc, không ý kiến thứ hai, không điểm dừng.',
+        problem_body: 'Trader của bạn revenge trade với đòn bẩy 50x — bạn cũng vậy. Không bộ lọc, không ý kiến thứ hai, không điểm dừng.',
         solution_title: 'AI giám đốc rủi ro',
-        solution_body:
-          'Foxy AI kiểm toán mọi tín hiệu qua 225 nguồn dữ liệu và chặn những lệnh không đạt — ngay cả khi trader của bạn gửi.',
+        solution_body: 'Foxy AI kiểm toán mọi tín hiệu qua 225 nguồn dữ liệu và chặn những lệnh không đạt — ngay cả khi trader của bạn gửi.',
       },
       {
         problem_title: 'Alpha của bạn phân tán',
-        problem_body:
-          'Trader hàng đầu trên Telegram. Bot dev trên Discord. Tín hiệu trên ba sàn. Bạn mất thời gian đảo tab nhiều hơn thực thi.',
+        problem_body: 'Trader hàng đầu trên Telegram. Bot dev trên Discord. Tín hiệu trên ba sàn. Bạn mất thời gian đảo tab nhiều hơn thực thi.',
         solution_title: 'Một app, mọi chiến lược',
-        solution_body:
-          'Trader người, bot thuật toán và AI agent — tất cả trong một marketplace. Đăng ký bằng Credits, lệnh chạy 24/7 trong ví.',
+        solution_body: 'Trader người, bot thuật toán và AI agent — tất cả trong một marketplace. Đăng ký bằng Credits, lệnh chạy 24/7 trong ví.',
       },
       {
         problem_title: 'Thị trường tách biệt, bạn tách biệt',
-        problem_body:
-          'Crypto một app, cổ phiếu app khác, forex nơi khác. Không thể chạy luận đề đa tài sản mà không có năm lần đăng nhập.',
+        problem_body: 'Crypto một app, cổ phiếu app khác, forex nơi khác. Không thể chạy luận đề đa tài sản mà không có năm lần đăng nhập.',
         solution_title: 'Đa tài sản từ một terminal',
-        solution_body:
-          'Crypto đã có. Cổ phiếu, forex và hàng hóa sẽ đến Q1 2027 trên cùng hạ tầng — một tài khoản, một góc nhìn danh mục.',
+        solution_body: 'Crypto đã có. Cổ phiếu, forex và hàng hóa sẽ đến Q1 2027 trên cùng hạ tầng — một tài khoản, một góc nhìn danh mục.',
       },
     ],
   },
@@ -93,12 +83,20 @@ export const vi: Dict = {
     headline_1: 'Mỗi lệnh đều',
     headline_2: 'được kiểm toán',
     headline_3: 'trước khi đến ví bạn.',
-    subtitle:
-      'Foxy là AI độc quyền được huấn luyện trên 225 nguồn dữ liệu. Khi trader, bot hay agent công bố tín hiệu, Foxy chấm điểm 0–100 dựa trên kỹ thuật, cơ bản, tin tức, độ sâu order book và mẫu rủi ro của tác giả. Điểm đỏ — lệnh bị chặn, dù bạn đã đăng ký.',
+    subtitle: 'Foxy là AI độc quyền được huấn luyện trên 225 nguồn dữ liệu. Khi trader, bot hay agent công bố tín hiệu, Foxy chấm điểm 0–100 dựa trên kỹ thuật, cơ bản, tin tức, độ sâu order book và mẫu rủi ro của tác giả. Điểm đỏ — lệnh bị chặn, dù bạn đã đăng ký.',
     pillars: [
-      { title: 'Kiểm toán', body: 'Mọi tín hiệu bị chặn và chấm điểm trên 225 nguồn trước khi thực thi.' },
-      { title: 'Chặn', body: 'Lệnh vượt ngưỡng rủi ro bị dừng ở firewall — trước khi lỗ.' },
-      { title: 'Tối ưu', body: 'Lệnh vào/ra được điều chỉnh để giảm slippage và tăng P&L ròng.' },
+      {
+        title: 'Kiểm toán',
+        body: 'Mọi tín hiệu bị chặn và chấm điểm trên 225 nguồn trước khi thực thi.',
+      },
+      {
+        title: 'Chặn',
+        body: 'Lệnh vượt ngưỡng rủi ro bị dừng ở firewall — trước khi lỗ.',
+      },
+      {
+        title: 'Tối ưu',
+        body: 'Lệnh vào/ra được điều chỉnh để giảm slippage và tăng P&L ròng.',
+      },
     ],
     signal_flow: 'Luồng tín hiệu',
     trader_node: 'Trader / Bot / AI agent',
@@ -117,8 +115,7 @@ export const vi: Dict = {
     label: 'Marketplace',
     headline_1: 'Ba loại chiến lược.',
     headline_2: 'Một marketplace.',
-    subtitle:
-      'Creator mở shop. Người dùng đăng ký bằng BottomUP Credits. Chiến lược chạy 24/7 trong ví đã kết nối — mọi lệnh đều qua Foxy trước.',
+    subtitle: 'Creator mở shop. Người dùng đăng ký bằng BottomUP Credits. Chiến lược chạy 24/7 trong ví đã kết nối — mọi lệnh đều qua Foxy trước.',
     golive: 'Mở marketplace · Tháng 5 2026',
     shops: [
       {
@@ -151,20 +148,30 @@ export const vi: Dict = {
     ],
     credits_label: 'BottomUP Credits · cách micro-economy hoạt động',
     steps: [
-      { title: 'Mua Credits', body: 'Thẻ hoặc crypto. Credits là tiền tệ chung của mọi shop.' },
-      { title: 'Đăng ký shop', body: 'Chọn trader, bot hoặc agent bạn tin tưởng. Hủy bất cứ lúc nào.' },
-      { title: 'Foxy kiểm toán', body: 'Mọi lệnh được chấm 0–100 trước khi rời firewall.' },
-      { title: 'Ví thực thi', body: 'Lệnh đã duyệt chuyển thẳng đến ví kết nối, 24/7.' },
+      {
+        title: 'Mua Credits',
+        body: 'Thẻ hoặc crypto. Credits là tiền tệ chung của mọi shop.',
+      },
+      {
+        title: 'Đăng ký shop',
+        body: 'Chọn trader, bot hoặc agent bạn tin tưởng. Hủy bất cứ lúc nào.',
+      },
+      {
+        title: 'Foxy kiểm toán',
+        body: 'Mọi lệnh được chấm 0–100 trước khi rời firewall.',
+      },
+      {
+        title: 'Ví thực thi',
+        body: 'Lệnh đã duyệt chuyển thẳng đến ví kết nối, 24/7.',
+      },
     ],
   },
   lb: {
     label: 'Bảng xếp hạng trực tiếp',
     headline_1: '$10.000 ngày đầu tiên.',
     headline_2: 'Giờ họ ở đâu?',
-    subtitle:
-      'Mỗi trader bắt đầu tháng với $10.000 ảo. Nhấn vào thẻ để xem dashboard đầy đủ — đường equity, phân phối R, P&L theo tháng, theo coin.',
-    disclaimer:
-      'Kết quả mô phỏng. Hiệu suất giả định có giới hạn cố hữu. Hiệu suất quá khứ không dự đoán tương lai.',
+    subtitle: 'Mỗi trader bắt đầu tháng với $10.000 ảo. Nhấn vào thẻ để xem dashboard đầy đủ — đường equity, phân phối R, P&L theo tháng, theo coin.',
+    disclaimer: 'Kết quả mô phỏng. Hiệu suất giả định có giới hạn cố hữu. Hiệu suất quá khứ không dự đoán tương lai.',
     cta: 'Xem marketplace →',
     empty: 'Chưa có lệnh đóng tháng này — quay lại sớm.',
     balance_label: 'Số dư ảo',
@@ -181,19 +188,45 @@ export const vi: Dict = {
     label: 'MCP Suite',
     headline_1: 'Chín',
     headline_2: 'Modular Crypto Processors, cùng làm việc.',
-    subtitle:
-      'Mỗi MCP là một AI agent chuyên biệt biến hỗn loạn thông tin thành insight hữu ích. Chạy song song với Foxy — lệnh đến bạn đã được kiểm toán, định thời và khớp với chiến lược.',
+    subtitle: 'Mỗi MCP là một AI agent chuyên biệt biến hỗn loạn thông tin thành insight hữu ích. Chạy song song với Foxy — lệnh đến bạn đã được kiểm toán, định thời và khớp với chiến lược.',
     coming_soon: 'Sắp ra mắt · Q2 2026',
     cards: [
-      { title: 'Giảm rủi ro', body: 'Đánh dấu revenge trading, đòn bẩy quá mức và kích thước lệnh không an toàn ở mỗi trader — thời gian thực.' },
-      { title: 'Timing lệnh', body: 'Theo dõi order book, sự kiện macro (FOMC, CPI, ETF) và slippage lịch sử để đề xuất cửa sổ tốt nhất.' },
-      { title: 'Ghép cặp', body: 'Phân tích khẩu vị rủi ro và ghép bạn với phong cách phù hợp — scalper, momentum, swing dài.' },
-      { title: 'Nghiên cứu token', body: 'Xem sức khỏe contract, hoạt động dev, ví cá voi và đợt sóng xã hội. Tạo giả thuyết, không nhiễu.' },
-      { title: 'Scout launch & airdrop', body: 'Theo dõi deploy mới, testnet và buzz Telegram. Thông báo alpha sớm và xác định ví đủ điều kiện airdrop.' },
-      { title: 'Rebalance danh mục', body: 'Phát hiện tập trung quá mức và tương quan ngành khi thị trường biến động. Gợi ý hedge hoặc xoay vòng trước drawdown.' },
-      { title: 'Quét quy định', body: 'Kéo feed tin tức, cập nhật chính sách sàn và tín hiệu pháp lý khu vực. Cảnh báo rủi ro tuân thủ — delisting, trừng phạt — trước khi đau.' },
-      { title: 'Phân kỳ tâm lý', body: 'Bắt alpha ẩn khi on-chain tăng nhưng Twitter/Reddit giảm. Hoàn hảo cho vị thế sớm trước đám đông.' },
-      { title: 'Watchdog thao túng', body: 'Theo dõi ví influencer, timing quảng cáo và mẫu khuếch đại. Đánh dấu pump phối hợp và hype viral trả phí.' },
+      {
+        title: 'Giảm rủi ro',
+        body: 'Đánh dấu revenge trading, đòn bẩy quá mức và kích thước lệnh không an toàn ở mỗi trader — thời gian thực.',
+      },
+      {
+        title: 'Timing lệnh',
+        body: 'Theo dõi order book, sự kiện macro (FOMC, CPI, ETF) và slippage lịch sử để đề xuất cửa sổ tốt nhất.',
+      },
+      {
+        title: 'Ghép cặp',
+        body: 'Phân tích khẩu vị rủi ro và ghép bạn với phong cách phù hợp — scalper, momentum, swing dài.',
+      },
+      {
+        title: 'Nghiên cứu token',
+        body: 'Xem sức khỏe contract, hoạt động dev, ví cá voi và đợt sóng xã hội. Tạo giả thuyết, không nhiễu.',
+      },
+      {
+        title: 'Scout launch & airdrop',
+        body: 'Theo dõi deploy mới, testnet và buzz Telegram. Thông báo alpha sớm và xác định ví đủ điều kiện airdrop.',
+      },
+      {
+        title: 'Rebalance danh mục',
+        body: 'Phát hiện tập trung quá mức và tương quan ngành khi thị trường biến động. Gợi ý hedge hoặc xoay vòng trước drawdown.',
+      },
+      {
+        title: 'Quét quy định',
+        body: 'Kéo feed tin tức, cập nhật chính sách sàn và tín hiệu pháp lý khu vực. Cảnh báo rủi ro tuân thủ — delisting, trừng phạt — trước khi đau.',
+      },
+      {
+        title: 'Phân kỳ tâm lý',
+        body: 'Bắt alpha ẩn khi on-chain tăng nhưng Twitter/Reddit giảm. Hoàn hảo cho vị thế sớm trước đám đông.',
+      },
+      {
+        title: 'Watchdog thao túng',
+        body: 'Theo dõi ví influencer, timing quảng cáo và mẫu khuếch đại. Đánh dấu pump phối hợp và hype viral trả phí.',
+      },
     ],
   },
   pulse: {
@@ -201,8 +234,7 @@ export const vi: Dict = {
     headline_1: 'Cùng dữ liệu mà',
     headline_2: 'Foxy',
     headline_3: 'sử dụng.',
-    subtitle:
-      'CoinGlass, CoinGecko và futures Binance cung cấp cho firewall Foxy theo thời gian thực. Bạn thấy cùng bề mặt: Fear & Greed, BTC dominance, funding cross-exchange, bias long/short, liquidation 24h và thay đổi open interest.',
+    subtitle: 'CoinGlass, CoinGecko và futures Binance cung cấp cho firewall Foxy theo thời gian thực. Bạn thấy cùng bề mặt: Fear & Greed, BTC dominance, funding cross-exchange, bias long/short, liquidation 24h và thay đổi open interest.',
     auto: 'Tự làm mới · cache 5 phút',
     fg: 'Fear & Greed Index',
     dom: 'BTC Dominance',
@@ -219,20 +251,37 @@ export const vi: Dict = {
     table_total: 'Tổng',
     table_split: 'Long/Short',
   },
+  whales: {
+    label: 'Đồng hồ cá voi',
+    headline_1: 'Tiền thật,',
+    headline_2: 'đang di chuyển ngay bây giờ.',
+    subtitle: 'Nguồn cấp dữ liệu trực tiếp về mọi ví Hyperliquid mở hoặc đóng vị thế trên 1 triệu USD. Mỗi hàng là vốn thực tế — không có tài khoản demo, không có bảng xếp hạng trả phí. Bề mặt tương tự mà Foxy đọc khi nó ghi được tín hiệu của nhà giao dịch của bạn.',
+    threshold: '1 triệu USD+ danh nghĩa',
+    tab_alerts: 'Hoạt động gần đây',
+    tab_positions: 'Vị trí mở hàng đầu',
+    side_long: 'Dài',
+    side_short: 'Ngắn',
+    notional: 'danh nghĩa',
+    entry: 'Lối vào',
+    liquidation: 'rượu',
+    leverage: 'Đòn bẩy',
+    unrealized: 'PnL chưa thực hiện',
+    empty: 'Hiện không có hoạt động nào của cá voi - hãy kiểm tra lại sau một phút.',
+    source: 'Nguồn: Hyperliquid · CoinGlass · được làm mới mỗi phút',
+    just_now: 'ngay bây giờ',
+  },
   news: {
     label: 'News feed',
     headline_1: 'Tin tức crypto, gắn',
     headline_2: 'cảm xúc.',
-    subtitle:
-      'Mỗi tin gắn nhãn tích cực/tiêu cực và liên kết đến các coin bị ảnh hưởng. Mở ngay tại đây — không tab mới, không mất ngữ cảnh.',
+    subtitle: 'Mỗi tin gắn nhãn tích cực/tiêu cực và liên kết đến các coin bị ảnh hưởng. Mở ngay tại đây — không tab mới, không mất ngữ cảnh.',
     no_summary: 'Không có tóm tắt bổ sung cho bài này.',
   },
   pr: {
     label: 'Giá',
     headline_1: 'Một lệnh xấu bị chặn',
     headline_2: 'bù cả năm.',
-    subtitle:
-      'Gói miễn phí đủ cho các lần kiểm tra nhanh hàng ngày. Các gói trả phí mở khóa kiểm duyệt rủi ro Foxy AI không giới hạn và 100% hiển thị mọi setup do trader công bố — giữa các gói trả phí chỉ khác nhau ở thời hạn cam kết.',
+    subtitle: 'Gói miễn phí đủ cho các lần kiểm tra nhanh hàng ngày. Các gói trả phí mở khóa kiểm duyệt rủi ro Foxy AI không giới hạn và 100% hiển thị mọi setup do trader công bố — giữa các gói trả phí chỉ khác nhau ở thời hạn cam kết.',
     most_popular: 'Phổ biến nhất',
     billed_monthly: 'Thanh toán hàng tháng, gia hạn',
     billed_upfront: '{total} trả trước',
@@ -269,8 +318,7 @@ export const vi: Dict = {
         ],
       },
     ],
-    footer:
-      'Mọi gói tính phí bằng USD và tự gia hạn cuối kỳ trừ khi hủy. Hủy từ tài khoản hoặc app store. Không hoàn tiền theo tỷ lệ kỳ dang dở. Không thay thế tư vấn đầu tư — xem Công bố rủi ro. Copy-trading không cung cấp cho cư dân Hoa Kỳ.',
+    footer: 'Mọi gói tính phí bằng USD và tự gia hạn cuối kỳ trừ khi hủy. Hủy từ tài khoản hoặc app store. Không hoàn tiền theo tỷ lệ kỳ dang dở. Không thay thế tư vấn đầu tư — xem Công bố rủi ro. Copy-trading không cung cấp cho cư dân Hoa Kỳ.',
   },
   faq: {
     label: 'Câu hỏi thường gặp',
@@ -326,12 +374,10 @@ export const vi: Dict = {
     sub: 'Trader, bot và AI agent đang chạy trực tiếp trên marketplace ngay bây giờ. Mỗi tín hiệu được kiểm toán. Đăng ký trong 30 giây.',
     cta_primary: 'Bắt đầu miễn phí →',
     cta_secondary: 'Đăng nhập',
-    disclaimer:
-      'Không phải tư vấn đầu tư. Giao dịch crypto có rủi ro mất vốn cao. Copy-trading không khả dụng cho cư dân Hoa Kỳ.',
+    disclaimer: 'Không phải tư vấn đầu tư. Giao dịch crypto có rủi ro mất vốn cao. Copy-trading không khả dụng cho cư dân Hoa Kỳ.',
   },
   ft: {
-    tagline:
-      'App Store của smart money. Trader hàng đầu, AI agent và bot thuật toán — một marketplace, được bảo vệ bởi Foxy AI.',
+    tagline: 'App Store của smart money. Trader hàng đầu, AI agent và bot thuật toán — một marketplace, được bảo vệ bởi Foxy AI.',
     product: 'Sản phẩm',
     account: 'Tài khoản',
     legal: 'Pháp lý',
@@ -345,8 +391,7 @@ export const vi: Dict = {
     terms: 'Điều khoản dịch vụ',
     privacy: 'Riêng tư',
     risk: 'Công bố rủi ro',
-    disclosure:
-      'BottomUP, Inc. là công ty Delaware. BottomUP không phải cố vấn đầu tư đã đăng ký, broker-dealer, commodity pool operator, commodity trading advisor hay money services business. Mọi nội dung trên Dịch vụ — tín hiệu, vered Foxy AI và chiến lược creator — chỉ mang tính thông tin và giáo dục, không phải tư vấn đầu tư, pháp lý hay thuế cá nhân. Hiệu suất quá khứ, mô phỏng và giả định (bao gồm con số "danh mục ảo $10.000") không đảm bảo tương lai. Giao dịch crypto, đặc biệt với đòn bẩy hoặc phái sinh, có rủi ro mất toàn bộ cao. Copy-trading hiện không khả dụng cho cư dân Hoa Kỳ. Cư dân các khu vực bị trừng phạt OFAC không đủ điều kiện.',
+    disclosure: 'BottomUP, Inc. là công ty Delaware. BottomUP không phải cố vấn đầu tư đã đăng ký, broker-dealer, commodity pool operator, commodity trading advisor hay money services business. Mọi nội dung trên Dịch vụ — tín hiệu, vered Foxy AI và chiến lược creator — chỉ mang tính thông tin và giáo dục, không phải tư vấn đầu tư, pháp lý hay thuế cá nhân. Hiệu suất quá khứ, mô phỏng và giả định (bao gồm con số "danh mục ảo $10.000") không đảm bảo tương lai. Giao dịch crypto, đặc biệt với đòn bẩy hoặc phái sinh, có rủi ro mất toàn bộ cao. Copy-trading hiện không khả dụng cho cư dân Hoa Kỳ. Cư dân các khu vực bị trừng phạt OFAC không đủ điều kiện.',
     copy: '© {year} BottomUP, Inc. · Đã giữ mọi quyền.',
     address: '1209 Orange St, Wilmington, DE 19801, Hoa Kỳ',
   },

@@ -3,10 +3,8 @@ import type { Dict } from './schema';
 export const id: Dict = {
   meta: {
     title: 'BottomUP — Marketplace copy trading sosial dengan AI',
-    description:
-      'BottomUP adalah App Store smart money: manajemen portofolio AI, copy trading otomatis, dan bot trading kripto — setiap sinyal diaudit Foxy AI.',
-    keywords:
-      'social trading, copy trading, copy trading otomatis, manajemen portofolio AI, bot trading kripto, AI trading agent, AI risk firewall, BottomUP, Foxy AI, OKX copy trading',
+    description: 'BottomUP adalah App Store smart money: manajemen portofolio AI, copy trading otomatis, dan bot trading kripto — setiap sinyal diaudit Foxy AI.',
+    keywords: 'social trading, copy trading, copy trading otomatis, manajemen portofolio AI, bot trading kripto, AI trading agent, AI risk firewall, BottomUP, Foxy AI, OKX copy trading',
     og_image_alt: 'BottomUP — Marketplace copy trading dilindungi AI',
   },
   nav: {
@@ -21,8 +19,7 @@ export const id: Dict = {
   hero: {
     headline_1: 'App Store-nya',
     headline_2: 'Smart Money.',
-    subtitle:
-      'Manajemen portofolio otomatis yang memungkinkan siapa pun mengikuti trader elite dan AI agent lewat marketplace terdesentralisasi.',
+    subtitle: 'Manajemen portofolio otomatis yang memungkinkan siapa pun mengikuti trader elite dan AI agent lewat marketplace terdesentralisasi.',
     cta_primary: 'Mulai gratis →',
     cta_secondary: 'Cara Foxy melindungi kamu',
     kpi_volume: 'Volume trading',
@@ -57,34 +54,27 @@ export const id: Dict = {
     label: 'Tesis kami',
     headline_1: 'Trading retail rusak.',
     headline_2: 'Kami bangun ulang.',
-    subtitle:
-      'Manajemen portofolio otomatis yang memungkinkan siapa pun mengikuti trader elite dan AI agent di marketplace terdesentralisasi — diaudit menyeluruh oleh firewall risiko milik kami.',
+    subtitle: 'Manajemen portofolio otomatis yang memungkinkan siapa pun mengikuti trader elite dan AI agent di marketplace terdesentralisasi — diaudit menyeluruh oleh firewall risiko milik kami.',
     before: 'Sebelum BottomUP',
     with: 'Dengan BottomUP',
     rows: [
       {
         problem_title: 'Kamu menyalin trade buruk',
-        problem_body:
-          'Trader-mu revenge trade 50x leverage — kamu juga. Tanpa filter, tanpa pendapat kedua, tanpa rem.',
+        problem_body: 'Trader-mu revenge trade 50x leverage — kamu juga. Tanpa filter, tanpa pendapat kedua, tanpa rem.',
         solution_title: 'Chief of Risk berbasis AI',
-        solution_body:
-          'Foxy AI mengaudit setiap sinyal lewat 225 sumber data dan memblokir yang tidak lolos — meski dikirim oleh trader-mu.',
+        solution_body: 'Foxy AI mengaudit setiap sinyal lewat 225 sumber data dan memblokir yang tidak lolos — meski dikirim oleh trader-mu.',
       },
       {
         problem_title: 'Alpha kamu tersebar',
-        problem_body:
-          'Trader top di Telegram. Bot di Discord. Sinyal di tiga exchange. Lebih banyak ganti tab daripada eksekusi.',
+        problem_body: 'Trader top di Telegram. Bot di Discord. Sinyal di tiga exchange. Lebih banyak ganti tab daripada eksekusi.',
         solution_title: 'Satu app, semua strategi',
-        solution_body:
-          'Trader manusia, bot algoritmik, dan AI agent — semua di satu marketplace. Langganan pakai Credits, order jalan 24/7 di wallet-mu.',
+        solution_body: 'Trader manusia, bot algoritmik, dan AI agent — semua di satu marketplace. Langganan pakai Credits, order jalan 24/7 di wallet-mu.',
       },
       {
         problem_title: 'Pasar terpisah, kamu terpisah',
-        problem_body:
-          'Crypto satu app, saham lain, forex lain lagi. Tidak bisa jalankan tesis cross-asset tanpa lima login.',
+        problem_body: 'Crypto satu app, saham lain, forex lain lagi. Tidak bisa jalankan tesis cross-asset tanpa lima login.',
         solution_title: 'Multi-aset dari satu terminal',
-        solution_body:
-          'Crypto sudah ada. Saham, forex, dan komoditas tiba Q1 2027 di jalur yang sama — satu akun, satu tampilan portofolio.',
+        solution_body: 'Crypto sudah ada. Saham, forex, dan komoditas tiba Q1 2027 di jalur yang sama — satu akun, satu tampilan portofolio.',
       },
     ],
   },
@@ -93,12 +83,20 @@ export const id: Dict = {
     headline_1: 'Setiap trade',
     headline_2: 'diaudit',
     headline_3: 'sebelum masuk wallet-mu.',
-    subtitle:
-      'Foxy adalah AI milik kami yang dilatih pada 225 sumber data. Saat trader, bot, atau agent mempublikasikan sinyal, Foxy memberi nilai 0–100 berdasarkan teknik, fundamental, berita, kedalaman order book, dan pola risiko pembuat. Jika nilainya merah — trade diblokir, meskipun kamu berlangganan.',
+    subtitle: 'Foxy adalah AI milik kami yang dilatih pada 225 sumber data. Saat trader, bot, atau agent mempublikasikan sinyal, Foxy memberi nilai 0–100 berdasarkan teknik, fundamental, berita, kedalaman order book, dan pola risiko pembuat. Jika nilainya merah — trade diblokir, meskipun kamu berlangganan.',
     pillars: [
-      { title: 'Audit', body: 'Setiap sinyal yang masuk dicegat dan diberi skor di 225 sumber sebelum eksekusi.' },
-      { title: 'Blokir', body: 'Trade yang melewati amplop risiko dihentikan di firewall — bukan setelah rugi.' },
-      { title: 'Optimalkan', body: 'Order masuk/keluar disesuaikan untuk mengurangi slippage dan menaikkan P&L net.' },
+      {
+        title: 'Audit',
+        body: 'Setiap sinyal yang masuk dicegat dan diberi skor di 225 sumber sebelum eksekusi.',
+      },
+      {
+        title: 'Blokir',
+        body: 'Trade yang melewati amplop risiko dihentikan di firewall — bukan setelah rugi.',
+      },
+      {
+        title: 'Optimalkan',
+        body: 'Order masuk/keluar disesuaikan untuk mengurangi slippage dan menaikkan P&L net.',
+      },
     ],
     signal_flow: 'Alur sinyal',
     trader_node: 'Trader / Bot / AI agent',
@@ -117,8 +115,7 @@ export const id: Dict = {
     label: 'Marketplace',
     headline_1: 'Tiga jenis strategi.',
     headline_2: 'Satu marketplace.',
-    subtitle:
-      'Creator membuka toko. User berlangganan dengan BottomUP Credits. Strategi dieksekusi 24/7 langsung di wallet yang terhubung — setiap order diaudit Foxy dulu.',
+    subtitle: 'Creator membuka toko. User berlangganan dengan BottomUP Credits. Strategi dieksekusi 24/7 langsung di wallet yang terhubung — setiap order diaudit Foxy dulu.',
     golive: 'Go-live marketplace · Mei 2026',
     shops: [
       {
@@ -151,20 +148,30 @@ export const id: Dict = {
     ],
     credits_label: 'BottomUP Credits · cara kerja ekonomi mikro',
     steps: [
-      { title: 'Beli Credits', body: 'Kartu kredit atau crypto. Credits adalah mata uang universal di setiap toko.' },
-      { title: 'Langganan toko', body: 'Pilih trader, bot, atau agent yang kamu percaya. Batalkan kapan saja.' },
-      { title: 'Foxy audit sinyal', body: 'Setiap order diberi skor 0–100 sebelum keluar dari firewall.' },
-      { title: 'Wallet eksekusi', body: 'Order yang disetujui langsung ke wallet terhubung, 24/7.' },
+      {
+        title: 'Beli Credits',
+        body: 'Kartu kredit atau crypto. Credits adalah mata uang universal di setiap toko.',
+      },
+      {
+        title: 'Langganan toko',
+        body: 'Pilih trader, bot, atau agent yang kamu percaya. Batalkan kapan saja.',
+      },
+      {
+        title: 'Foxy audit sinyal',
+        body: 'Setiap order diberi skor 0–100 sebelum keluar dari firewall.',
+      },
+      {
+        title: 'Wallet eksekusi',
+        body: 'Order yang disetujui langsung ke wallet terhubung, 24/7.',
+      },
     ],
   },
   lb: {
     label: 'Papan peringkat live',
     headline_1: '$10.000 di hari pertama.',
     headline_2: 'Sekarang mereka di mana?',
-    subtitle:
-      'Setiap trader mulai bulan dengan $10.000 virtual. Tap kartu untuk dashboard analitik lengkap — kurva equity, distribusi R, P&L bulanan, breakdown per coin.',
-    disclaimer:
-      'Hasil simulasi. Performa hipotetis punya keterbatasan inheren. Performa masa lalu bukan indikasi hasil di masa depan.',
+    subtitle: 'Setiap trader mulai bulan dengan $10.000 virtual. Tap kartu untuk dashboard analitik lengkap — kurva equity, distribusi R, P&L bulanan, breakdown per coin.',
+    disclaimer: 'Hasil simulasi. Performa hipotetis punya keterbatasan inheren. Performa masa lalu bukan indikasi hasil di masa depan.',
     cta: 'Jelajahi marketplace →',
     empty: 'Belum ada trade yang ditutup bulan ini — cek lagi nanti.',
     balance_label: 'Saldo virtual',
@@ -181,19 +188,45 @@ export const id: Dict = {
     label: 'MCP Suite',
     headline_1: 'Sembilan',
     headline_2: 'Modular Crypto Processors, bekerja bersama.',
-    subtitle:
-      'Setiap MCP adalah AI agent khusus yang mengubah kekacauan informasi menjadi insight. Jalan bersamaan dengan Foxy — trade-mu datang sudah diaudit, diukur waktunya, dan selaras dengan strategi.',
+    subtitle: 'Setiap MCP adalah AI agent khusus yang mengubah kekacauan informasi menjadi insight. Jalan bersamaan dengan Foxy — trade-mu datang sudah diaudit, diukur waktunya, dan selaras dengan strategi.',
     coming_soon: 'Segera hadir · Q2 2026',
     cards: [
-      { title: 'Mitigasi risiko', body: 'Menandai revenge trading, leverage berlebihan, dan ukuran posisi tidak aman di setiap trader — real-time.' },
-      { title: 'Timing trade', body: 'Mengawasi kedalaman order book, peristiwa makro (FOMC, CPI, ETF), dan slippage historis untuk merekomendasikan jendela terbaik.' },
-      { title: 'Pencocokan', body: 'Membuat profil selera risikomu dan memasangkan dengan gaya kompatibel — scalper, momentum, atau swing jangka panjang.' },
-      { title: 'Riset token', body: 'Memeriksa kesehatan kontrak, aktivitas dev, perilaku whale, dan lonjakan sosial. Menghasilkan hipotesis, bukan kebisingan.' },
-      { title: 'Scout launch & airdrop', body: 'Memonitor deploy baru, aktivitas testnet, dan buzz Telegram. Memberi kabar alpha awal dan mengidentifikasi wallet yang eligible.' },
-      { title: 'Rebalancing portofolio', body: 'Mendeteksi over-exposure dan risiko korelasi sektor saat pasar bergerak. Menyarankan hedge atau rotasi sebelum drawdown.' },
-      { title: 'Scan regulasi', body: 'Menarik feed berita, update kebijakan exchange, dan sinyal hukum regional. Memperingatkan risiko kepatuhan — delisting, sanksi — sebelum menyakitkan.' },
-      { title: 'Divergensi sentimen', body: 'Menangkap alpha tersembunyi saat on-chain bullish tapi Twitter/Reddit bearish. Sempurna untuk posisi awal.' },
-      { title: 'Watchdog manipulasi', body: 'Melacak aktivitas wallet influencer, timing promosi, dan pola amplifikasi. Menandai pump terkoordinasi dan hype viral berbayar.' },
+      {
+        title: 'Mitigasi risiko',
+        body: 'Menandai revenge trading, leverage berlebihan, dan ukuran posisi tidak aman di setiap trader — real-time.',
+      },
+      {
+        title: 'Timing trade',
+        body: 'Mengawasi kedalaman order book, peristiwa makro (FOMC, CPI, ETF), dan slippage historis untuk merekomendasikan jendela terbaik.',
+      },
+      {
+        title: 'Pencocokan',
+        body: 'Membuat profil selera risikomu dan memasangkan dengan gaya kompatibel — scalper, momentum, atau swing jangka panjang.',
+      },
+      {
+        title: 'Riset token',
+        body: 'Memeriksa kesehatan kontrak, aktivitas dev, perilaku whale, dan lonjakan sosial. Menghasilkan hipotesis, bukan kebisingan.',
+      },
+      {
+        title: 'Scout launch & airdrop',
+        body: 'Memonitor deploy baru, aktivitas testnet, dan buzz Telegram. Memberi kabar alpha awal dan mengidentifikasi wallet yang eligible.',
+      },
+      {
+        title: 'Rebalancing portofolio',
+        body: 'Mendeteksi over-exposure dan risiko korelasi sektor saat pasar bergerak. Menyarankan hedge atau rotasi sebelum drawdown.',
+      },
+      {
+        title: 'Scan regulasi',
+        body: 'Menarik feed berita, update kebijakan exchange, dan sinyal hukum regional. Memperingatkan risiko kepatuhan — delisting, sanksi — sebelum menyakitkan.',
+      },
+      {
+        title: 'Divergensi sentimen',
+        body: 'Menangkap alpha tersembunyi saat on-chain bullish tapi Twitter/Reddit bearish. Sempurna untuk posisi awal.',
+      },
+      {
+        title: 'Watchdog manipulasi',
+        body: 'Melacak aktivitas wallet influencer, timing promosi, dan pola amplifikasi. Menandai pump terkoordinasi dan hype viral berbayar.',
+      },
     ],
   },
   pulse: {
@@ -201,8 +234,7 @@ export const id: Dict = {
     headline_1: 'Data yang sama yang',
     headline_2: 'Foxy',
     headline_3: 'gunakan.',
-    subtitle:
-      'CoinGlass, CoinGecko, dan futures Binance memberi makan firewall Foxy secara real-time. Kamu lihat permukaan yang sama: Fear & Greed, BTC dominance, funding antar-exchange, bias long/short, liquidation 24j, dan perubahan open interest.',
+    subtitle: 'CoinGlass, CoinGecko, dan futures Binance memberi makan firewall Foxy secara real-time. Kamu lihat permukaan yang sama: Fear & Greed, BTC dominance, funding antar-exchange, bias long/short, liquidation 24j, dan perubahan open interest.',
     auto: 'Auto-refresh · cache 5 menit',
     fg: 'Fear & Greed Index',
     dom: 'BTC Dominance',
@@ -219,20 +251,37 @@ export const id: Dict = {
     table_total: 'Total',
     table_split: 'Long/Short',
   },
+  whales: {
+    label: 'Menonton ikan paus',
+    headline_1: 'Uang nyata,',
+    headline_2: 'bergerak sekarang.',
+    subtitle: 'Umpan langsung dari setiap dompet Hyperlikuid yang membuka atau menutup posisi $1M+. Setiap baris adalah modal nyata — tidak ada akun demo, tidak ada papan peringkat berbayar. Permukaan yang sama yang dibaca Foxy saat ia mencetak sinyal trader Anda.',
+    threshold: '$1 juta+ nosional',
+    tab_alerts: 'Aktivitas terkini',
+    tab_positions: 'Posisi terbuka teratas',
+    side_long: 'Panjang',
+    side_short: 'Pendek',
+    notional: 'Nosional',
+    entry: 'Pintu masuk',
+    liquidation: 'cair',
+    leverage: 'Manfaat',
+    unrealized: 'PnL yang belum terealisasi',
+    empty: 'Tidak ada aktivitas ikan paus saat ini — periksa kembali sebentar lagi.',
+    source: 'Sumber: Hyperliquid · CoinGlass · disegarkan setiap menit',
+    just_now: 'baru saja',
+  },
   news: {
     label: 'News feed',
     headline_1: 'Berita crypto, dengan',
     headline_2: 'sentimen.',
-    subtitle:
-      'Setiap berita diberi label positif/negatif dan terhubung dengan coin yang terpengaruh. Buka di sini — tanpa tab baru, tanpa kehilangan konteks.',
+    subtitle: 'Setiap berita diberi label positif/negatif dan terhubung dengan coin yang terpengaruh. Buka di sini — tanpa tab baru, tanpa kehilangan konteks.',
     no_summary: 'Tidak ada ringkasan tambahan untuk artikel ini.',
   },
   pr: {
     label: 'Harga',
     headline_1: 'Satu trade buruk yang diblokir',
     headline_2: 'menutupi setahun.',
-    subtitle:
-      'Gratis cukup untuk pemeriksaan harian cepat. Paket berbayar membuka audit risiko Foxy AI tanpa batas dan visibilitas 100% setiap setup yang dipublikasikan trader — di antara paket berbayar yang berbeda hanya durasi komitmen.',
+    subtitle: 'Gratis cukup untuk pemeriksaan harian cepat. Paket berbayar membuka audit risiko Foxy AI tanpa batas dan visibilitas 100% setiap setup yang dipublikasikan trader — di antara paket berbayar yang berbeda hanya durasi komitmen.',
     most_popular: 'Paling populer',
     billed_monthly: 'Ditagih bulanan, diperpanjang',
     billed_upfront: '{total} dibayar di muka',
@@ -269,8 +318,7 @@ export const id: Dict = {
         ],
       },
     ],
-    footer:
-      'Semua paket ditagih dalam USD dan otomatis diperpanjang di akhir periode kecuali dibatalkan. Batalkan dari akun atau app store. Periode parsial tidak di-prorata. Bukan pengganti nasihat investasi — lihat Pengungkapan Risiko. Copy-trading tidak tersedia untuk penduduk AS.',
+    footer: 'Semua paket ditagih dalam USD dan otomatis diperpanjang di akhir periode kecuali dibatalkan. Batalkan dari akun atau app store. Periode parsial tidak di-prorata. Bukan pengganti nasihat investasi — lihat Pengungkapan Risiko. Copy-trading tidak tersedia untuk penduduk AS.',
   },
   faq: {
     label: 'Pertanyaan umum',
@@ -326,12 +374,10 @@ export const id: Dict = {
     sub: 'Trader, bot, dan AI agent sedang aktif di marketplace sekarang. Setiap sinyal diaudit. Daftar dalam 30 detik.',
     cta_primary: 'Mulai gratis →',
     cta_secondary: 'Masuk',
-    disclaimer:
-      'Bukan nasihat investasi. Trading crypto memiliki risiko kerugian tinggi. Copy-trading tidak tersedia untuk penduduk AS.',
+    disclaimer: 'Bukan nasihat investasi. Trading crypto memiliki risiko kerugian tinggi. Copy-trading tidak tersedia untuk penduduk AS.',
   },
   ft: {
-    tagline:
-      'App Store-nya smart money. Trader elite, AI agent, dan bot algoritmik — satu marketplace, dilindungi Foxy AI.',
+    tagline: 'App Store-nya smart money. Trader elite, AI agent, dan bot algoritmik — satu marketplace, dilindungi Foxy AI.',
     product: 'Produk',
     account: 'Akun',
     legal: 'Legal',
@@ -345,8 +391,7 @@ export const id: Dict = {
     terms: 'Syarat layanan',
     privacy: 'Privasi',
     risk: 'Pengungkapan risiko',
-    disclosure:
-      'BottomUP, Inc. adalah korporasi Delaware. BottomUP bukan penasihat investasi terdaftar, broker-dealer, commodity pool operator, commodity trading advisor, atau money services business. Semua konten di Layanan — sinyal, vered Foxy AI, dan strategi creator — disediakan hanya untuk tujuan informasi dan edukasi serta bukan nasihat investasi, hukum, atau pajak yang dipersonalisasi. Performa masa lalu, performa simulasi, dan hasil hipotetis (termasuk angka "portofolio virtual $10.000") bukan indikasi hasil di masa depan. Perdagangan aset crypto, terutama dengan leverage atau derivatif, melibatkan risiko kerugian total tinggi. Fungsi copy-trading saat ini tidak ditawarkan kepada penduduk AS. Penduduk wilayah yang disanksi OFAC tidak memenuhi syarat.',
+    disclosure: 'BottomUP, Inc. adalah korporasi Delaware. BottomUP bukan penasihat investasi terdaftar, broker-dealer, commodity pool operator, commodity trading advisor, atau money services business. Semua konten di Layanan — sinyal, vered Foxy AI, dan strategi creator — disediakan hanya untuk tujuan informasi dan edukasi serta bukan nasihat investasi, hukum, atau pajak yang dipersonalisasi. Performa masa lalu, performa simulasi, dan hasil hipotetis (termasuk angka "portofolio virtual $10.000") bukan indikasi hasil di masa depan. Perdagangan aset crypto, terutama dengan leverage atau derivatif, melibatkan risiko kerugian total tinggi. Fungsi copy-trading saat ini tidak ditawarkan kepada penduduk AS. Penduduk wilayah yang disanksi OFAC tidak memenuhi syarat.',
     copy: '© {year} BottomUP, Inc. · Hak cipta dilindungi.',
     address: '1209 Orange St, Wilmington, DE 19801, AS',
   },

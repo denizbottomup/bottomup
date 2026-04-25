@@ -126,6 +126,8 @@ export class PublicService {
         top_long_short: [],
         liquidation: [],
         open_interest: [],
+        whale_alerts: [],
+        whale_positions: [],
       })),
     ]);
     return { stats, top_traders: traders, latest_setups: setups, news, pulse };

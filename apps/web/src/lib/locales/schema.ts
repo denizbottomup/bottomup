@@ -145,6 +145,37 @@ export interface Dict {
     table_total: string;
     table_split: string;
   };
+  whales: {
+    label: string;
+    headline_1: string;
+    headline_2: string;
+    subtitle: string;
+    /** Pill shown on the section header noting the $1M+ filter. */
+    threshold: string;
+    /** Tab label for the live "alerts" feed. */
+    tab_alerts: string;
+    /** Tab label for the snapshot of open positions. */
+    tab_positions: string;
+    /** Column / card label: side ("Long" / "Short"). */
+    side_long: string;
+    side_short: string;
+    /** Card / table label: position size in USD. */
+    notional: string;
+    /** Card / table label: entry price. */
+    entry: string;
+    /** Card / table label: liquidation price. */
+    liquidation: string;
+    /** Card / table label: leverage multiplier. */
+    leverage: string;
+    /** Card / table label: unrealized PnL. */
+    unrealized: string;
+    /** Empty-state message when CG doesn't return data right now. */
+    empty: string;
+    /** Footer credit / source line. */
+    source: string;
+    /** Just-now relative time. */
+    just_now: string;
+  };
   news: {
     label: string;
     headline_1: string;
