@@ -159,8 +159,8 @@ export interface Dict {
     most_popular: string;
     billed_monthly: string;
     billed_upfront: string;
-    save_17: string;
-    save_25: string;
+    save_13: string;
+    save_20: string;
     plans: Array<{ name: string; cta: string; features: string[] }>;
     footer: string;
   };

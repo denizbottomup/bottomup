@@ -106,11 +106,11 @@ export function StructuredData({ locale = 'en' }: { locale?: LocaleCode }) {
           {
             '@type': 'Offer',
             name: 'Monthly',
-            price: '30',
+            price: '49.99',
             priceCurrency: 'USD',
             priceSpecification: {
               '@type': 'UnitPriceSpecification',
-              price: '30',
+              price: '49.99',
               priceCurrency: 'USD',
               billingDuration: 'P1M',
               unitText: 'month',
@@ -119,11 +119,11 @@ export function StructuredData({ locale = 'en' }: { locale?: LocaleCode }) {
           {
             '@type': 'Offer',
             name: 'Quarterly',
-            price: '75',
+            price: '129.99',
             priceCurrency: 'USD',
             priceSpecification: {
               '@type': 'UnitPriceSpecification',
-              price: '75',
+              price: '129.99',
               priceCurrency: 'USD',
               billingDuration: 'P3M',
               unitText: '3 months',
@@ -132,11 +132,11 @@ export function StructuredData({ locale = 'en' }: { locale?: LocaleCode }) {
           {
             '@type': 'Offer',
             name: 'Semi-annual',
-            price: '135',
+            price: '239.99',
             priceCurrency: 'USD',
             priceSpecification: {
               '@type': 'UnitPriceSpecification',
-              price: '135',
+              price: '239.99',
               priceCurrency: 'USD',
               billingDuration: 'P6M',
               unitText: '6 months',

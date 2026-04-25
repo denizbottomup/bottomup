@@ -237,8 +237,8 @@ export const id: Dict = {
     most_popular: 'Paling populer',
     billed_monthly: 'Ditagih bulanan, diperpanjang',
     billed_upfront: '{total} dibayar di muka',
-    save_17: 'Hemat 17%',
-    save_25: 'Hemat 25%',
+    save_13: 'Hemat 13%',
+    save_20: 'Hemat 20%',
     plans: [
       {
         name: 'Bulanan',

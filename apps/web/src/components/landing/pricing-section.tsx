@@ -2,30 +2,35 @@
 
 import { useT } from '@/lib/i18n';
 
+// Prices mirror the live App Store Connect tiers (US, USD) for the
+// "Plans" subscription group on app id 1661474993:
+//   monthly       → $49.99 / month
+//   3 months      → $129.99 total ($43.33 / month, ~13% off monthly)
+//   6 months      → $239.99 total ($40.00 / month, ~20% off monthly)
 const PLAN_META = [
   {
     code: 'monthly',
-    price: 30,
-    priceLabel: '$30',
+    price: 49.99,
+    priceLabel: '$49.99',
     total: null as number | null,
     highlight: false,
-    saveKey: null as 'save_17' | 'save_25' | null,
+    saveKey: null as 'save_13' | 'save_20' | null,
   },
   {
     code: 'quarter',
-    price: 25,
-    priceLabel: '$25',
-    total: 75,
+    price: 43.33,
+    priceLabel: '$43.33',
+    total: 129.99,
     highlight: true,
-    saveKey: 'save_17' as const,
+    saveKey: 'save_13' as const,
   },
   {
     code: 'half',
-    price: 22.5,
-    priceLabel: '$22.50',
-    total: 135,
+    price: 40,
+    priceLabel: '$40',
+    total: 239.99,
     highlight: false,
-    saveKey: 'save_25' as const,
+    saveKey: 'save_20' as const,
   },
 ];
 
@@ -61,10 +66,10 @@ export function PricingSection() {
               billedMonthly={t.pr.billed_monthly}
               billedUpfront={t.pr.billed_upfront}
               saveLabel={
-                p.saveKey === 'save_17'
-                  ? t.pr.save_17
-                  : p.saveKey === 'save_25'
-                    ? t.pr.save_25
+                p.saveKey === 'save_13'
+                  ? t.pr.save_13
+                  : p.saveKey === 'save_20'
+                    ? t.pr.save_20
                     : null
               }
             />

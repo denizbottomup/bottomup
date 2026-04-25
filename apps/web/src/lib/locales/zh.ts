@@ -237,8 +237,8 @@ export const zh: Dict = {
     most_popular: '最受欢迎',
     billed_monthly: '按月计费,续订',
     billed_upfront: '{total} 预付',
-    save_17: '节省 17%',
-    save_25: '节省 25%',
+    save_13: '节省 13%',
+    save_20: '节省 20%',
     plans: [
       {
         name: '月度',

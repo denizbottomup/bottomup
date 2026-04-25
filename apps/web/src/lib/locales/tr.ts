@@ -237,8 +237,8 @@ export const tr: Dict = {
     most_popular: 'En popüler',
     billed_monthly: 'Aylık faturalanır, yenilenir',
     billed_upfront: '{total} peşin',
-    save_17: '%17 tasarruf',
-    save_25: '%25 tasarruf',
+    save_13: '%13 tasarruf',
+    save_20: '%20 tasarruf',
     plans: [
       {
         name: 'Aylık',

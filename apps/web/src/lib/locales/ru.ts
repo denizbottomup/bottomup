@@ -237,8 +237,8 @@ export const ru: Dict = {
     most_popular: 'Самое популярное',
     billed_monthly: 'Ежемесячно, автопродление',
     billed_upfront: '{total} за период',
-    save_17: 'Экономия 17%',
-    save_25: 'Экономия 25%',
+    save_13: 'Экономия 13%',
+    save_20: 'Экономия 20%',
     plans: [
       {
         name: 'Месяц',

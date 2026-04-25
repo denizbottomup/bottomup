@@ -237,8 +237,8 @@ export const ar: Dict = {
     most_popular: 'الأكثر شيوعًا',
     billed_monthly: 'فوترة شهرية، تجديد تلقائي',
     billed_upfront: '{total} مدفوعة مقدمًا',
-    save_17: 'وفر 17٪',
-    save_25: 'وفر 25٪',
+    save_13: 'وفر 13٪',
+    save_20: 'وفر 20٪',
     plans: [
       {
         name: 'شهري',

@@ -237,8 +237,8 @@ export const es: Dict = {
     most_popular: 'Más popular',
     billed_monthly: 'Facturación mensual, renueva',
     billed_upfront: '{total} por adelantado',
-    save_17: 'Ahorra 17%',
-    save_25: 'Ahorra 25%',
+    save_13: 'Ahorra 13%',
+    save_20: 'Ahorra 20%',
     plans: [
       {
         name: 'Mensual',

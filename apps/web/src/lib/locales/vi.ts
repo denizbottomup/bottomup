@@ -237,8 +237,8 @@ export const vi: Dict = {
     most_popular: 'Phổ biến nhất',
     billed_monthly: 'Thanh toán hàng tháng, gia hạn',
     billed_upfront: '{total} trả trước',
-    save_17: 'Tiết kiệm 17%',
-    save_25: 'Tiết kiệm 25%',
+    save_13: 'Tiết kiệm 13%',
+    save_20: 'Tiết kiệm 20%',
     plans: [
       {
         name: 'Hàng tháng',

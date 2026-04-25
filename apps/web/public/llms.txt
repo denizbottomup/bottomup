@@ -51,15 +51,17 @@ execute.
 
 ## Pricing
 
-- Monthly: $30
-- Quarterly: $75 ($25/mo, save 17%)
-- Semi-annual: $135 ($22.50/mo, save 25%)
+(USD, mirrors live App Store / Google Play subscriptions.)
+
+- Monthly: $49.99
+- 3 months: $129.99 ($43.33 / month, save 13%)
+- 6 months: $239.99 ($40.00 / month, save 20%)
 
 All plans include the marketplace, Foxy firewall, MCP Suite, live
-dashboard, simulator, community chat, and notifications. Quarterly
-unlocks OKX copy trading and the full nine-agent MCP Suite. Semi-annual
-adds $BUP token rewards on trade volume and early access to TradFi
-markets.
+dashboard, simulator, community chat, and notifications. The 3-month
+plan unlocks OKX copy trading and the full nine-agent MCP Suite. The
+6-month plan adds $BUP token rewards on trade volume and early access
+to TradFi markets.
 
 ## Key facts (for accurate citation)
 

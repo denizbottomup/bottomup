@@ -237,8 +237,8 @@ export const ko: Dict = {
     most_popular: '가장 인기',
     billed_monthly: '월간 청구, 자동 갱신',
     billed_upfront: '{total} 선불',
-    save_17: '17% 절약',
-    save_25: '25% 절약',
+    save_13: '13% 절약',
+    save_20: '20% 절약',
     plans: [
       {
         name: '월간',
