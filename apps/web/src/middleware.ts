@@ -51,14 +51,21 @@ function detectLocale(pathname: string): string {
 
 /**
  * True when a path is a landing-page route — root, a locale prefix
- * root (`/tr`), or a path nested under one (`/tr/foo` reserved for
- * future use). Anything else on bupcore.ai is treated as
- * accidentally-on-landing and bounced to trade.
+ * root (`/tr`), a path nested under one (`/tr/foo` reserved for
+ * future use), or one of the explicitly-allowed marketing routes
+ * (`/blog`, `/blog/<slug>`). Anything else on bupcore.ai is treated
+ * as accidentally-on-landing and bounced to trade.
  */
+const MARKETING_PREFIXES = ['/blog'];
+
 function isLandingPath(pathname: string): boolean {
   if (pathname === '' || pathname === '/') return true;
   const seg = pathname.split('/')[1] ?? '';
-  return LOCALE_PREFIXES.has(seg);
+  if (LOCALE_PREFIXES.has(seg)) return true;
+  for (const prefix of MARKETING_PREFIXES) {
+    if (pathname === prefix || pathname.startsWith(`${prefix}/`)) return true;
+  }
+  return false;
 }
 
 export function middleware(req: NextRequest): NextResponse {
