@@ -17,6 +17,14 @@ export function LandingNav() {
     return () => window.removeEventListener('scroll', h);
   }, []);
 
+  // The hero now sits on a light background. Until the user scrolls
+  // past it, nav text needs to be dark to stay readable on white;
+  // once the user is on the dark sections below, nav goes back to
+  // its glass-on-dark look.
+  const linkClass = scrolled
+    ? 'text-fg-muted hover:text-fg'
+    : 'text-zinc-600 hover:text-zinc-900';
+
   return (
     <header
       className={`sticky top-0 z-40 transition-colors ${
@@ -28,20 +36,20 @@ export function LandingNav() {
       <div className="mx-auto flex max-w-[1400px] items-center justify-between px-4 py-3 md:px-8">
         <div className="flex items-center gap-8">
           <Logo variant="lockup" size="sm" />
-          <nav className="hidden items-center gap-6 text-sm text-fg-muted md:flex">
-            <a href="#foxy" className="hover:text-fg transition">
+          <nav className="hidden items-center gap-6 text-sm md:flex">
+            <a href="#foxy" className={`transition ${linkClass}`}>
               {t.nav.foxy}
             </a>
-            <a href="#marketplace" className="hover:text-fg transition">
+            <a href="#marketplace" className={`transition ${linkClass}`}>
               {t.nav.marketplace}
             </a>
-            <a href="#mcp" className="hover:text-fg transition">
+            <a href="#mcp" className={`transition ${linkClass}`}>
               {t.nav.mcp}
             </a>
-            <a href="#leaderboard" className="hover:text-fg transition">
+            <a href="#leaderboard" className={`transition ${linkClass}`}>
               {t.nav.traders}
             </a>
-            <a href="#pricing" className="hover:text-fg transition">
+            <a href="#pricing" className={`transition ${linkClass}`}>
               {t.nav.pricing}
             </a>
           </nav>
@@ -52,7 +60,11 @@ export function LandingNav() {
         </div>
 
         <button
-          className="md:hidden rounded-lg border border-border p-2 text-fg"
+          className={`md:hidden rounded-lg border p-2 ${
+            scrolled
+              ? 'border-border text-fg'
+              : 'border-zinc-300 text-zinc-700'
+          }`}
           onClick={() => setMobileOpen((v) => !v)}
           aria-label="Menu"
         >
