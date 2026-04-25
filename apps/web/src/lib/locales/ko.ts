@@ -1,6 +1,14 @@
 import type { Dict } from './schema';
 
 export const ko: Dict = {
+  meta: {
+    title: 'BottomUP — AI가 보호하는 소셜 카피 트레이딩 마켓플레이스',
+    description:
+      'BottomUP은 스마트 머니의 앱스토어입니다. AI 포트폴리오 관리, 자동 카피 트레이딩, 크립토 트레이딩 봇 — 모든 신호를 Foxy AI가 감사합니다.',
+    keywords:
+      '소셜 트레이딩, 카피 트레이딩, 자동 카피 트레이딩, AI 포트폴리오 관리, 크립토 트레이딩 봇, AI 트레이딩 에이전트, AI 리스크 방화벽, BottomUP, Foxy AI, OKX 카피 트레이딩',
+    og_image_alt: 'BottomUP — AI 보호 카피 트레이딩 마켓플레이스',
+  },
   nav: {
     foxy: 'Foxy AI',
     marketplace: '마켓플레이스',

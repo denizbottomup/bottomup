@@ -23,11 +23,37 @@
  */
 
 import { en } from '@/lib/locales/en';
+import { tr } from '@/lib/locales/tr';
+import { es } from '@/lib/locales/es';
+import { pt } from '@/lib/locales/pt';
+import { ru } from '@/lib/locales/ru';
+import { vi } from '@/lib/locales/vi';
+import { id } from '@/lib/locales/id';
+import { zh } from '@/lib/locales/zh';
+import { ko } from '@/lib/locales/ko';
+import { ar } from '@/lib/locales/ar';
+import type { LocaleCode } from '@/lib/locale-config';
+import type { Dict } from '@/lib/locales/schema';
+
+const DICTS: Record<LocaleCode, Dict> = {
+  en,
+  tr,
+  es,
+  pt,
+  ru,
+  vi,
+  id,
+  zh,
+  ko,
+  ar,
+};
 
 const ORG_ID = 'https://bupcore.ai/#organization';
 const APP_ID = 'https://bupcore.ai/#software';
 
-export function StructuredData() {
+export function StructuredData({ locale = 'en' }: { locale?: LocaleCode }) {
+  const t = DICTS[locale];
+  const url = locale === 'en' ? 'https://bupcore.ai' : `https://bupcore.ai/${locale}`;
   const data = {
     '@context': 'https://schema.org',
     '@graph': [
@@ -62,8 +88,8 @@ export function StructuredData() {
         applicationCategory: 'FinanceApplication',
         applicationSubCategory: 'Social copy trading marketplace',
         operatingSystem: 'iOS, Android, Web',
-        url: 'https://bupcore.ai',
-        downloadUrl: 'https://bupcore.ai',
+        url,
+        downloadUrl: url,
         publisher: { '@id': ORG_ID },
         creator: { '@id': ORG_ID },
         featureList: [
@@ -129,7 +155,8 @@ export function StructuredData() {
       },
       {
         '@type': 'FAQPage',
-        mainEntity: en.faq.items.map((item) => ({
+        inLanguage: locale,
+        mainEntity: t.faq.items.map((item) => ({
           '@type': 'Question',
           name: item.q,
           acceptedAnswer: {

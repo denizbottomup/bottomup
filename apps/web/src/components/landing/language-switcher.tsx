@@ -1,10 +1,12 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
-import { LOCALES, useT, type LocaleCode } from '@/lib/i18n';
+import { LOCALES, localePath, useT, type LocaleCode } from '@/lib/i18n';
 
 export function LanguageSwitcher() {
   const { locale, setLocale } = useT();
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement | null>(null);
 
@@ -55,8 +57,14 @@ export function LanguageSwitcher() {
                 <button
                   type="button"
                   onClick={() => {
-                    setLocale(l.code as LocaleCode);
+                    const code = l.code as LocaleCode;
+                    setLocale(code);
                     setOpen(false);
+                    // Navigate to the locale's canonical URL so the
+                    // SSR'd `<html lang>` and metadata match what the
+                    // user just selected. Cookie persistence stays in
+                    // the provider for a future "remember on /" flow.
+                    router.push(localePath(code));
                   }}
                   role="option"
                   aria-selected={active}

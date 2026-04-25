@@ -1,6 +1,14 @@
 import type { Dict } from './schema';
 
 export const tr: Dict = {
+  meta: {
+    title: 'BottomUP — AI korumalı sosyal kopya trade marketplace’i',
+    description:
+      'BottomUP akıllı paranın App Store’u: AI tabanlı portföy yönetimi, otomatik kopya trade ve kripto trading botları — her sinyali Foxy AI denetler.',
+    keywords:
+      'sosyal trade, kopya trade, otomatik kopya trade, AI portföy yönetimi, kripto trading botu, AI trading agent, AI risk firewall, BottomUP, Foxy AI, OKX kopya trade',
+    og_image_alt: 'BottomUP — AI korumalı kopya trade marketplace’i',
+  },
   nav: {
     foxy: 'Foxy AI',
     marketplace: 'Marketplace',

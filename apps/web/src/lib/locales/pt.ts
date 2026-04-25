@@ -1,6 +1,14 @@
 import type { Dict } from './schema';
 
 export const pt: Dict = {
+  meta: {
+    title: 'BottomUP — Marketplace de copy trading social com IA',
+    description:
+      'BottomUP é a App Store do dinheiro inteligente: gestão de carteira com IA, copy trading automático e bots de trading cripto — auditados pelo Foxy AI.',
+    keywords:
+      'social trading, copy trading, copy trading automático, gestão de carteira com IA, bots de trading cripto, agentes de trading IA, firewall de risco IA, BottomUP, Foxy AI, OKX copy trading',
+    og_image_alt: 'BottomUP — Marketplace de copy trading protegido por IA',
+  },
   nav: {
     foxy: 'Foxy AI',
     marketplace: 'Marketplace',

@@ -1,6 +1,14 @@
 import type { Dict } from './schema';
 
 export const id: Dict = {
+  meta: {
+    title: 'BottomUP — Marketplace copy trading sosial dengan AI',
+    description:
+      'BottomUP adalah App Store smart money: manajemen portofolio AI, copy trading otomatis, dan bot trading kripto — setiap sinyal diaudit Foxy AI.',
+    keywords:
+      'social trading, copy trading, copy trading otomatis, manajemen portofolio AI, bot trading kripto, AI trading agent, AI risk firewall, BottomUP, Foxy AI, OKX copy trading',
+    og_image_alt: 'BottomUP — Marketplace copy trading dilindungi AI',
+  },
   nav: {
     foxy: 'Foxy AI',
     marketplace: 'Marketplace',

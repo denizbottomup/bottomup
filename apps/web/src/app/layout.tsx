@@ -1,10 +1,25 @@
 import type { Metadata } from 'next';
+import { headers } from 'next/headers';
 import { Inter } from 'next/font/google';
 import { AuthProvider } from '@/lib/auth-context';
 import { LocaleProvider } from '@/lib/i18n';
+import type { LocaleCode } from '@/lib/locale-config';
 import { CookieBanner } from '@/components/cookie-banner';
 import { GtmNoScript, GtmScript } from '@/components/gtm';
 import './globals.css';
+
+const KNOWN_LOCALES: LocaleCode[] = [
+  'en',
+  'tr',
+  'es',
+  'pt',
+  'ru',
+  'vi',
+  'id',
+  'zh',
+  'ko',
+  'ar',
+];
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 
@@ -80,15 +95,30 @@ export const metadata: Metadata = {
   icons: { icon: '/icon.png' },
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  // The middleware sets `x-locale` on every request to either the
+  // path-derived locale (e.g. `/tr` → "tr") or "en" for the canonical
+  // root. Reading it here lets us SSR the correct `<html lang dir>`
+  // without flashing English first.
+  const h = await headers();
+  const headerLocale = (h.get('x-locale') ?? 'en') as LocaleCode;
+  const locale: LocaleCode = KNOWN_LOCALES.includes(headerLocale)
+    ? headerLocale
+    : 'en';
+  const dir = locale === 'ar' ? 'rtl' : 'ltr';
+
   return (
-    <html lang="en" className={inter.variable}>
+    <html lang={locale} dir={dir} className={inter.variable}>
       <head>
         <GtmScript />
       </head>
       <body>
         <GtmNoScript />
-        <LocaleProvider>
+        <LocaleProvider initialLocale={locale}>
           <AuthProvider>{children}</AuthProvider>
           <CookieBanner />
         </LocaleProvider>

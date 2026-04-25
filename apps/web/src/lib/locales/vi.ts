@@ -1,6 +1,14 @@
 import type { Dict } from './schema';
 
 export const vi: Dict = {
+  meta: {
+    title: 'BottomUP — Sàn copy trading xã hội được AI bảo vệ',
+    description:
+      'BottomUP là App Store của smart money: quản lý danh mục bằng AI, copy trading tự động và bot crypto — mọi tín hiệu đều được Foxy AI kiểm duyệt.',
+    keywords:
+      'social trading, copy trading, copy trading tự động, quản lý danh mục AI, bot trading crypto, AI trading agent, tường lửa rủi ro AI, BottomUP, Foxy AI, OKX copy trading',
+    og_image_alt: 'BottomUP — Sàn copy trading được AI bảo vệ',
+  },
   nav: {
     foxy: 'Foxy AI',
     marketplace: 'Marketplace',

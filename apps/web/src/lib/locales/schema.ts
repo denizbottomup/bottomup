@@ -1,4 +1,14 @@
 export interface Dict {
+  meta: {
+    /** <title> tag content for the landing page in this locale. */
+    title: string;
+    /** <meta name="description"> for the landing page. ~155 char cap. */
+    description: string;
+    /** Comma-separated keyword surface for legacy SEO + LLM context. */
+    keywords: string;
+    /** OG image alt text. */
+    og_image_alt: string;
+  };
   nav: {
     foxy: string;
     marketplace: string;

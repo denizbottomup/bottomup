@@ -1,6 +1,14 @@
 import type { Dict } from './schema';
 
 export const zh: Dict = {
+  meta: {
+    title: 'BottomUP — AI 风控的社交跟单交易市场',
+    description:
+      'BottomUP 是聪明钱的应用商店：AI 投资组合管理、自动跟单交易、加密交易机器人 — 每个信号都由 Foxy AI 风控审核。',
+    keywords:
+      '社交交易, 跟单交易, 自动跟单交易, AI 投资组合管理, 加密交易机器人, AI 交易代理, AI 风控, BottomUP, Foxy AI, OKX 跟单交易',
+    og_image_alt: 'BottomUP — AI 风控的跟单交易市场',
+  },
   nav: {
     foxy: 'Foxy AI',
     marketplace: '市场',
