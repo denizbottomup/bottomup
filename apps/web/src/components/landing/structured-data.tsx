@@ -50,6 +50,7 @@ const DICTS: Record<LocaleCode, Dict> = {
 
 const ORG_ID = 'https://bottomup.app/#organization';
 const APP_ID = 'https://bottomup.app/#software';
+const WEBSITE_ID = 'https://bottomup.app/#website';
 
 export function StructuredData({ locale = 'en' }: { locale?: LocaleCode }) {
   const t = DICTS[locale];
@@ -58,15 +59,46 @@ export function StructuredData({ locale = 'en' }: { locale?: LocaleCode }) {
     '@context': 'https://schema.org',
     '@graph': [
       {
+        '@type': 'WebSite',
+        '@id': WEBSITE_ID,
+        url: 'https://bottomup.app',
+        name: 'BottomUP',
+        description:
+          'AI-protected social copy trading marketplace. Mirror elite traders, algorithmic bots, and AI agents — every signal audited by Foxy AI before it reaches your wallet.',
+        publisher: { '@id': ORG_ID },
+        inLanguage: locale,
+      },
+      {
         '@type': 'Organization',
         '@id': ORG_ID,
         name: 'BottomUP',
         legalName: 'BottomUP, Inc.',
+        alternateName: ['BottomUP Inc.', 'bottomup.app'],
         url: 'https://bottomup.app',
         logo: 'https://bottomup.app/logos/logomark-color.png',
         foundingDate: '2024',
+        slogan: 'The App Store of smart money.',
         description:
           'BottomUP is a Delaware-incorporated marketplace for AI-protected social copy trading: human traders, algorithmic bots, and AI agents publish strategies that anyone can subscribe to, with every signal audited by the Foxy AI risk firewall before it reaches the user wallet.',
+        // Topics this organisation is authoritative on — feeds the
+        // "knows about" graph that Google + LLMs use to decide which
+        // queries we're a relevant answer for.
+        knowsAbout: [
+          'social copy trading',
+          'automated copy trading',
+          'crypto trading bots',
+          'AI portfolio management',
+          'AI trading agents',
+          'crypto risk management',
+          'crypto market data',
+          'cryptocurrency social trading',
+          'algorithmic crypto trading',
+          'TradFi AI agents',
+          'OKX copy trading',
+          'Hyperliquid whale tracking',
+          'Fear and Greed index',
+          'crypto liquidation tracking',
+        ],
         address: {
           '@type': 'PostalAddress',
           streetAddress: '1209 Orange St',
@@ -75,10 +107,48 @@ export function StructuredData({ locale = 'en' }: { locale?: LocaleCode }) {
           postalCode: '19801',
           addressCountry: 'US',
         },
+        contactPoint: [
+          {
+            '@type': 'ContactPoint',
+            contactType: 'customer support',
+            email: 'contact@bottomup.app',
+            availableLanguage: [
+              'English',
+              'Turkish',
+              'Spanish',
+              'Portuguese',
+              'Russian',
+              'Vietnamese',
+              'Indonesian',
+              'Chinese',
+              'Korean',
+              'Arabic',
+            ],
+          },
+          {
+            '@type': 'ContactPoint',
+            contactType: 'press',
+            email: 'press@bottomup.app',
+          },
+        ],
         sameAs: [
           'https://x.com/bottomupsocial',
           'https://t.me/BottomUPcommunity',
           'https://www.linkedin.com/company/bottomupsocial/',
+          'https://github.com/bottomupapp',
+          'https://apps.apple.com/tr/app/bottomup-sofi-trade-finance/id1661474993',
+          'https://play.google.com/store/apps/details?id=com.bottomup.bottomupapp',
+        ],
+      },
+      {
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+          {
+            '@type': 'ListItem',
+            position: 1,
+            name: 'Home',
+            item: url,
+          },
         ],
       },
       {
@@ -90,6 +160,20 @@ export function StructuredData({ locale = 'en' }: { locale?: LocaleCode }) {
         operatingSystem: 'iOS, Android, Web',
         url,
         downloadUrl: url,
+        screenshot: [
+          'https://bottomup.app/screens/hero-app.png',
+          'https://bottomup.app/screens/setups.png',
+          'https://bottomup.app/screens/traders.png',
+          'https://bottomup.app/screens/notifications.png',
+          'https://bottomup.app/screens/bup-ai.png',
+          'https://bottomup.app/screens/news.png',
+          'https://bottomup.app/screens/calendar.png',
+        ],
+        audience: {
+          '@type': 'Audience',
+          audienceType:
+            'Retail crypto traders interested in copy trading, AI risk management, and AI trading agents',
+        },
         publisher: { '@id': ORG_ID },
         creator: { '@id': ORG_ID },
         featureList: [

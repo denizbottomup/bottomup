@@ -1,0 +1,168 @@
+**Crypto trading bots** and **copy trading** look like they
+solve the same problem — "I don't want to stare at a chart all
+day." But mechanically they are very different products, and
+choosing the wrong one is one of the most common, expensive
+mistakes in retail crypto.
+
+This post walks through what each one actually is, when each
+makes sense, and the three questions that should decide
+between them.
+
+## What a crypto trading bot is
+
+A trading bot is a program that executes a fixed strategy. You
+define the rules — entry, exit, size, leverage — and the bot
+follows them 24/7 without sleeping, panicking, or revenge-
+trading.
+
+The strategies that work are usually unglamorous:
+
+- **Grid bots** — place buy/sell orders at fixed intervals
+  around a price, profit from oscillation in sideways markets.
+- **DCA bots** — buy a fixed dollar amount on a schedule, ignore
+  price.
+- **Arbitrage bots** — exploit price differences between venues
+  (mostly closed by professionals now, but still possible on
+  small/new pairs).
+- **Trend-following bots** — buy when a moving-average crossover
+  triggers, sell on the reverse.
+
+A bot has zero human in the loop. The strategy is whatever you
+or the bot vendor decided it should be at design time. If the
+market regime changes, the bot keeps doing what it did
+yesterday until you intervene.
+
+## What copy trading is
+
+Copy trading mirrors a *human or AI agent* in real time. When
+the source account opens a position, your account opens the
+same one. When they close, you close.
+
+The strategy is whatever the source account decides to do
+today. That can change. A momentum trader might pivot to mean-
+reversion mid-month and never tell subscribers — your account
+will follow them into the new regime whether you want to or
+not. (For more on this failure mode, see
+[what is auto copy trading](/blog/what-is-auto-copy-trading).)
+
+In a modern copy-trading platform, an [AI risk
+firewall](/blog/foxy-ai-risk-firewall-how-it-works) sits between
+the publisher and your wallet, so the strategy drift gets
+audited before it executes. In a 2010-era platform, it doesn't.
+
+## The mechanical comparison
+
+| | Trading bot | Copy trading |
+| --- | --- | --- |
+| Strategy source | Predefined rules | Human or AI publisher |
+| Adapts to regime | No (until you re-tune) | Yes (whatever the publisher does) |
+| Latency | Native to bot, can be ms | Limited by webhook + your venue |
+| 24/7 operation | Yes | Yes (if publisher trades 24/7) |
+| Risk control | What you coded | What the platform's audit layer does |
+| Explainability | Code is visible | Publisher's reasoning is opaque |
+| Skill required to set up | High | Low |
+| What you're paying for | Code that runs | Someone else's judgment |
+
+The headline split: **bots execute logic, copy trading executes
+judgment**. Logic is more reliable but worse at adapting. Judgment
+is better at adapting but unreliable.
+
+## The three questions that decide
+
+When users ask us "should I run a bot or copy trade," the
+answer almost always reduces to three questions.
+
+**1. Do you have a thesis about the market, or do you trust
+someone who does?**
+
+If you have a thesis ("ETH grinds sideways for 6 months, I want
+to harvest the chop"), a bot is the right tool. You're encoding
+the thesis into rules.
+
+If you don't have a thesis but know a trader you trust, copy
+trading is the right tool. You're delegating the thesis.
+
+If you have neither — no thesis, no trusted trader — neither
+tool will save you. Don't pick the third option of "buy and
+hold something I read about on Twitter."
+
+**2. What happens when the market regime changes?**
+
+Bots break silently when regimes change. A grid bot in a
+suddenly-trending market bleeds money on every cycle. A
+trend-follower in a chop market bleeds on whipsaws. *You* have
+to notice and pause it.
+
+Copy trading adapts as fast as the publisher does — which can
+be too fast (they pivot to a strategy they haven't validated)
+or just right. The audit layer is what protects you when
+they're too fast.
+
+If you're not going to monitor your account daily, copy trading
+with a hard risk envelope handles regime changes better than a
+set-and-forget bot.
+
+**3. How much do you care why the trade happened?**
+
+A bot can tell you why every trade fired — it's in the code.
+
+Copy trading often can't. Most publishers don't write
+explainers. You see "long ETH 5x" appear on your account and
+that's it.
+
+If you want to learn from your trades — understand patterns,
+build intuition — bots are the better classroom. If you just
+want exposure to better-than-yours decision-making and don't
+care to study it, copy trading is fine.
+
+## When to combine them
+
+The interesting move that retail traders are increasingly
+making in 2026: **bot for the base layer, copy trading for the
+alpha layer.**
+
+Run a DCA bot on BTC and ETH for the boring exposure. Allocate
+10–25% of capital to copy traders for the active component. Set
+hard risk caps on the copy-trading bucket so a bad publisher
+can't take down the whole portfolio.
+
+This works because the two layers fail differently. A DCA bot's
+worst day is a market crash, which it converts into average-
+cost-down. A copy trader's worst day is a revenge-trade
+sequence, which the bot can't help with — but which an AI risk
+firewall can intercept.
+
+The portfolio-management layer (see [AI portfolio management
+for crypto](/blog/ai-portfolio-management-crypto)) is what ties
+the two halves together: one risk envelope governing both
+buckets, one rebalancing schedule, one explanation surface.
+
+## The honest pitch for each
+
+**Pick a bot if:** you have or want to develop a clear market
+thesis, you'll review the strategy at least monthly, you want
+to understand why every trade fires, and you're comfortable with
+the bot doing the same thing in a regime change as it does now.
+
+**Pick copy trading if:** you don't want to develop a thesis,
+you trust the audit infrastructure of the platform you'd be
+copying on, you want exposure to active decision-making without
+making decisions yourself, and you're willing to diversify across
+3–5 publishers rather than betting everything on one star
+trader.
+
+**Pick both if:** you want a base layer that runs forever and
+an active layer that adapts. This is the right answer for
+most $5K–$50K retail portfolios in 2026.
+
+The wrong answer in all cases is "neither, I'll just trade
+manually when I have time." That's the strategy that pays for
+everyone else's bots.
+
+---
+
+*BottomUP supports both trading bots (via OKX exchange's bot
+infrastructure) and AI-audited copy trading. The Foxy AI risk
+firewall sits in front of all copy-traded signals. Past
+performance is not indicative of future results. Crypto
+trading carries a high risk of total loss.*

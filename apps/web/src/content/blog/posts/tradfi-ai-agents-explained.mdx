@@ -1,0 +1,178 @@
+**TradFi AI agents** — autonomous AI software that takes
+trading actions on traditional finance rails like equities, FX,
+and commodities — went from research demos to live products
+between 2024 and 2026. This isn't quite the same story as crypto
+AI agents. The infrastructure is different, the regulators are
+much closer, and the failure modes are louder when they happen.
+
+This post maps where TradFi AI agents actually work today, who's
+building them, and the bright lines regulators have drawn that
+shape what's possible.
+
+## What "TradFi AI agent" means in 2026
+
+The phrase covers three different products that sometimes get
+collapsed together:
+
+**1. Buy-side execution agents.** Software that takes a target
+position from a portfolio manager ("buy 200,000 shares of MSFT
+over the day") and decides how to slice and route the order to
+minimize market impact. These have existed since the 2000s as
+"smart order routers" — what's new in 2026 is that the slicing
+logic is learned, not hand-coded, and adapts to intraday
+liquidity in a way that smart routing alone never did.
+
+**2. Sell-side market-making agents.** Software running on
+broker-dealer balance sheets that quotes bids and offers in
+listed instruments and adjusts the quotes faster than any human
+desk. This space has been algorithmic for 15 years. The 2026
+shift is that the inventory-risk model is now an LLM-derived
+agent that reads news in real time and adjusts spread in
+response — not just based on order-flow features.
+
+**3. Retail-facing portfolio agents.** Software that manages
+ordinary users' brokerage accounts: rebalancing, tax-loss
+harvesting, dividend reinvestment, sometimes outright stock
+selection. This is the part the public mostly sees. Wealthfront
+and Betterment built version 1.0 of this category between 2014
+and 2020. The 2026 wave is more autonomous — agents that can
+take a verbal instruction ("set me up for retirement in 25
+years, moderately aggressive") and translate it into ongoing
+allocation decisions.
+
+The first two categories are where the money is. The third is
+where the regulatory pressure is.
+
+## Who's actually building this
+
+A short, intentionally non-exhaustive map of what's live in
+2026:
+
+**Major banks** (Goldman, JPMorgan, Morgan Stanley) ship
+internal-only execution agents on their dark pools and ATSs.
+These are not products you can buy — they're competitive
+advantage, used to attract institutional flow.
+
+**Hedge funds** (Two Sigma, Renaissance, Citadel, AQR) operate
+agent-driven trading at scale. They don't disclose architecture.
+The public knows it works because the funds keep producing
+returns; the *how* stays inside.
+
+**Independent fintech** has the more interesting layer for
+retail observers. Public Investing rolled out an AI portfolio
+copilot in 2025. Robinhood added "Cortex" agents in 2026.
+Interactive Brokers shipped IBot Agent for orders-by-natural-
+language. Schwab acquired Wealthfront-derived AI tooling in late
+2025.
+
+**Crypto-native crossover** is where it gets messy. Several
+exchanges are spinning up "TradFi onramp" products that route
+US equity orders through prime broker partnerships. The agent
+sits on the crypto exchange UI; the order touches a prime-
+broker pipe at execution. From the user's perspective it's all
+one app. From the regulator's perspective it's a different
+thing entirely.
+
+## Why TradFi is harder than crypto for AI agents
+
+Crypto agents have a few structural advantages that make
+products move faster:
+
+- **24/7 markets** — agents can be tested live without
+  pre-market windows.
+- **Direct API access to spot venues** — no intermediation by
+  registered broker-dealers.
+- **Permissionless deployment** — anyone can build, deploy, and
+  ship a product.
+
+TradFi takes those advantages away:
+
+- **Venue hours** are 9:30–16:00 ET for US equities, plus
+  pre/post-market with thin liquidity. Agents either trade
+  inside that window or have to handle "market reopens at 9:30
+  with a gap" gracefully.
+- **Order routing** goes through registered broker-dealers, who
+  have fiduciary duties under Reg BI and best-execution
+  obligations. An AI agent can't ignore those duties just
+  because the agent is making the decision.
+- **Recordkeeping** under SEC Rule 17a-4 means every order, every
+  intent, every model output may have to be reproducible from
+  WORM-storage records for years.
+- **Marketing** is heavily regulated. "AI that picks winners"
+  is a compliance problem; "AI that helps you stick to your
+  plan" usually isn't.
+
+The result is that TradFi AI agent products are slower to ship
+but harder to dislodge once they exist. The crypto-native
+playbook of "ship, see what users want, iterate" doesn't work
+when shipping requires Form ADV updates and FINRA review.
+
+## What regulators are pushing on
+
+Three things to watch:
+
+**1. SEC's predictive-data-analytics rule.** The 2023 proposed
+rule on predictive data analytics by broker-dealers and
+investment advisers — controversial, repeatedly delayed, still
+under negotiation as of 2026 — would require firms to identify
+and eliminate conflicts of interest where AI models are tuned to
+favor the firm over the customer. Whatever the final form,
+firms operating retail-facing AI agents are pre-emptively
+documenting their training objectives so they can defend them
+later.
+
+**2. CFTC on autonomous derivative agents.** The CFTC has been
+clearer than the SEC about expecting human-in-the-loop oversight
+for any agent trading futures or swaps on US persons' behalf.
+"Fully autonomous" is something firms describe in marketing but
+do not actually claim in their compliance filings.
+
+**3. EU AI Act, high-risk classification.** Under the AI Act,
+financial services AI is presumptively high-risk, which means
+documentation, transparency, and human oversight requirements.
+Anything trading EU residents' accounts has to comply by the
+phased deadlines through 2026–2027.
+
+The practical effect: TradFi AI products that work are usually
+*assistive* (the human approves) rather than *autonomous*. The
+language is sometimes the opposite in marketing copy. Read the
+disclosures carefully.
+
+## What this means for retail
+
+Three honest implications:
+
+**Pick TradFi AI products where the AI is the explanation
+layer, not the decision layer.** "Tell me why my portfolio
+underperformed this quarter" is a low-risk, high-value AI
+application. "Pick my next stock" is a high-risk, low-value
+one — even if the AI is good, regulatory friction means the
+product has to constantly second-guess itself, and you get a
+worse experience.
+
+**Don't expect the same speed of innovation as crypto.** The
+gap between research breakthrough and shipped TradFi product
+is measured in years, not weeks. If you want to use the AI
+research that came out last quarter, the crypto path will let
+you do that; the TradFi path will not.
+
+**Watch the cross-rail products carefully.** Crypto exchanges
+adding TradFi rails (or vice versa) are the most likely place
+for compliance surprises. The user experience can hide which
+regulator's regime you're in. Read the disclosures. Know whose
+rules apply when something goes wrong.
+
+The honest summary: TradFi AI agents are real, working, and
+moving capital, but the products you can use as a retail user
+are mostly assistive. Fully-autonomous TradFi agents trading on
+your behalf — with no human approval, no compliance brake — are
+not a thing yet, and probably won't be for at least another
+regulatory cycle.
+
+---
+
+*BottomUP focuses on crypto copy trading with the
+[Foxy AI risk firewall](/blog/foxy-ai-risk-firewall-how-it-works).
+We do not currently offer TradFi AI agent products. This post
+is a market overview, not investment advice. Past performance
+is not indicative of future results.*

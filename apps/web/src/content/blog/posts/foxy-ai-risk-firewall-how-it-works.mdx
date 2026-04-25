@@ -1,0 +1,190 @@
+An **AI risk firewall** is a piece of infrastructure that sits
+between a copy-trading publisher and your wallet. Every signal
+the publisher sends gets scored against an independent risk
+model *before* it executes on your account. Bad signals get
+blocked. Good ones pass through.
+
+This sounds like a small thing. In practice it's the difference
+between modern copy trading and the 2010-era version, where the
+publisher's worst day was also your worst day.
+
+This post walks through how Foxy AI — BottomUP's risk firewall —
+actually works: what data it reads, how the score is built, and
+what gets blocked vs. what passes through.
+
+## Why the firewall exists
+
+The classic copy-trading failure mode is the **revenge trade**.
+A publisher takes a loss, gets emotional, doubles their position
+size on the next entry. If you copy them at 1×, your account
+takes the doubled loss too. The mirror is faithful — that's the
+problem.
+
+Three failure modes show up over and over in post-mortems:
+
+- **Revenge trades** — emotional response to a recent loss
+- **Leverage drift** — trader quietly moves from 3× to 20×
+- **Strategy abandonment** — momentum trader silently switches
+  to mean-reversion mid-month
+
+A 2010-era platform mirrors all three. An AI risk firewall is
+designed to catch all three before execution. (For context on
+the broader copy-trading category, see
+[what is auto copy trading](/blog/what-is-auto-copy-trading).)
+
+## The architecture in one diagram
+
+```
+publisher account   →   signal webhook   →   Foxy AI audit   →   your account
+   (OKX/Bybit)         (1-3ms latency)      (~800ms scoring)      (order routes)
+                                                  │
+                                                  ▼
+                                          BLOCK if score < threshold
+                                          (your envelope, your call)
+```
+
+The audit is a synchronous gate. The signal does not reach your
+account until Foxy AI has scored it. If the score is below your
+declared threshold, the signal is logged but not executed.
+
+## What Foxy AI reads
+
+The score is a weighted aggregate of about 12 inputs. The five
+that matter most:
+
+**1. Order-book depth.** Foxy AI pulls L2 from CoinGlass and
+the venue's own API. If the proposed entry size is more than
+~2% of immediate liquidity, the trade gets a slippage penalty.
+This is what blocks "size 3× normal" entries that signal
+desperation.
+
+**2. Funding rates.** Perp funding tells you what the rest of
+the market is doing. A long position taken at -150% funding is
+*paying* the shorts every 8 hours. If the publisher is on the
+wrong side of crowded flow, the score reflects it.
+
+**3. Publisher pattern match.** Each publisher has a baseline
+in Foxy AI's model — typical position size, typical leverage,
+typical hold time, typical entry vs. recent price. Signals that
+deviate >2σ from the publisher's own baseline get flagged. This
+is what catches revenge trades and leverage drift.
+
+**4. News and sentiment.** A real-time scan of the last 30
+minutes of news for the asset and its sector. Signals that
+fight known news flow are penalized. (Long ETH 30 minutes after
+a known L2 exploit gets a penalty.)
+
+**5. Whale flow.** Large positions opened on Hyperliquid and
+the major venues are tracked separately. If retail signal X is
+moving the opposite direction from concentrated whale flow,
+that's a yellow flag — not blocking on its own, but
+contributing to the aggregate.
+
+The remaining inputs (volatility regime, FOMC/CPI proximity,
+asset correlation in the user's existing portfolio, time-of-day
+liquidity, etc.) refine the score but rarely flip the
+decision.
+
+## What the score actually looks like
+
+Foxy AI returns a 0–100 score per signal, plus a small JSON
+payload with the contributing factors:
+
+```json
+{
+  "score": 72,
+  "decision": "ALLOW",
+  "factors": [
+    { "name": "publisher_pattern", "weight": 0.30, "value": 0.85 },
+    { "name": "orderbook_depth", "weight": 0.20, "value": 0.78 },
+    { "name": "funding_rate", "weight": 0.15, "value": 0.65 },
+    { "name": "news_sentiment", "weight": 0.15, "value": 0.70 },
+    { "name": "whale_flow", "weight": 0.10, "value": 0.60 },
+    { "name": "other", "weight": 0.10, "value": 0.55 }
+  ]
+}
+```
+
+The decision isn't binary. It's a number compared against the
+threshold *you* set. Conservative users run at 65; aggressive
+users run at 40. The default for new accounts is 50.
+
+A trade scoring 28/100 is not "the AI thinks this trade will
+lose money." It's "the AI sees enough red flags that this
+doesn't pass our risk envelope at the threshold the user set."
+Many of those blocked trades will print profit. The firewall is
+about *risk-adjusted* return, not absolute return — see also
+[AI portfolio management for crypto](/blog/ai-portfolio-management-crypto).
+
+## Worked example: the 03:00 GMT revenge trade
+
+A real pattern Foxy AI was designed to catch.
+
+A publisher opens a 5× long ETH at 02:40 GMT. Stop hits at
+02:55. Twelve minutes later — 03:07 GMT — they open a new
+position: 25× long ETH, position size 4× their normal.
+
+**What 2010-era copy trading does.** Mirrors the trade. Your
+account is now 25× long ETH at 4× normal size, taken in
+illiquid Asian-session hours, by a publisher who just took a
+loss.
+
+**What Foxy AI does.** Three flags fire:
+
+- Publisher pattern: position size 4× baseline, leverage 5×
+  baseline → 0.20 (very abnormal)
+- Time-of-day liquidity: 03:00 GMT is the thinnest hour →
+  0.45
+- Recency to prior loss: 12 minutes → 0.30 (revenge-trade
+  signal)
+
+Aggregate score: 31/100. At the default threshold of 50, the
+trade is blocked. Logged for the publisher's record. Your
+account stays flat. The publisher's next trade — taken hours
+later, at normal size — passes the audit normally.
+
+This is the boring, quiet, valuable thing the firewall does.
+
+## What it does *not* do
+
+Three honest limitations:
+
+**It doesn't predict winners.** Foxy AI is calibrated against
+risk patterns, not return patterns. Many of its blocked trades
+would have been profitable. The product is designed to reduce
+catastrophic loss, not maximize upside.
+
+**It doesn't catch coordinated publisher fraud.** If a
+publisher has been running a normal-looking pattern for three
+months specifically to build a low risk score and then makes one
+big anomalous bet, the system flags the anomaly — but only on
+the *anomalous* trade. It doesn't detect long-game manipulation.
+
+**It doesn't replace your risk envelope.** Foxy AI is *one*
+gate. You still need to set max-drawdown, max-leverage, and
+max-position-size caps on your own account. The firewall and
+the envelope work together: the firewall scores individual
+signals; the envelope caps aggregate exposure.
+
+## How to think about it
+
+The mental model that works for users: Foxy AI is a *bouncer*,
+not a fortune teller. It looks at the trade walking in the
+door and decides whether it's the kind of thing that should be
+walking in. Sometimes the bouncer is wrong and turns away
+someone fine. Sometimes a bad actor slips through. On
+aggregate, the bar with the bouncer is a better place to be
+than the bar without.
+
+If you're considering copy trading and the platform doesn't
+have a firewall — even a less sophisticated one — you are the
+last line of defense. That works fine when you're at your phone.
+It works less well at 03:00 GMT.
+
+---
+
+*BottomUP is a Delaware-incorporated copy-trading marketplace.
+Foxy AI is BottomUP's risk firewall. Copy-trading functionality
+is not currently offered to U.S. persons. Past performance is
+not indicative of future results. Crypto trading carries a high
+risk of total loss.*

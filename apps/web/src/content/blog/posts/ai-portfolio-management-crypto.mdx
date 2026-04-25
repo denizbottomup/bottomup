@@ -1,0 +1,166 @@
+**AI portfolio management** for crypto used to mean a chatbot that
+told you to "buy the dip." In 2026 it means something more
+specific: an autonomous agent that watches your portfolio in
+real time, evaluates risk against an independent model, and
+acts — rebalancing, hedging, or freezing trades — without
+waking you up.
+
+The shift happened quietly between 2024 and 2026. The crypto
+audience stopped wanting "AI insights" and started wanting "AI
+that actually does things." This post walks through what
+production-grade AI portfolio management looks like today, what
+parts work, and what parts are still vapor.
+
+## What AI portfolio management actually does
+
+Strip away the marketing and there are four jobs:
+
+**1. Continuous risk audit.** The agent reads every position
+you hold and scores it against current market conditions —
+order-book depth, funding rates, news sentiment, on-chain flow.
+Positions that exceed your declared risk envelope get flagged
+or auto-reduced. This is the boring, valuable layer.
+
+**2. Signal evaluation.** When a copy-traded signal arrives, or
+a bot wants to open a position, the AI runs an independent
+check. Does the trade match the publisher's historical pattern?
+Is leverage drifting upward? Is the asset trading at an
+unusual spread? A 0–100 score gates execution.
+
+**3. Rebalancing.** Drift between target weights and actual
+holdings is corrected on a schedule (daily, weekly) or on a
+threshold (rebalance when any position drifts >15% from
+target). The AI handles tax-aware order routing on chains
+where that matters.
+
+**4. Reporting.** Plain-English explanations of what the
+portfolio did, why, and what changed. This is where
+[Bup.AI](/) lives — you ask "why did you sell my SOL position
+yesterday" and get a paragraph instead of a chart.
+
+Notice what's not on the list: picking winners. Modern AI
+portfolio managers do not try to predict next week's BTC price.
+They optimize the *risk* side of the equation while the user
+(or a copied trader, or a bot) handles the *return* side.
+
+## How the audit works under the hood
+
+The interesting part is signal evaluation, because it's the
+piece that didn't exist in 2022-era products.
+
+A signal arrives — say, "long ETH at $3,420, stop $3,350,
+target $3,580." The audit pipeline runs in roughly 800ms:
+
+1. **Fundamentals check.** Is there a known event in the next 6
+   hours? FOMC, CPI, major protocol upgrade? Signals that fight
+   scheduled volatility get penalized.
+2. **Order-book depth.** The agent pulls L2 from CoinGlass and
+   the venue's own API. If the proposed entry size is >2% of
+   immediate liquidity, it's a slippage risk and gets scored
+   down.
+3. **Publisher pattern match.** Does this signal look like the
+   publisher's normal output, or is it 4× their average size?
+   Anomalies get flagged.
+4. **Cross-asset correlation.** If the user already has 3 long
+   positions on ETH-correlated assets, taking a fourth is just
+   leverage on the same bet. Score reduced.
+5. **News + sentiment.** A breaking-news scan over the last 30
+   minutes for the asset and its sector. Signals that contradict
+   strong news flow are flagged.
+
+The output is a single number. Above the user's threshold, the
+trade routes. Below, it's blocked and logged. The user never
+has to be at their phone for any of it.
+
+## Why this matters for retail
+
+The retail trader's hardest problem is not finding signals —
+they're free, everywhere, of varying quality. The hard problem
+is *not getting drawn into the bad ones*. Discipline degrades
+under fatigue, FOMO, and revenge-trade urges. AI portfolio
+management converts discipline from a willpower problem into a
+software problem.
+
+A useful frame: AI portfolio management is to retail trading
+what an automatic transmission was to driving. You can still
+choose where to go. You're just not deciding when to shift
+gears anymore.
+
+The trade-off is that the AI's risk model becomes load-bearing.
+A lazy or overfit model will block too many good trades, or
+miss the ones that matter. This is why the only AI portfolio
+management products worth using are the ones that publish what
+their model actually does (see the [Foxy AI risk firewall
+explainer](/blog/foxy-ai-risk-firewall-how-it-works) for one
+example) — not the ones that say "proprietary AI."
+
+## What still doesn't work
+
+Three honest limitations:
+
+**Tail-risk events.** Models trained on the last 5 years
+haven't seen a 2008-style cascade. The risk firewall is
+calibrated against the data it has, and the data has a
+survivorship bias toward continued markets.
+
+**Regime detection.** AI agents are good at flagging anomalies
+within a regime — they're worse at detecting that the regime
+itself has shifted. The 2022 Terra collapse was a regime change
+that propagated faster than most agents could re-calibrate.
+
+**Asset coverage.** Most production AI risk models cover the
+top 50–100 crypto assets well. Going deeper into the long tail
+means thinner data, weaker signals, and more false flags. If
+you're trading micro-caps, a 2026 AI agent is much less helpful
+than it is for ETH or SOL.
+
+## How to evaluate an AI portfolio manager
+
+Six questions. Most products fail at least one.
+
+1. **Does it run continuously, or only when you open the app?**
+   The right answer is server-side, 24/7, with push
+   notifications.
+2. **What's the audit latency?** Sub-second per signal. If it's
+   slower, you're getting filled at worse prices than the
+   source trader.
+3. **Can you see the score?** A trade that gets blocked should
+   show *why* — a numeric score and the contributing factors.
+4. **Is the risk envelope hard or soft?** Hard means the AI
+   *cannot* exceed your declared limits, even if a publisher
+   tries to. Soft means "we'll suggest." Hard is what you want.
+5. **Does it explain itself?** When the agent rebalances or
+   blocks something, you should be able to ask why and get a
+   human-readable answer. Black-box models that refuse to
+   explain are an unmanaged risk.
+6. **What happens during exchange downtime?** A good agent
+   degrades gracefully — pausing position changes, surfacing the
+   incident, not auto-cancelling working orders that may
+   re-fill at bad prices.
+
+## Where this is going
+
+The roadmap most platforms are building toward in 2026 is
+**multi-account orchestration**: an AI that manages a portfolio
+spread across copy-traded accounts, in-house bots, and manual
+positions, and treats them as one unified risk surface. Today
+most platforms isolate copy trading from spot from
+algorithmic — the unified-surface model is the obvious next
+step and the one or two products getting it right will pull
+significant ahead.
+
+For now, the practical advice for retail is unglamorous. Set
+your envelope. Pick an AI manager that publishes its model.
+Watch what it blocks for the first month and see if you'd have
+made the same calls. If it disagrees with you in ways you can't
+defend, that's the value — not the times it agrees.
+
+---
+
+*BottomUP is a Delaware-incorporated copy-trading marketplace
+with the Foxy AI risk firewall in front of every signal. AI
+portfolio management features described here include
+[the Foxy AI audit](/blog/foxy-ai-risk-firewall-how-it-works)
+and Bup.AI explanation agent. Past performance is not
+indicative of future results. Crypto trading carries a high
+risk of total loss.*

@@ -1,4 +1,5 @@
 import type { MetadataRoute } from 'next';
+import { POSTS } from '@/content/blog';
 import { LOCALES } from '@/lib/locale-config';
 
 const BASE = 'https://bottomup.app';
@@ -31,5 +32,21 @@ export default function sitemap(): MetadataRoute.Sitemap {
     alternates: { languages },
   }));
 
-  return landingEntries;
+  const blogIndex: MetadataRoute.Sitemap = [
+    {
+      url: `${BASE}/blog`,
+      lastModified: now,
+      changeFrequency: 'weekly',
+      priority: 0.8,
+    },
+  ];
+
+  const blogPosts: MetadataRoute.Sitemap = POSTS.map((p) => ({
+    url: `${BASE}/blog/${p.slug}`,
+    lastModified: new Date(p.modified ?? p.date),
+    changeFrequency: 'monthly',
+    priority: 0.7,
+  }));
+
+  return [...landingEntries, ...blogIndex, ...blogPosts];
 }

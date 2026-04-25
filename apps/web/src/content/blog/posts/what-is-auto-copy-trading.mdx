@@ -1,0 +1,164 @@
+**Auto copy trading** is the practice of automatically mirroring the
+trades of another account — a professional trader, an algorithmic
+bot, or an AI agent — directly inside your own brokerage or
+exchange wallet, with no manual click required. When the source
+account opens a position, your account opens the same position. When
+they close, you close. The whole point is that you do not have to
+watch the screen.
+
+It sounds simple, and the surface mechanic is. The interesting
+question — the one that decides whether copy trading actually works
+out for you — is everything *around* the mirror: who you copy, on
+what venue, with what risk controls, and what happens when the
+person you trust has a bad day.
+
+## How auto copy trading works, step by step
+
+The basic flow is the same on every modern platform:
+
+1. **You connect a brokerage or exchange account** — an OKX, Bybit,
+   Binance, eToro, or NAGA account, depending on the platform — via
+   a read-and-trade API key. The platform never sees your
+   withdrawal permission, so worst-case it can't drain your funds.
+2. **You browse a marketplace of source accounts.** Each one
+   publishes a verified P&L curve, a win rate, a maximum drawdown,
+   and usually a per-trade size scaling factor.
+3. **You subscribe and pick a copy ratio** — say, 1× (mirror trade
+   size 1:1 in dollars) or fractional (mirror at 0.25× their
+   position size, capped at $X risk per trade).
+4. **The platform's worker watches the source account** for new
+   orders. When one opens, it submits the same order on your
+   account using your API key.
+5. **Risk constraints apply on top.** Most modern platforms let you
+   set hard limits — max drawdown, max leverage, max concurrent
+   open positions. If a copied trade would breach a limit, it's
+   skipped or scaled down.
+
+The five steps are platform-agnostic. Where copy trading platforms
+differ is what they do *between* steps 4 and 5. That's the part
+worth thinking about.
+
+## What can go wrong
+
+Auto copy trading inherits every pathology of the trader you copy.
+The platform mirrors faithfully, which is a feature when the trader
+is having a good day and a bug when they aren't.
+
+The three failure modes that come up over and over in the post-
+mortems on /r/CryptoCurrency and Bybit's own forums:
+
+**Revenge trading.** A trader takes a loss, doubles their position
+size on the next entry to "win it back," and gets stopped out a
+second time. If you're copying them at 1×, you take that doubled
+loss too. Most platforms will not detect this — to the order book,
+the second entry looks indistinguishable from a normal one.
+
+**Leverage drift.** A trader who normally swings 3× starts using
+20× because their last week was good. Their absolute return scales
+with leverage, so for a while their stats look great. When the
+inevitable reversion hits, the drawdown is also leveraged.
+
+**Strategy abandonment.** A momentum trader's edge stops working
+because the regime shifted. They switch to mean-reversion mid-month
+without telling subscribers. Their next 30 days look like
+randomness because they're trading a strategy they haven't
+validated, on a venue that doesn't care.
+
+The mirror copies all of it.
+
+## What to look for in a 2026 copy-trading platform
+
+The first generation of copy-trading platforms — eToro 2010, ZuluTrade
+2007, Bybit Copy Trading 2022 — solved step 4. They built reliable
+order-mirroring workers. The second generation, which is what
+matters in 2026, is solving the *between-step* problem.
+
+Three features to insist on:
+
+**1. An audit layer in front of the mirror.** A platform that scores
+every signal coming out of the source account against an
+independent model and blocks the trade if the score is bad. Foxy AI
+on BottomUP is one example: it reads order-book depth, news,
+fundamentals, and the publisher's own historical risk pattern, then
+returns a 0–100 score. Trades scoring below your threshold don't
+execute, no matter who sent them.
+
+**2. A risk envelope that travels with you, not the trader.** Set
+max drawdown / max leverage / max position size on *your* account.
+The platform enforces them as a hard ceiling. The trader can do
+whatever they want; you cap the damage.
+
+**3. Verified, not screenshot-based, P&L.** First-generation
+platforms display screenshots of the trader's claimed trades.
+Verified means the platform sees the trader's account directly and
+publishes the live equity curve. If you can't see "this number
+came from a connected exchange API," assume it's marketing.
+
+A useful test when evaluating a platform: ask what happens when a
+trader you copy makes a 50× leveraged revenge trade at 03:00 GMT.
+If the answer is "you take the loss," you're looking at a 2010-era
+copy trading product. If the answer is "the audit blocks it before
+execution," you're looking at one built for 2026.
+
+## Auto copy trading vs. manual signal services
+
+A signal service sends you a Telegram message with an entry, stop,
+and target. You read it and decide whether to take the trade. Auto
+copy trading skips the read step.
+
+Three trade-offs:
+
+| | Manual signals | Auto copy |
+| --- | --- | --- |
+| Speed | Lossy (you have to be at your phone) | Real-time |
+| Selection | You can skip bad calls | The mirror takes everything |
+| Slippage | You enter late, get worse fills | Worker enters near source price |
+| Discipline cost | High — you'll second-guess | Low — automation handles it |
+
+For most retail accounts, auto copy is the right answer **if and
+only if** there's an audit layer in front of it. Without the audit,
+you're just delegating discipline to someone who may not have any.
+
+## Who copy trading is and isn't for
+
+It's for retail traders who:
+
+- Have $1K–$50K to allocate
+- Do not have time to monitor markets full-time
+- Understand they are paying for *risk-adjusted* return, not
+  absolute return
+- Treat copy trading like a fund: diversify across 3–5 source
+  accounts, not all-in on one
+
+It's not for:
+
+- People looking for "guaranteed returns" — these don't exist.
+- High-net-worth managed accounts — at $100K+ a separately managed
+  account makes more sense.
+- Anyone in jurisdictions where the underlying exchange doesn't
+  serve retail (US persons can't currently copy-trade on OKX, for
+  example).
+
+## The 30-second test
+
+Before subscribing to any copy trader, ask three questions:
+
+1. **What's their max drawdown over the last 12 months?** If it's
+   over 40% they're either lucky or about to teach you what
+   reversion to the mean feels like.
+2. **How is their P&L verified?** A linked exchange API is the
+   only acceptable answer.
+3. **What audit layer sits between their orders and your wallet?**
+   "None" is a worse answer than people realise.
+
+If the platform answers those three honestly, auto copy trading
+can be a meaningful piece of a retail portfolio. If it can't,
+treat the marketplace as entertainment, not allocation.
+
+---
+
+*BottomUP is a Delaware-incorporated copy-trading marketplace with
+the Foxy AI risk firewall in front of every signal. Copy-trading
+functionality is not currently offered to U.S. persons. Past
+performance is not indicative of future results. Crypto trading
+carries a high risk of total loss.*
