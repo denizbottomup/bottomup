@@ -93,6 +93,12 @@ export const metadata: Metadata = {
     },
   },
   icons: { icon: '/icon.png' },
+  verification: {
+    other: {
+      // Bing Webmaster Tools site ownership verification.
+      'msvalidate.01': '970D91B67F55D795CC10BC42C0DA252D',
+    },
+  },
 };
 
 export default async function RootLayout({
