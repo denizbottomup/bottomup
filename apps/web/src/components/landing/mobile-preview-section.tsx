@@ -25,7 +25,7 @@ export function MobilePreviewSection() {
           </p>
         </div>
 
-        <ul className="mx-auto mt-10 grid max-w-3xl grid-cols-1 gap-3 text-sm text-fg md:grid-cols-2">
+        <ul className="mx-auto mt-10 grid max-w-2xl grid-cols-1 gap-3 text-sm text-fg sm:grid-cols-3">
           <li className="flex items-start gap-2 rounded-xl border border-border bg-bg-card/40 p-4">
             <Tick />
             <span>{t.mobile.bullet_push}</span>
@@ -37,10 +37,6 @@ export function MobilePreviewSection() {
           <li className="flex items-start gap-2 rounded-xl border border-border bg-bg-card/40 p-4">
             <Tick />
             <span>{t.mobile.bullet_copy}</span>
-          </li>
-          <li className="flex items-start gap-2 rounded-xl border border-border bg-bg-card/40 p-4">
-            <Tick />
-            <span>{t.mobile.bullet_sim}</span>
           </li>
         </ul>
 

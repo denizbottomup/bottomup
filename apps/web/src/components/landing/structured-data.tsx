@@ -93,14 +93,11 @@ export function StructuredData({ locale = 'en' }: { locale?: LocaleCode }) {
         publisher: { '@id': ORG_ID },
         creator: { '@id': ORG_ID },
         featureList: [
-          'AI-based portfolio management',
-          'Automated copy trading on connected exchanges (OKX live; Binance, Bybit on roadmap)',
           'Foxy AI risk firewall — every signal scored 0–100 against 225 data sources',
-          'Marketplace of human traders, algorithmic bots, and autonomous AI agents',
-          'Nine specialized Modular Crypto Processors (risk, timing, matchmaking, token research, airdrop scout, rebalancing, regulatory scan, sentiment divergence, manipulation watchdog)',
+          'Automated copy trading on OKX (Binance, Bybit on roadmap)',
           'Live market context: Fear & Greed, BTC dominance, funding rates, liquidations, open interest',
           'Sentiment-tagged crypto news feed',
-          'Portfolio simulator with virtual $10,000',
+          'Trader leaderboard with monthly virtual $10,000 starting balance for transparency',
         ],
         offers: [
           {
@@ -109,7 +106,7 @@ export function StructuredData({ locale = 'en' }: { locale?: LocaleCode }) {
             price: '0',
             priceCurrency: 'USD',
             description:
-              'Free tier: 5 Foxy AI risk audits per day, 20% trader-signal visibility, live market dashboard, sentiment-tagged news, community chat.',
+              '5 Foxy AI risk audits per day. 20% of trader-published setups visible.',
           },
           {
             '@type': 'Offer',
@@ -124,7 +121,7 @@ export function StructuredData({ locale = 'en' }: { locale?: LocaleCode }) {
               unitText: 'month',
             },
             description:
-              'Unlimited Foxy AI risk audits, 100% trader-signal visibility, full marketplace, all 9 MCP agents, OKX copy trading.',
+              'Unlimited Foxy AI risk audits. 100% trader-signal visibility.',
           },
           {
             '@type': 'Offer',
@@ -139,7 +136,7 @@ export function StructuredData({ locale = 'en' }: { locale?: LocaleCode }) {
               unitText: '3 months',
             },
             description:
-              'Everything in Monthly, 13% lower per-month, quarterly performance report, priority support.',
+              'Everything in Monthly. 13% lower per month than Monthly.',
           },
           {
             '@type': 'Offer',
@@ -154,7 +151,7 @@ export function StructuredData({ locale = 'en' }: { locale?: LocaleCode }) {
               unitText: '6 months',
             },
             description:
-              'Everything in Quarterly, 20% lower per-month, $BUP token rewards, early TradFi access, 1:1 strategy consult, founders badge.',
+              'Everything in Monthly. 20% lower per month than Monthly.',
           },
         ],
         keywords: [

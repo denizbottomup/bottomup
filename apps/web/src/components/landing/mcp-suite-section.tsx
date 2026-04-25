@@ -9,17 +9,22 @@ export function McpSuiteSection() {
   return (
     <section id="mcp" className="relative">
       <div className="mx-auto max-w-[1400px] px-4 py-14 md:px-8 md:py-20">
-        <header className="max-w-2xl">
-          <div className="text-[11px] uppercase tracking-[0.2em] text-brand">
-            {t.mcp.label}
+        <header className="flex max-w-3xl flex-wrap items-start justify-between gap-3">
+          <div className="max-w-2xl">
+            <div className="text-[11px] uppercase tracking-[0.2em] text-brand">
+              {t.mcp.label}
+            </div>
+            <h2 className="mt-1 text-3xl font-extrabold tracking-[-0.02em] md:text-5xl">
+              <span className="logo-gradient">{t.mcp.headline_1}</span>{' '}
+              {t.mcp.headline_2}
+            </h2>
+            <p className="mt-3 text-sm text-fg-muted md:text-base">
+              {t.mcp.subtitle}
+            </p>
           </div>
-          <h2 className="mt-1 text-3xl font-extrabold tracking-[-0.02em] md:text-5xl">
-            <span className="logo-gradient">{t.mcp.headline_1}</span>{' '}
-            {t.mcp.headline_2}
-          </h2>
-          <p className="mt-3 text-sm text-fg-muted md:text-base">
-            {t.mcp.subtitle}
-          </p>
+          <span className="rounded-full border border-brand/30 bg-brand/10 px-3 py-1 text-[11px] text-brand">
+            {t.mcp.coming_soon}
+          </span>
         </header>
 
         <div className="mt-10 grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">

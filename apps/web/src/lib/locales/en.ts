@@ -52,7 +52,6 @@ export const en: Dict = {
     bullet_push: 'Real-time push on every new setup',
     bullet_score: 'Foxy AI risk score on every card',
     bullet_copy: 'One-tap copy trade on connected OKX',
-    bullet_sim: 'Portfolio simulator with virtual $10,000',
   },
   ps: {
     label: 'The thesis',
@@ -100,7 +99,6 @@ export const en: Dict = {
       { title: 'Audit', body: 'Every incoming signal is intercepted and scored across 225 sources before execution.' },
       { title: 'Block', body: "Trades that breach your risk envelope are stopped at the firewall — not after the loss." },
       { title: 'Optimize', body: 'Entry/exit orders are tuned to reduce slippage and increase net P&L inside your wallet.' },
-      { title: 'Simulate', body: 'Build a portfolio, simulate team performance at live prices before committing real capital.' },
     ],
     signal_flow: 'Signal flow',
     trader_node: 'Trader / Bot / AI agent',
@@ -185,6 +183,7 @@ export const en: Dict = {
     headline_2: 'Modular Crypto Processors, working together.',
     subtitle:
       'Each MCP is a specialized AI agent that turns information chaos into actionable insight. They run continuously alongside Foxy — so your trades arrive pre-audited, pre-timed, and pre-matched to your strategy.',
+    coming_soon: 'Coming soon · Q2 2026',
     cards: [
       { title: 'Risk mitigation', body: 'Flags revenge trading, excessive leverage, and unsafe allocation sizes on every trader you follow — in real time.' },
       { title: 'Trade timing', body: 'Watches order-book depth, macro events (FOMC, CPI, ETF news), and historical slippage to recommend the best entry and exit window.' },
@@ -233,7 +232,7 @@ export const en: Dict = {
     headline_1: 'One blocked bad trade',
     headline_2: 'covers the year.',
     subtitle:
-      'Subscriptions unlock the marketplace, Foxy firewall, and the full MCP Suite. Individual shops subscribe via BottomUP Credits — creators earn 25% of revenue they generate.',
+      'Free is good for daily quick checks. Paid plans unlock unlimited Foxy AI risk audits and 100% visibility into every trader-published setup — only the commitment length differs between paid tiers.',
     most_popular: 'Most popular',
     billed_monthly: 'Billed monthly, renews',
     billed_upfront: '{total} billed upfront',
@@ -246,9 +245,6 @@ export const en: Dict = {
         features: [
           '5 Foxy AI risk audits per day',
           'See 20% of trader-published setups',
-          'Live market dashboard (Fear & Greed, BTC dominance, funding)',
-          'Sentiment-tagged crypto news feed',
-          'Community chat',
         ],
       },
       {
@@ -256,11 +252,6 @@ export const en: Dict = {
         features: [
           'Unlimited Foxy AI risk audits',
           '100% trader signal visibility',
-          'Full marketplace — human traders, bots, AI agents',
-          'All 9 MCP agents — full Suite',
-          'OKX copy trading — one-click execution',
-          'Portfolio simulator with virtual $10,000',
-          'Web + push notifications',
         ],
       },
       {
@@ -268,19 +259,13 @@ export const en: Dict = {
         features: [
           'Everything in Monthly',
           '13% lower per-month than Monthly',
-          'Quarterly performance report',
-          'Priority support',
         ],
       },
       {
         name: '6 Months',
         features: [
-          'Everything in 3 Months',
+          'Everything in Monthly',
           '20% lower per-month than Monthly',
-          '$BUP token rewards on trade volume',
-          'Early access to TradFi markets (Q1 2027)',
-          '1:1 strategy consult',
-          'Founders community badge',
         ],
       },
     ],

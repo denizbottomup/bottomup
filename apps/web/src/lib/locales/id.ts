@@ -52,7 +52,6 @@ export const id: Dict = {
     bullet_push: 'Push real-time setiap ada setup baru',
     bullet_score: 'Skor risiko Foxy AI di setiap kartu',
     bullet_copy: 'Copy trade satu sentuh via OKX terhubung',
-    bullet_sim: 'Simulator portofolio dengan $10.000 virtual',
   },
   ps: {
     label: 'Tesis kami',
@@ -100,7 +99,6 @@ export const id: Dict = {
       { title: 'Audit', body: 'Setiap sinyal yang masuk dicegat dan diberi skor di 225 sumber sebelum eksekusi.' },
       { title: 'Blokir', body: 'Trade yang melewati amplop risiko dihentikan di firewall — bukan setelah rugi.' },
       { title: 'Optimalkan', body: 'Order masuk/keluar disesuaikan untuk mengurangi slippage dan menaikkan P&L net.' },
-      { title: 'Simulasikan', body: 'Bangun portofolio, simulasikan performa tim pada harga live sebelum mempertaruhkan modal asli.' },
     ],
     signal_flow: 'Alur sinyal',
     trader_node: 'Trader / Bot / AI agent',
@@ -185,6 +183,7 @@ export const id: Dict = {
     headline_2: 'Modular Crypto Processors, bekerja bersama.',
     subtitle:
       'Setiap MCP adalah AI agent khusus yang mengubah kekacauan informasi menjadi insight. Jalan bersamaan dengan Foxy — trade-mu datang sudah diaudit, diukur waktunya, dan selaras dengan strategi.',
+    coming_soon: 'Segera hadir · Q2 2026',
     cards: [
       { title: 'Mitigasi risiko', body: 'Menandai revenge trading, leverage berlebihan, dan ukuran posisi tidak aman di setiap trader — real-time.' },
       { title: 'Timing trade', body: 'Mengawasi kedalaman order book, peristiwa makro (FOMC, CPI, ETF), dan slippage historis untuk merekomendasikan jendela terbaik.' },
@@ -233,7 +232,7 @@ export const id: Dict = {
     headline_1: 'Satu trade buruk yang diblokir',
     headline_2: 'menutupi setahun.',
     subtitle:
-      'Langganan membuka marketplace, firewall Foxy, dan seluruh MCP Suite. Toko individu dibayar dengan BottomUP Credits — creator mendapat 25% dari pendapatan yang mereka hasilkan.',
+      'Gratis cukup untuk pemeriksaan harian cepat. Paket berbayar membuka audit risiko Foxy AI tanpa batas dan visibilitas 100% setiap setup yang dipublikasikan trader — di antara paket berbayar yang berbeda hanya durasi komitmen.',
     most_popular: 'Paling populer',
     billed_monthly: 'Ditagih bulanan, diperpanjang',
     billed_upfront: '{total} dibayar di muka',
@@ -246,9 +245,6 @@ export const id: Dict = {
         features: [
           '5 audit risiko Foxy AI per hari',
           'Lihat 20% setup yang dipublikasikan trader',
-          'Dashboard pasar live (Fear & Greed, BTC dominance, funding)',
-          'Feed berita kripto bertanda sentimen',
-          'Chat komunitas',
         ],
       },
       {
@@ -256,11 +252,6 @@ export const id: Dict = {
         features: [
           'Audit risiko Foxy AI tanpa batas',
           'Visibilitas 100% sinyal trader',
-          'Marketplace lengkap — trader, bot, AI agent',
-          'MCP Suite — semua 9 AI agent',
-          'Copy trading OKX — eksekusi satu klik',
-          'Simulator portofolio dengan $10.000 virtual',
-          'Notifikasi web + push',
         ],
       },
       {
@@ -268,19 +259,13 @@ export const id: Dict = {
         features: [
           'Semua di Bulanan',
           '13% lebih murah per bulan dibanding Bulanan',
-          'Laporan performa kuartalan',
-          'Dukungan prioritas',
         ],
       },
       {
         name: '6 Bulan',
         features: [
-          'Semua di 3 Bulan',
+          'Semua di Bulanan',
           '20% lebih murah per bulan dibanding Bulanan',
-          'Reward $BUP dari volume trading',
-          'Akses awal ke pasar TradFi (Q1 2027)',
-          'Konsultasi strategi 1:1',
-          'Badge komunitas founders',
         ],
       },
     ],

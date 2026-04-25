@@ -52,7 +52,6 @@ export const zh: Dict = {
     bullet_push: '每个新 setup 都有实时推送',
     bullet_score: '每张卡片都有 Foxy AI 风险评分',
     bullet_copy: '已连接 OKX 时一键跟单',
-    bullet_sim: '$10,000 虚拟资金的投资组合模拟器',
   },
   ps: {
     label: '我们的论点',
@@ -100,7 +99,6 @@ export const zh: Dict = {
       { title: '审计', body: '每个进入的信号在执行前都被拦截并在 225 个来源中打分。' },
       { title: '拦截', body: '超出你的风险承受能力的交易在防火墙处停止 — 而非损失之后。' },
       { title: '优化', body: '入场/离场订单经过调整以减少滑点并提高净 P&L。' },
-      { title: '模拟', body: '建立投资组合,在实时价格下模拟团队表现,再承担真实资本风险。' },
     ],
     signal_flow: '信号流',
     trader_node: '交易员 / 机器人 / AI agent',
@@ -185,6 +183,7 @@ export const zh: Dict = {
     headline_2: 'Modular Crypto Processors,协同工作。',
     subtitle:
       '每个 MCP 都是专业的 AI agent,把信息混乱转化为可操作的洞察。与 Foxy 同步运行 — 你的交易到达时已经过审计、时机优化,并与你的策略匹配。',
+    coming_soon: '即将推出 · 2026 Q2',
     cards: [
       { title: '风险缓解', body: '实时标记你关注的每位交易员的报复性交易、过高杠杆和不安全仓位规模。' },
       { title: '交易时机', body: '观察订单簿深度、宏观事件(FOMC、CPI、ETF)和历史滑点,推荐最佳入场和离场窗口。' },
@@ -233,7 +232,7 @@ export const zh: Dict = {
     headline_1: '一笔被拦截的糟糕交易',
     headline_2: '就能覆盖一整年。',
     subtitle:
-      '订阅解锁市场、Foxy 防火墙和整个 MCP Suite。单个店铺通过 BottomUP Credits 订阅 — 创作者获得其产生收入的 25%。',
+      '免费版适合每日快速查看。付费计划解锁无限 Foxy AI 风险审核和 100% 交易员发布仓位的可见性 — 付费计划之间只是承诺时长不同。',
     most_popular: '最受欢迎',
     billed_monthly: '按月计费,续订',
     billed_upfront: '{total} 预付',
@@ -246,9 +245,6 @@ export const zh: Dict = {
         features: [
           '每天 5 次 Foxy AI 风险审核',
           '查看交易员发布的 20% 仓位',
-          '实时市场仪表板 (Fear & Greed、BTC dominance、funding)',
-          '带情绪标签的加密新闻 feed',
-          '社区聊天',
         ],
       },
       {
@@ -256,11 +252,6 @@ export const zh: Dict = {
         features: [
           '无限 Foxy AI 风险审核',
           '100% 交易员信号可见性',
-          '完整市场 — 人类交易员、机器人、AI agent',
-          'MCP Suite — 全部 9 个 AI agent',
-          'OKX 跟单 — 一键执行',
-          '$10,000 虚拟资金的投资组合模拟器',
-          'Web + push 通知',
         ],
       },
       {
@@ -268,19 +259,13 @@ export const zh: Dict = {
         features: [
           '月度计划的一切',
           '每月成本比月度便宜 13%',
-          '季度业绩报告',
-          '优先支持',
         ],
       },
       {
         name: '6 个月',
         features: [
-          '3 个月计划的一切',
+          '月度计划的一切',
           '每月成本比月度便宜 20%',
-          '交易量的 $BUP 代币奖励',
-          '抢先访问 TradFi 市场 (Q1 2027)',
-          '1:1 策略咨询',
-          '创始社区徽章',
         ],
       },
     ],

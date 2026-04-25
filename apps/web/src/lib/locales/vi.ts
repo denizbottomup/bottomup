@@ -52,7 +52,6 @@ export const vi: Dict = {
     bullet_push: 'Push thời gian thực cho mỗi setup mới',
     bullet_score: 'Điểm rủi ro Foxy AI trên mỗi thẻ',
     bullet_copy: 'Copy trade một chạm qua OKX',
-    bullet_sim: 'Mô phỏng danh mục với $10.000 ảo',
   },
   ps: {
     label: 'Luận điểm',
@@ -100,7 +99,6 @@ export const vi: Dict = {
       { title: 'Kiểm toán', body: 'Mọi tín hiệu bị chặn và chấm điểm trên 225 nguồn trước khi thực thi.' },
       { title: 'Chặn', body: 'Lệnh vượt ngưỡng rủi ro bị dừng ở firewall — trước khi lỗ.' },
       { title: 'Tối ưu', body: 'Lệnh vào/ra được điều chỉnh để giảm slippage và tăng P&L ròng.' },
-      { title: 'Mô phỏng', body: 'Xây danh mục, mô phỏng hiệu suất đội với giá trực tiếp trước khi cam kết vốn thật.' },
     ],
     signal_flow: 'Luồng tín hiệu',
     trader_node: 'Trader / Bot / AI agent',
@@ -185,6 +183,7 @@ export const vi: Dict = {
     headline_2: 'Modular Crypto Processors, cùng làm việc.',
     subtitle:
       'Mỗi MCP là một AI agent chuyên biệt biến hỗn loạn thông tin thành insight hữu ích. Chạy song song với Foxy — lệnh đến bạn đã được kiểm toán, định thời và khớp với chiến lược.',
+    coming_soon: 'Sắp ra mắt · Q2 2026',
     cards: [
       { title: 'Giảm rủi ro', body: 'Đánh dấu revenge trading, đòn bẩy quá mức và kích thước lệnh không an toàn ở mỗi trader — thời gian thực.' },
       { title: 'Timing lệnh', body: 'Theo dõi order book, sự kiện macro (FOMC, CPI, ETF) và slippage lịch sử để đề xuất cửa sổ tốt nhất.' },
@@ -233,7 +232,7 @@ export const vi: Dict = {
     headline_1: 'Một lệnh xấu bị chặn',
     headline_2: 'bù cả năm.',
     subtitle:
-      'Gói đăng ký mở marketplace, firewall Foxy và toàn bộ MCP Suite. Shop riêng dùng BottomUP Credits — creator nhận 25% doanh thu họ tạo.',
+      'Gói miễn phí đủ cho các lần kiểm tra nhanh hàng ngày. Các gói trả phí mở khóa kiểm duyệt rủi ro Foxy AI không giới hạn và 100% hiển thị mọi setup do trader công bố — giữa các gói trả phí chỉ khác nhau ở thời hạn cam kết.',
     most_popular: 'Phổ biến nhất',
     billed_monthly: 'Thanh toán hàng tháng, gia hạn',
     billed_upfront: '{total} trả trước',
@@ -246,9 +245,6 @@ export const vi: Dict = {
         features: [
           '5 lượt kiểm duyệt rủi ro Foxy AI mỗi ngày',
           'Xem 20% setup do trader công bố',
-          'Dashboard thị trường trực tiếp (Fear & Greed, BTC dominance, funding)',
-          'Feed tin tức crypto được gắn nhãn cảm xúc',
-          'Chat cộng đồng',
         ],
       },
       {
@@ -256,11 +252,6 @@ export const vi: Dict = {
         features: [
           'Kiểm duyệt rủi ro Foxy AI không giới hạn',
           'Xem 100% tín hiệu của trader',
-          'Marketplace đầy đủ — trader, bot, AI agent',
-          'MCP Suite — toàn bộ 9 agent AI',
-          'OKX copy trading — thực thi một chạm',
-          'Mô phỏng danh mục với $10.000 ảo',
-          'Thông báo web + push',
         ],
       },
       {
@@ -268,19 +259,13 @@ export const vi: Dict = {
         features: [
           'Toàn bộ gói Hàng tháng',
           'Rẻ hơn 13% mỗi tháng so với Hàng tháng',
-          'Báo cáo hiệu suất quý',
-          'Hỗ trợ ưu tiên',
         ],
       },
       {
         name: '6 tháng',
         features: [
-          'Toàn bộ gói 3 tháng',
+          'Toàn bộ gói Hàng tháng',
           'Rẻ hơn 20% mỗi tháng so với Hàng tháng',
-          'Thưởng $BUP theo volume giao dịch',
-          'Truy cập sớm thị trường TradFi (Q1 2027)',
-          'Tư vấn chiến lược 1:1',
-          'Huy hiệu cộng đồng founders',
         ],
       },
     ],

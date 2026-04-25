@@ -51,7 +51,6 @@ export interface Dict {
     bullet_push: string;
     bullet_score: string;
     bullet_copy: string;
-    bullet_sim: string;
   };
   ps: {
     label: string;
@@ -120,6 +119,8 @@ export interface Dict {
     headline_1: string;
     headline_2: string;
     subtitle: string;
+    /** "Coming soon" badge text shown next to the section header. */
+    coming_soon: string;
     cards: Array<{ title: string; body: string }>;
   };
   pulse: {

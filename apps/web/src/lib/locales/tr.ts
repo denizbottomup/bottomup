@@ -52,7 +52,6 @@ export const tr: Dict = {
     bullet_push: 'Her yeni setup’ta anında push bildirim',
     bullet_score: 'Her kartta Foxy AI risk skoru',
     bullet_copy: 'OKX bağlıyken tek dokunuşla kopya trade',
-    bullet_sim: '10.000$ sanal kasa ile portföy simülatörü',
   },
   ps: {
     label: 'Tezimiz',
@@ -100,7 +99,6 @@ export const tr: Dict = {
       { title: 'Denetle', body: 'Her gelen sinyal execution’dan önce 225 kaynakta yakalanır ve skorlanır.' },
       { title: 'Engelle', body: 'Risk zarfını aşan işlemler kayıp yaşanmadan firewall’da durdurulur.' },
       { title: 'Optimize et', body: 'Entry/exit emirleri slippage’ı azaltmak ve net P&L’i artırmak için ayarlanır.' },
-      { title: 'Simüle et', body: 'Portföyünü kur, takım performansını gerçek fiyatlarla dene — gerçek sermaye riski yok.' },
     ],
     signal_flow: 'Sinyal akışı',
     trader_node: 'Trader / Bot / AI agent',
@@ -185,6 +183,7 @@ export const tr: Dict = {
     headline_2: 'Modüler Crypto Processor, birlikte çalışır.',
     subtitle:
       'Her MCP, bilgi kaosunu eyleme dönüştüren uzman bir AI agent’tır. Foxy ile birlikte sürekli çalışırlar — işlemlerin denetlenmiş, zamanlamalı ve stratejine uygun gelir.',
+    coming_soon: 'Yakında · 2026 Q2',
     cards: [
       { title: 'Risk azaltma', body: 'Takip ettiğin her trader’da intikam trade, aşırı kaldıraç ve güvensiz pozisyon boyutlarını gerçek zamanlı işaretler.' },
       { title: 'İşlem zamanlaması', body: 'Order book derinliği, makro olaylar (FOMC, TÜFE, ETF haberleri) ve tarihsel slippage’ı izleyerek en iyi giriş/çıkış penceresini önerir.' },
@@ -233,7 +232,7 @@ export const tr: Dict = {
     headline_1: 'Engellenen bir kötü işlem',
     headline_2: 'yılı amorti eder.',
     subtitle:
-      'Abonelik; marketplace, Foxy firewall ve MCP Seti’nin tamamına erişim sağlar. Tekil mağazalar BottomUP Credits ile abone olunur — creator’lar ürettikleri gelirin %25’ini alır.',
+      'Ücretsiz plan günlük hızlı bakış için yeter. Ücretli planlar sınırsız Foxy AI risk denetimi ve trader’ların paylaştığı setup’ların %100’üne erişim açar — ücretli planlar arasındaki tek fark commitment süresi.',
     most_popular: 'En popüler',
     billed_monthly: 'Aylık faturalanır, yenilenir',
     billed_upfront: '{total} peşin',
@@ -246,9 +245,6 @@ export const tr: Dict = {
         features: [
           'Günde 5 Foxy AI risk denetimi',
           'Trader’ların paylaştığı setup’ların %20’si',
-          'Canlı piyasa panosu (Fear & Greed, BTC dominance, funding)',
-          'Sentiment etiketli kripto haber akışı',
-          'Topluluk sohbet',
         ],
       },
       {
@@ -256,11 +252,6 @@ export const tr: Dict = {
         features: [
           'Sınırsız Foxy AI risk denetimi',
           'Trader sinyallerinin %100’ü',
-          'Tam marketplace — trader, bot, AI agent',
-          'MCP Seti — 9 agent’ın tamamı',
-          'OKX kopya trade — tek tıkla execution',
-          '10.000$ sanal kasa portföy simülatörü',
-          'Web + push bildirim',
         ],
       },
       {
@@ -268,19 +259,13 @@ export const tr: Dict = {
         features: [
           'Aylık’taki her şey',
           'Aylık’a göre %13 daha düşük aylık maliyet',
-          'Çeyreklik performans raporu',
-          'Öncelikli destek',
         ],
       },
       {
         name: '6 Aylık',
         features: [
-          '3 Aylık’taki her şey',
+          'Aylık’taki her şey',
           'Aylık’a göre %20 daha düşük aylık maliyet',
-          'İşlem hacminden $BUP token ödülleri',
-          'TradFi piyasalarına erken erişim (Q1 2027)',
-          '1:1 strateji danışmanlığı',
-          'Kurucu topluluk rozeti',
         ],
       },
     ],
