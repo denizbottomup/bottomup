@@ -4,10 +4,20 @@ import { useT } from '@/lib/i18n';
 
 const MCP_ICONS = ['🛡', '⏱', '🧩', '🔬', '💎', '⚖', '⚠', '🎯', '🕵'];
 
+/**
+ * Light-theme MCP Suite section. Sandwiched between two dark sections
+ * (Leaderboard above, Pulse below), the white surround turns this
+ * into the second white "rest" in the section rhythm — same treatment
+ * as the Hero, so the alternation reads as a deliberate cadence
+ * rather than a one-off.
+ */
 export function McpSuiteSection() {
   const { t } = useT();
   return (
-    <section id="mcp" className="relative">
+    <section
+      id="mcp"
+      className="relative border-y border-zinc-200 bg-zinc-50 text-zinc-900"
+    >
       <div className="mx-auto max-w-[1400px] px-4 py-14 md:px-8 md:py-20">
         <header className="flex max-w-3xl flex-wrap items-start justify-between gap-3">
           <div className="max-w-2xl">
@@ -18,7 +28,7 @@ export function McpSuiteSection() {
               <span className="logo-gradient">{t.mcp.headline_1}</span>{' '}
               {t.mcp.headline_2}
             </h2>
-            <p className="mt-3 text-sm text-fg-muted md:text-base">
+            <p className="mt-3 text-sm text-zinc-600 md:text-base">
               {t.mcp.subtitle}
             </p>
           </div>
@@ -31,11 +41,13 @@ export function McpSuiteSection() {
           {t.mcp.cards.map((m, i) => (
             <div
               key={m.title}
-              className="flex flex-col rounded-2xl border border-border bg-bg-card p-5 transition hover:border-brand/30"
+              className="flex flex-col rounded-2xl border border-zinc-200 bg-white p-5 shadow-[0_2px_12px_-6px_rgba(0,0,0,0.06)] transition hover:border-brand/30 hover:shadow-[0_8px_24px_-12px_rgba(0,0,0,0.10)]"
             >
               <div className="text-2xl">{MCP_ICONS[i] ?? '•'}</div>
-              <h3 className="mt-4 text-base font-semibold text-fg">{m.title}</h3>
-              <p className="mt-2 text-[13px] leading-relaxed text-fg-muted">
+              <h3 className="mt-4 text-base font-semibold text-zinc-900">
+                {m.title}
+              </h3>
+              <p className="mt-2 text-[13px] leading-relaxed text-zinc-600">
                 {m.body}
               </p>
             </div>
