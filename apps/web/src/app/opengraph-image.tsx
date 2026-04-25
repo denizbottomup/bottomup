@@ -27,8 +27,9 @@ export default function OpengraphImage(): ImageResponse {
           justifyContent: 'center',
           alignItems: 'flex-start',
           padding: 80,
-          background:
-            'radial-gradient(circle at 20% 20%, rgba(124,92,255,0.35), transparent 55%), radial-gradient(circle at 80% 75%, rgba(255,138,76,0.30), transparent 60%), #0a0a0c',
+          backgroundColor: '#0a0a0c',
+          backgroundImage:
+            'radial-gradient(circle at 20% 20%, rgba(124,92,255,0.35), transparent 55%), radial-gradient(circle at 80% 75%, rgba(255,138,76,0.30), transparent 60%)',
           color: '#ffffff',
           fontFamily: 'sans-serif',
         }}
@@ -58,6 +59,8 @@ export default function OpengraphImage(): ImageResponse {
 
         <div
           style={{
+            display: 'flex',
+            flexWrap: 'wrap',
             marginTop: 28,
             fontSize: 84,
             fontWeight: 800,
@@ -66,7 +69,7 @@ export default function OpengraphImage(): ImageResponse {
             maxWidth: 1000,
           }}
         >
-          The App Store of{' '}
+          <span>The App Store of&nbsp;</span>
           <span
             style={{
               background:
@@ -81,6 +84,7 @@ export default function OpengraphImage(): ImageResponse {
 
         <div
           style={{
+            display: 'flex',
             marginTop: 28,
             fontSize: 30,
             color: '#c5c5cf',
@@ -88,8 +92,8 @@ export default function OpengraphImage(): ImageResponse {
             lineHeight: 1.35,
           }}
         >
-          Elite traders, AI agents, and algorithmic bots — one
-          marketplace, protected by Foxy AI.
+          Elite traders, AI agents, and algorithmic bots — one marketplace,
+          protected by Foxy AI.
         </div>
 
         <div
