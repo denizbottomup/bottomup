@@ -368,56 +368,75 @@ function LiquidationTable({ pulse, tp }: { pulse: LandingPayload['pulse']; tp: P
   const liq = pulse.liquidation.slice(0, 8);
   if (liq.length === 0) return null;
   return (
-    <div className="mt-4 overflow-hidden rounded-2xl border border-border bg-bg-card">
+    <div className="mt-4 rounded-2xl border border-border bg-bg-card">
       <div className="flex items-center justify-between border-b border-border px-4 py-3">
         <div className="text-[10px] uppercase tracking-wider text-fg-dim">
           {tp.liq_table}
         </div>
         <span className="text-[10px] text-fg-dim">CoinGlass</span>
       </div>
-      <table className="w-full text-sm">
-        <thead className="text-[10px] uppercase tracking-wider text-fg-dim">
-          <tr>
-            <th className="px-4 py-2 text-left">{tp.table_coin}</th>
-            <th className="px-4 py-2 text-right">{tp.table_long}</th>
-            <th className="px-4 py-2 text-right">{tp.table_short}</th>
-            <th className="px-4 py-2 text-right">{tp.table_total}</th>
-            <th className="hidden px-4 py-2 text-right md:table-cell">{tp.table_split}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {liq.map((r) => {
-            const pct =
-              r.total_24h_usd > 0
-                ? (r.long_24h_usd / r.total_24h_usd) * 100
-                : 50;
-            return (
-              <tr key={r.symbol} className="border-t border-white/5">
-                <td className="px-4 py-2 font-mono font-semibold text-fg">
-                  {r.symbol}
-                </td>
-                <td className="px-4 py-2 text-right font-mono text-emerald-300">
-                  {formatUsd(r.long_24h_usd)}
-                </td>
-                <td className="px-4 py-2 text-right font-mono text-rose-300">
-                  {formatUsd(r.short_24h_usd)}
-                </td>
-                <td className="px-4 py-2 text-right font-mono text-fg">
-                  {formatUsd(r.total_24h_usd)}
-                </td>
-                <td className="hidden px-4 py-2 md:table-cell">
-                  <div className="flex h-1 overflow-hidden rounded-full bg-rose-400/20">
-                    <div
-                      className="bg-emerald-400"
-                      style={{ width: `${pct}%` }}
-                    />
-                  </div>
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+      {/* Wrap the table in horizontal scroll for narrow viewports —
+          4 numeric columns × ~$222.47M-width values can't fit under
+          ~440px so on a 360–390px phone the cells were getting clipped
+          off-screen by the parent's overflow-hidden. Letting the table
+          itself scroll keeps every value reachable. The header row's
+          `whitespace-nowrap` plus the cell padding shrink (`px-3` on
+          mobile) keep the scroll comfortable. */}
+      <div className="overflow-x-auto overscroll-x-contain">
+        <table className="w-full min-w-[480px] text-sm">
+          <thead className="text-[10px] uppercase tracking-wider text-fg-dim">
+            <tr>
+              <th className="whitespace-nowrap px-3 py-2 text-left md:px-4">
+                {tp.table_coin}
+              </th>
+              <th className="whitespace-nowrap px-3 py-2 text-right md:px-4">
+                {tp.table_long}
+              </th>
+              <th className="whitespace-nowrap px-3 py-2 text-right md:px-4">
+                {tp.table_short}
+              </th>
+              <th className="whitespace-nowrap px-3 py-2 text-right md:px-4">
+                {tp.table_total}
+              </th>
+              <th className="hidden whitespace-nowrap px-4 py-2 text-right md:table-cell">
+                {tp.table_split}
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {liq.map((r) => {
+              const pct =
+                r.total_24h_usd > 0
+                  ? (r.long_24h_usd / r.total_24h_usd) * 100
+                  : 50;
+              return (
+                <tr key={r.symbol} className="border-t border-white/5">
+                  <td className="whitespace-nowrap px-3 py-2 font-mono font-semibold text-fg md:px-4">
+                    {r.symbol}
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-2 text-right font-mono text-emerald-300 md:px-4">
+                    {formatUsd(r.long_24h_usd)}
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-2 text-right font-mono text-rose-300 md:px-4">
+                    {formatUsd(r.short_24h_usd)}
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-2 text-right font-mono text-fg md:px-4">
+                    {formatUsd(r.total_24h_usd)}
+                  </td>
+                  <td className="hidden px-4 py-2 md:table-cell">
+                    <div className="flex h-1 overflow-hidden rounded-full bg-rose-400/20">
+                      <div
+                        className="bg-emerald-400"
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

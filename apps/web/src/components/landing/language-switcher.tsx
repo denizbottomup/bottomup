@@ -28,7 +28,7 @@ export function LanguageSwitcher() {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-1.5 rounded-lg border border-border bg-bg-card/60 px-2.5 py-1.5 text-xs text-fg-muted transition hover:border-white/20 hover:text-fg"
+        className="flex h-9 items-center gap-1.5 rounded-lg border border-border bg-bg-card/60 px-3 text-xs text-fg-muted transition hover:border-white/20 hover:text-fg"
         aria-haspopup="listbox"
         aria-expanded={open}
       >
