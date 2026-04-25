@@ -91,6 +91,11 @@ export function LandingFooter() {
                   {t.ft.faq}
                 </a>
               </li>
+              <li>
+                <Link href="/blog" className="hover:text-fg">
+                  Blog
+                </Link>
+              </li>
             </ul>
           </div>
 

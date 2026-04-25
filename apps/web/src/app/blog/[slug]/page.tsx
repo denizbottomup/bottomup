@@ -19,6 +19,7 @@ export async function generateMetadata(
   const post = POST_BY_SLUG[slug];
   if (!post) return {};
   const url = `https://bottomup.app/blog/${slug}`;
+  const ogImage = 'https://bottomup.app/opengraph-image';
   return {
     title: post.title,
     description: post.description,
@@ -33,6 +34,7 @@ export async function generateMetadata(
       publishedTime: post.date,
       modifiedTime: post.modified ?? post.date,
       authors: ['https://bottomup.app'],
+      images: [{ url: ogImage, width: 1200, height: 630, alt: post.title }],
     },
     twitter: {
       card: 'summary_large_image',
@@ -40,6 +42,7 @@ export async function generateMetadata(
       creator: '@bottomupsocial',
       title: post.title,
       description: post.description,
+      images: [ogImage],
     },
   };
 }
