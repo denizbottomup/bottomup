@@ -109,7 +109,7 @@ export const vi: Dict = {
     decision_ok_body: 'Đã tối ưu ✓',
     wallet_node: 'Ví của bạn',
     wallet_node_sub: 'chỉ thực thi khi Foxy duyệt',
-    stat: '✓ Foxy đã chặn 1.247 tín hiệu rủi ro trong 30 ngày qua trên marketplace.',
+    stat: '✓ Foxy AI đang được phát triển — thiết kế để đề xuất các đội ngũ danh mục từ những nhà phát hành đang trong phong độ tốt trên marketplace.',
   },
   mkt: {
     label: 'Marketplace',

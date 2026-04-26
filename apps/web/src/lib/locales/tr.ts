@@ -109,7 +109,7 @@ export const tr: Dict = {
     decision_ok_body: 'Optimize ✓',
     wallet_node: 'Cüzdanın',
     wallet_node_sub: 'yalnızca Foxy onaylarsa çalıştırılır',
-    stat: '✓ Foxy son 30 günde marketplace genelinde 1.247 riskli sinyali engelledi.',
+    stat: '✓ Foxy AI aktif geliştirme aşamasında — marketplace içinde formda olan yayıncılardan portföy takımları önermek üzere tasarlandı.',
   },
   mkt: {
     label: 'Marketplace',

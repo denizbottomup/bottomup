@@ -109,7 +109,7 @@ export const es: Dict = {
     decision_ok_body: 'Optimizado ✓',
     wallet_node: 'Tu wallet',
     wallet_node_sub: 'ejecución sólo si Foxy aprueba',
-    stat: '✓ Foxy bloqueó 1.247 señales riesgosas en los últimos 30 días en todo el marketplace.',
+    stat: '✓ Foxy AI está en desarrollo activo — diseñada para recomendar equipos de cartera con los publicadores en forma del marketplace.',
   },
   mkt: {
     label: 'El marketplace',

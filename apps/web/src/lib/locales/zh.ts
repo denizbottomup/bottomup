@@ -109,7 +109,7 @@ export const zh: Dict = {
     decision_ok_body: '已优化 ✓',
     wallet_node: '你的钱包',
     wallet_node_sub: '仅在 Foxy 批准时执行',
-    stat: '✓ Foxy 在过去 30 天的市场上拦截了 1,247 个风险信号。',
+    stat: '✓ Foxy AI 正在积极开发中 — 旨在从市场中表现出色的发布者中推荐投资组合团队。',
   },
   mkt: {
     label: '市场',

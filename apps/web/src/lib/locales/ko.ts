@@ -109,7 +109,7 @@ export const ko: Dict = {
     decision_ok_body: '최적화됨 ✓',
     wallet_node: '당신의 지갑',
     wallet_node_sub: 'Foxy 승인 시에만 실행',
-    stat: '✓ Foxy는 지난 30일 동안 마켓플레이스 전반에서 1,247개의 리스크 시그널을 차단.',
+    stat: '✓ Foxy AI는 현재 개발 중입니다 — 마켓플레이스에서 좋은 성과를 내는 게시자들로 포트폴리오 팀을 추천하도록 설계되었습니다.',
   },
   mkt: {
     label: '마켓플레이스',

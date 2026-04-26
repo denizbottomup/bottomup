@@ -109,7 +109,7 @@ export const id: Dict = {
     decision_ok_body: 'Dioptimalkan ✓',
     wallet_node: 'Wallet-mu',
     wallet_node_sub: 'eksekusi hanya jika Foxy menyetujui',
-    stat: '✓ Foxy memblokir 1.247 sinyal berisiko dalam 30 hari terakhir di seluruh marketplace.',
+    stat: '✓ Foxy AI sedang dalam pengembangan aktif — dirancang untuk merekomendasikan tim portofolio dari publisher yang sedang dalam performa terbaik di marketplace.',
   },
   mkt: {
     label: 'Marketplace',
