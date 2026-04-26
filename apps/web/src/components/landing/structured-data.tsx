@@ -128,7 +128,7 @@ export function StructuredData({ locale = 'en' }: { locale?: LocaleCode }) {
           {
             '@type': 'ContactPoint',
             contactType: 'press',
-            email: 'press@bottomup.app',
+            email: 'deniz@bottomup.app',
           },
         ],
         sameAs: [

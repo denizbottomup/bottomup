@@ -133,7 +133,7 @@ Tüm article'lar internal cross-linked, NPOV-toned, dipnot disclaimer'lı. Artic
 | Boilerplate (NPOV) | /press → "Official boilerplate" | Press release / pitch email'de paste |
 | 7 logo varyantı | /press → "Logos" | Journalist self-serve |
 | 8 key stat | /press → "Key facts" | Quote'larda kullanım |
-| `press@bottomup.app` mailbox | — | Coverage requests |
+| `deniz@bottomup.app` mailbox | — | Coverage requests |
 | Wikipedia draft | docs/WIKIPEDIA_DRAFT.md (repo) | Sonraki notability adımı için hazır |
 
 ## Yapılacaklar (Awareness — pending)

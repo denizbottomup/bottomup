@@ -237,10 +237,10 @@ export default function PressPage() {
           <p>
             For interviews, quotes, or coverage requests, email{' '}
             <a
-              href="mailto:press@bottomup.app"
+              href="mailto:deniz@bottomup.app"
               className="text-brand hover:underline"
             >
-              press@bottomup.app
+              deniz@bottomup.app
             </a>
             . Typical response time is under 24 hours on weekdays.
           </p>
