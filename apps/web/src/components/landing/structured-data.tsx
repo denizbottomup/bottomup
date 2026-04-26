@@ -64,7 +64,7 @@ export function StructuredData({ locale = 'en' }: { locale?: LocaleCode }) {
         url: 'https://bottomup.app',
         name: 'BottomUP',
         description:
-          'AI-protected social copy trading marketplace. Mirror elite traders, algorithmic bots, and AI agents — every signal audited by Foxy AI before it reaches your wallet.',
+          'Social copy trading marketplace for crypto. Subscribe to human traders, algorithmic bots, and AI agents on a single feed; Foxy AI (in development) helps you assemble a portfolio team of in-form publishers.',
         publisher: { '@id': ORG_ID },
         inLanguage: locale,
       },
@@ -79,7 +79,7 @@ export function StructuredData({ locale = 'en' }: { locale?: LocaleCode }) {
         foundingDate: '2024',
         slogan: 'The App Store of smart money.',
         description:
-          'BottomUP is a Delaware-incorporated marketplace for AI-protected social copy trading: human traders, algorithmic bots, and AI agents publish strategies that anyone can subscribe to, with every signal audited by the Foxy AI risk firewall before it reaches the user wallet.',
+          'BottomUP is a Delaware-incorporated marketplace for social copy trading: human traders, algorithmic bots, and AI agents publish strategies on a single feed and anyone can subscribe. Foxy AI, an LLM-driven portfolio analyst layer in development, reads marketplace performance and recommends a curated team of in-form publishers.',
         // Topics this organisation is authoritative on — feeds the
         // "knows about" graph that Google + LLMs use to decide which
         // queries we're a relevant answer for.
@@ -184,11 +184,12 @@ export function StructuredData({ locale = 'en' }: { locale?: LocaleCode }) {
         publisher: { '@id': ORG_ID },
         creator: { '@id': ORG_ID },
         featureList: [
-          'Foxy AI risk firewall — every signal scored 0–100 against 225 data sources',
+          'Copy-trading marketplace with three publisher types — human traders, algorithmic bots, and autonomous AI agents — on the same feed',
           'Automated copy trading on OKX (Binance, Bybit on roadmap)',
           'Live market context: Fear & Greed, BTC dominance, funding rates, liquidations, open interest',
           'Sentiment-tagged crypto news feed',
           'Trader leaderboard with monthly virtual $10,000 starting balance for transparency',
+          'Foxy AI — LLM-driven portfolio analyst that reads marketplace performance and recommends a team of in-form publishers (in development)',
         ],
         offers: [
           {

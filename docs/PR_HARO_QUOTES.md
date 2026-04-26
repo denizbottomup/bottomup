@@ -53,48 +53,49 @@ The most overlooked risk in retail copy trading isn't picking the
 wrong publisher — it's getting copied through their worst hour.
 
 When a publisher takes a loss and revenge-trades on the next
-entry at 4-5x their normal size, every subscriber takes the same
-oversized loss. We've seen this pattern in roughly 1 in 8 active
-publisher accounts on major exchanges. The mirror is faithful;
-that's the feature on a good day and the bug on a bad one.
+entry at multiples of their normal size, every subscriber takes
+the same oversized loss. The mirror is faithful; that's the
+feature on a good day and the bug on a bad one.
 
-Risk-controlled copy trading platforms now intercept these
-signals before execution by scoring them against the publisher's
-own historical pattern. A 5x size deviation from baseline is the
-single highest-signal indicator that a copy-trade is about to go
-badly.
+The structural fix retail copy-trading platforms haven't
+shipped yet is a curation layer that recommends a *team* of
+publishers in form right now, rather than asking the user to bet
+on one master. Picking a portfolio of disciplined sources is a
+more forgiving frame than picking a single winner.
 ```
 
-**Attribution:** Deniz Saglam, founder of BottomUP — an
-AI-protected copy-trading marketplace.
+**Attribution:** Deniz Saglam, founder of BottomUP — a social
+copy-trading marketplace for crypto.
 
 ---
 
-## Template 2 — AI risk firewall / AI in finance
+## Template 2 — AI in finance / AI portfolio analysts
 
-**Use when query mentions:** AI in finance, AI risk management,
-fintech AI agents, automated trading risk, AI portfolio tools,
-algorithmic guardrails
+**Use when query mentions:** AI in finance, AI portfolio tools,
+fintech AI agents, AI investment recommendations, AI in trading,
+LLM agents in finance
 
 ```
 The interesting AI-in-finance question for 2026 isn't "can AI
-predict markets" — it's "can AI tell you when not to trade."
+predict markets" — it's "can AI help retail users assemble a
+sensible team of strategies and stop them from over-concentrating
+in one bet."
 
-We've trained risk-firewall models on 225 inputs (order-book
-depth, funding rates, news sentiment, publisher pattern history)
-that score every incoming signal 0-100 before execution. The
-practical effect: roughly 1 in 6 signals get blocked, and the
-ones that do are disproportionately the ones traders later wish
-they hadn't taken.
+The shape that's working is AI as the recommendation and
+explanation layer, not the execution layer. An LLM agent can
+read a marketplace of publishers (humans, algorithmic bots,
+other AI agents), summarise who's in form right now, and
+recommend a curated portfolio team. That's a much more
+forgiving design than betting on a single trader to mirror.
 
 The high-leverage AI use case in retail trading isn't optimizing
-upside. It's converting discipline from a willpower problem into
-a software problem.
+the upside on a single trade. It's letting an analyst layer
+construct portfolios that the user wouldn't have built alone.
 ```
 
-**Attribution:** Deniz Saglam, founder of BottomUP — runs the
-Foxy AI risk firewall on the company's social copy-trading
-marketplace.
+**Attribution:** Deniz Saglam, founder of BottomUP — building an
+AI portfolio-analyst layer (Foxy AI) on the company's social
+copy-trading marketplace.
 
 ---
 
@@ -137,10 +138,10 @@ breadth — a single-feature crypto app rarely makes it past 10K
 MAU because the user has 4-5 disconnected workflows already
 (exchange, wallet, signals, news, charts).
 
-We've found the consolidation thesis works in retail crypto:
-107K organic mobile installs at $0 paid CAC, with the strongest
-retention coming from users who use 3+ features in their first
-week, not those who use one feature deeply.
+The consolidation thesis is what's worked at BottomUP — 107K+
+organic mobile installs at $0 paid CAC, with the marketplace
+spanning human traders, algorithmic bots, and AI agents on the
+same feed rather than asking users to flip between apps.
 
 The takeaway for consumer fintech founders: in crypto, breadth
 is the moat. Specialists get bought or starved.

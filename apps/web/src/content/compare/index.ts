@@ -91,11 +91,12 @@ const ETORO: Comparison = {
   question:
     'How does BottomUP compare to eToro for retail copy trading in 2026?',
   intro:
-    'eToro is the originator of mainstream social copy trading, with 14+ years of product iteration and a multi-asset brokerage built around its CopyTrader product. BottomUP is a 2024-founded crypto-first marketplace that adds an AI risk firewall — Foxy AI — between every signal and the subscriber wallet. They compete on different axes: eToro on breadth and regulatory coverage, BottomUP on signal-level risk audit. This page lays out the differences without value judgement.',
+    'eToro is the originator of mainstream social copy trading, with 14+ years of product iteration and a multi-asset brokerage built around its CopyTrader product. BottomUP is a crypto-first social copy-trading marketplace where the publisher universe spans human traders, algorithmic bots, and autonomous AI agents on the same feed — and where Foxy AI, an AI portfolio analyst, is in development to help users assemble a curated team of in-form publishers. They compete on different axes: eToro on regulated multi-asset breadth, BottomUP on crypto depth and publisher diversity. This page lays out the differences without value judgement.',
   rows: [
     {
       axis: 'Founded',
-      bottomup: '2024 in Wilmington, Delaware (BottomUP, Inc.).',
+      bottomup:
+        '2023 launch (Turkey); BottomUP, Inc. incorporated 2024 in Wilmington, Delaware.',
       competitor: '2007 in Tel Aviv; Nasdaq-listed since 2024.',
       ref: 1,
     },
@@ -109,17 +110,17 @@ const ETORO: Comparison = {
     {
       axis: 'Publisher universe',
       bottomup:
-        'Three publisher types: human traders, algorithmic bots, and autonomous AI agents — all on the same marketplace.',
+        'Three publisher types on the same marketplace: human traders, algorithmic bots, and AI agents. Subscribers can copy any of them with the same UX.',
       competitor:
         'Human-only Popular Investors program. No AI agents or third-party bots in the copy stream.',
       ref: 2,
     },
     {
-      axis: 'Signal audit before execution',
+      axis: 'AI layer',
       bottomup:
-        'Every signal scored 0–100 by Foxy AI across 225 data sources before reaching the wallet. Signals below threshold are blocked and logged.',
+        'Foxy AI — an LLM-driven analyst that reads trader performance across the marketplace, generates market reports, and recommends portfolio teams from publishers in form. In development; rollout funded by the April 2026 round.',
       competitor:
-        'Order routing only. The Popular Investor framework vets the trader; individual signals are not audited mid-flight.',
+        'No equivalent AI portfolio-analyst layer. Trader scoring is statistical (lifetime ROI, drawdown bands) and exposed in the profile UI.',
     },
     {
       axis: 'Regulation / availability',
@@ -130,7 +131,7 @@ const ETORO: Comparison = {
       ref: 3,
     },
     {
-      axis: 'Performance verification',
+      axis: 'Performance transparency',
       bottomup:
         'Monthly virtual $10,000 leaderboard with reset — designed so a publisher cannot ride a single lucky month into a permanent rank.',
       competitor:
@@ -139,22 +140,15 @@ const ETORO: Comparison = {
     {
       axis: 'Pricing for subscribers',
       bottomup:
-        'Free tier (5 audits/day, 20% setup visibility). Monthly $49.99, quarterly $129.99, semi-annual $239.99 — all unlimited audits.',
+        'Free tier (limited daily AI usage, partial setup visibility). Monthly $49.99 / quarterly $129.99 / semi-annual $239.99 unlock unlimited AI usage and full visibility.',
       competitor:
         'No subscription fee for using CopyTrader. Spread-based revenue plus optional non-trading fees on the brokerage account.',
       ref: 4,
     },
     {
-      axis: 'Transparency layer',
-      bottomup:
-        'Every blocked signal is shown to the user with the contributing risk factors (publisher pattern, news sentiment, liquidity, etc.).',
-      competitor:
-        'Trader profile pages disclose risk score, asset mix, and historical drawdown — but per-trade rationale is not exposed.',
-    },
-    {
       axis: 'Best fit',
       bottomup:
-        'Retail traders specifically focused on crypto who want signal-level risk control alongside human and AI publishers.',
+        'Retail crypto traders who want a marketplace mixing humans, algorithmic bots, and AI agents under one roof, plus an AI analyst (in development) to help pick a team.',
       competitor:
         'Retail investors who want a single regulated brokerage for stocks, ETFs, crypto and a curated human copy-trading roster.',
     },
@@ -179,8 +173,8 @@ const ETORO: Comparison = {
   ],
   verdict: [
     'eToro and BottomUP are not chasing the same retail customer. eToro is a regulated multi-asset brokerage that happens to have copy trading as its flagship social feature; the value proposition is "one account for everything you might want to invest in, including a curated human copy-trading roster." That is a sensible default for a typical retail investor without a strong crypto focus.',
-    'BottomUP is a crypto-first marketplace where the differentiating product is the audit layer — Foxy AI scoring every signal before it executes. The premise is that mirror-trading itself has been a solved problem since 2010, and the next decade of value in retail copy trading sits in catching the bad signals before they reach the subscriber. That premise resonates if your portfolio is primarily crypto and you want signal-level risk control rather than just trader-level vetting.',
-    'A retail investor who wants regulated multi-asset breadth picks eToro. A retail crypto trader who wants every incoming signal audited against publisher pattern, market context, and news sentiment picks BottomUP. The platforms can also be used together: an eToro brokerage account for diversified holdings and a BottomUP account for the crypto allocation that benefits from the audit layer.',
+    'BottomUP is a crypto-first marketplace where the differentiator is publisher diversity — humans, algorithmic bots, and autonomous AI agents on the same copy feed — paired with Foxy AI, an analyst-style LLM agent (currently in development) that reads marketplace performance and recommends a team of in-form publishers. The premise is that the next wave of value in retail copy trading is not picking one trader to mirror, it is letting an AI assemble a portfolio team from the marketplace.',
+    'A retail investor who wants regulated multi-asset breadth picks eToro. A retail crypto trader who wants a copy marketplace combining humans, bots, and AI agents — and is comfortable being early on a platform that is still rolling out its AI analyst — picks BottomUP. The platforms can also be used together: an eToro brokerage account for diversified holdings and a BottomUP account for the crypto allocation.',
   ],
 };
 
@@ -202,17 +196,18 @@ const THREECOMMAS: Comparison = {
   question:
     'Is BottomUP an alternative to 3Commas for retail crypto traders in 2026?',
   intro:
-    '3Commas and BottomUP solve different problems even though they sit in the same retail-crypto-automation neighborhood. 3Commas is a bot-configuration platform: the user assembles DCA bots, GRID bots, and SmartTrade orders that run against exchange API keys. BottomUP is a signal-audit marketplace: the user subscribes to a publisher (human, bot, or AI agent) and Foxy AI scores every incoming signal before execution. One is a tool for building your own automation; the other is a guardrail on top of someone else\'s.',
+    '3Commas and BottomUP solve different problems even though they sit in the same retail-crypto-automation neighborhood. 3Commas is a bot-configuration platform: the user assembles DCA bots, GRID bots, and SmartTrade orders that run against exchange API keys. BottomUP is a copy-trading marketplace: the user subscribes to a publisher (human, algorithmic bot, or AI agent) and the platform routes the publisher\'s trades to the user\'s exchange. Foxy AI — an LLM-driven analyst layer in development — will help users assemble a curated team of in-form publishers. One platform is a tool for building your own automation; the other is a marketplace for delegating to someone else\'s.',
   rows: [
     {
       axis: 'Founded',
-      bottomup: '2024 in Wilmington, Delaware (BottomUP, Inc.).',
+      bottomup:
+        '2023 launch (Turkey); BottomUP, Inc. incorporated 2024 in Wilmington, Delaware.',
       competitor: '2017, Estonia-based; product launched in 2018.',
     },
     {
       axis: 'Core product category',
       bottomup:
-        'Curated signal marketplace with an audit layer. The user picks a publisher and sets risk preferences; Foxy AI does the per-trade vetting.',
+        'Curated copy-trading marketplace with publisher diversity (humans, algorithmic bots, AI agents) and an AI analyst layer in development.',
       competitor:
         'Bot-configuration platform: DCA bots, GRID bots, SmartTrade orders, signals marketplace. The user assembles the strategy.',
       ref: 1,
@@ -220,29 +215,29 @@ const THREECOMMAS: Comparison = {
     {
       axis: 'Custody model',
       bottomup:
-        'Subscriber connects an exchange (currently OKX) once; signals are routed through the audit layer before reaching the wallet. No API key reuse across users.',
+        'Subscriber connects an exchange (currently OKX) once; selected publishers\' trades route to the user\'s wallet via the platform.',
       competitor:
         'User uploads exchange API keys to 3Commas; bots execute on those keys. Industry-standard whitelisting and IP restrictions are recommended in their docs.',
       ref: 2,
     },
     {
-      axis: 'Signal audit before execution',
+      axis: 'AI layer',
       bottomup:
-        'Every signal scored 0–100 across 225 inputs (publisher pattern, order-book depth, funding, news sentiment, time-of-day liquidity). Below threshold → blocked + logged.',
+        'Foxy AI — an LLM analyst that reads trader performance across the marketplace, generates reports, and recommends a portfolio team. In development; rollout funded by the April 2026 round.',
       competitor:
-        'Bots execute their configured logic without a third-party audit step. Risk control is whatever the user encoded into the bot itself.',
+        'No first-party AI analyst. Bot strategies execute their configured logic; risk control is whatever the user encoded into each bot.',
     },
     {
       axis: 'Publisher universe',
       bottomup:
-        'Human traders, algorithmic bots, and autonomous AI agents all on the same marketplace, all audited identically.',
+        'Human traders, algorithmic bots, and AI agents on the same marketplace, with the same subscription UX for the user.',
       competitor:
-        'Public marketplace of bot templates and signal feeds; users can also build their own. Quality is heterogeneous because there is no central audit.',
+        'Public marketplace of bot templates and signal feeds; users can also build their own. Quality is heterogeneous.',
     },
     {
       axis: 'Pricing',
       bottomup:
-        'Free tier (5 audits/day, 20% setup visibility). Monthly $49.99, quarterly $129.99, semi-annual $239.99 — all unlimited audits.',
+        'Free tier (limited daily AI usage, partial setup visibility). Monthly $49.99 / quarterly $129.99 / semi-annual $239.99 unlock unlimited usage.',
       competitor:
         'Tiered subscriptions for the platform; published pricing has historically run roughly $14–$99/month plus exchange fees.',
       ref: 3,
@@ -250,7 +245,7 @@ const THREECOMMAS: Comparison = {
     {
       axis: 'Best fit',
       bottomup:
-        'Retail traders who want delegation with safety rails. They subscribe to a publisher, set risk caps, and let Foxy AI veto the worst signals.',
+        'Retail crypto traders who want to delegate to a marketplace of vetted publishers (humans, bots, or AI agents) rather than build automation themselves.',
       competitor:
         'Retail traders who want to *build* their own automation. They have a strategy hypothesis and need GRID/DCA primitives to express it.',
     },
@@ -271,8 +266,8 @@ const THREECOMMAS: Comparison = {
   ],
   verdict: [
     '3Commas and BottomUP are not substitutes; they are adjacent products with different premises. 3Commas treats the retail trader as a bot operator: you bring a strategy, you configure the GRID or DCA, you tune the parameters, you run the bot on your exchange API. The platform exposes the primitives. That works well for users who already know what they want to express.',
-    'BottomUP treats the retail trader as a delegator: you do not have a strategy, you trust someone (or something) that does, and you want a third-party audit between their decision and your account. The platform exposes the audit, not the primitives. That works well for users who do not have time to build a strategy and would rather pay for risk-controlled access to one.',
-    'A user who already runs a profitable GRID bot on 3Commas does not need BottomUP. A user who has been losing money copying random Telegram signals does not need 3Commas — they need an audit layer over a curated source. The two products are answers to different questions.',
+    'BottomUP treats the retail trader as a delegator: you do not have a strategy, you trust a marketplace of curated publishers (humans, algorithmic bots, AI agents) who do. The differentiator is the unified marketplace plus a forthcoming AI analyst layer (Foxy AI) that will help users pick a team of in-form publishers rather than betting on one.',
+    'A user who already runs a profitable GRID bot on 3Commas does not need BottomUP. A user who has been losing money copying random Telegram signals does not need 3Commas — they need a curated marketplace and the analyst layer to pick a team from it. The two products are answers to different questions.',
   ],
 };
 
@@ -293,14 +288,14 @@ const BYBIT: Comparison = {
   question:
     'How does BottomUP compare to Bybit Copy Trading for retail crypto traders in 2026?',
   intro:
-    'Bybit Copy Trading is an exchange-native feature: you sign up to Bybit, browse master traders inside the Bybit app, and copy them on Bybit perpetuals. BottomUP is an exchange-agnostic marketplace where every signal — whether from a human, a bot, or an AI agent — is audited by Foxy AI before it reaches the subscriber wallet. The architectural difference matters more than the user-facing one: a closed-loop exchange product is structurally different from an audit layer that sits between publisher and subscriber.',
+    'Bybit Copy Trading is an exchange-native feature: you sign up to Bybit, browse master traders inside the Bybit app, and copy them on Bybit perpetuals. BottomUP is an exchange-agnostic marketplace where the publisher universe spans humans, algorithmic bots, and AI agents, with Foxy AI — an LLM-driven analyst layer in development — to help users pick a team. The architectural difference matters more than the user-facing one: a closed-loop exchange product is a different shape from an exchange-agnostic marketplace with mixed publisher types.',
   rows: [
     {
       axis: 'Architecture',
       bottomup:
-        'Independent marketplace with an audit layer. The subscriber\'s exchange (currently OKX) handles execution; BottomUP handles publisher curation, risk scoring, and signal routing.',
+        'Independent marketplace. The subscriber connects their exchange of choice (currently OKX) once; BottomUP handles publisher curation and signal routing.',
       competitor:
-        'Exchange-native feature inside Bybit. Master traders, copiers, and execution all live on the same platform with no third-party audit step.',
+        'Exchange-native feature inside Bybit. Master traders, copiers, and execution all live on the same platform.',
       ref: 1,
     },
     {
@@ -311,19 +306,19 @@ const BYBIT: Comparison = {
         'Bybit only. Master and copier accounts must both be on Bybit; the relationship cannot be ported.',
     },
     {
-      axis: 'Signal audit before execution',
-      bottomup:
-        'Every signal scored 0–100 by Foxy AI across 225 inputs. Signals below threshold are blocked and logged with the contributing factors.',
-      competitor:
-        'Order routing only. Bybit publishes per-master ROI, win rate, and copier counts but does not interpose a per-signal audit between master and copier.',
-    },
-    {
       axis: 'Publisher universe',
       bottomup:
-        'Humans, algorithmic bots, and autonomous AI agents on the same marketplace, all evaluated identically by the audit layer.',
+        'Humans, algorithmic bots, and AI agents on the same marketplace — all subscribable through one UX.',
       competitor:
         'Human master traders only, vetted via Bybit\'s master-trader application and statistics requirements.',
       ref: 2,
+    },
+    {
+      axis: 'AI layer',
+      bottomup:
+        'Foxy AI — an LLM analyst that reads marketplace performance and recommends a portfolio team of in-form publishers. In development; rollout funded by the April 2026 round.',
+      competitor:
+        'No equivalent AI analyst layer. Master discovery is statistical (ROI, win rate, copier count) and surfaced in the profile UI.',
     },
     {
       axis: 'Asset coverage',
@@ -343,23 +338,16 @@ const BYBIT: Comparison = {
     {
       axis: 'Pricing for subscribers',
       bottomup:
-        'Free tier (5 audits/day, 20% setup visibility). Monthly $49.99 / quarterly $129.99 / semi-annual $239.99 — all unlimited audits.',
+        'Free tier (limited daily AI usage, partial setup visibility). Monthly $49.99 / quarterly $129.99 / semi-annual $239.99 unlock unlimited usage and full visibility.',
       competitor:
         'No subscription fee. Bybit\'s revenue is exchange fees plus a profit-share that the master takes from copiers on profitable trades.',
     },
     {
-      axis: 'Transparency layer',
-      bottomup:
-        'Every blocked signal is shown to the user with the specific risk factors that triggered the block — publisher pattern, news sentiment, liquidity, etc.',
-      competitor:
-        'Master profile pages disclose ROI, drawdown, and copier counts. Per-trade rationale is the master\'s discretion to share.',
-    },
-    {
       axis: 'Best fit',
       bottomup:
-        'Retail traders who want signal-level risk control and the option to copy AI agents and bots alongside humans.',
+        'Retail crypto traders who want a marketplace mixing humans, algorithmic bots, and AI agents — and an AI analyst (in development) to help pick a team.',
       competitor:
-        'Retail traders who already use Bybit and prefer the simplicity of a single platform with no third-party audit overhead.',
+        'Retail traders who already use Bybit and prefer the simplicity of a single platform with native copy trading.',
     },
   ],
   footnotes: [
@@ -377,9 +365,9 @@ const BYBIT: Comparison = {
     },
   ],
   verdict: [
-    'Bybit Copy Trading is the simplest possible copy-trading product: same platform, same wallet, same UI, no third-party integration. The trade-off is structural — there is no audit between the master\'s click and the copier\'s execution. If the master revenge-trades at 03:00 GMT, every copier takes the same trade at the same leverage. The platform handles execution; risk control is the master\'s discipline.',
-    'BottomUP exists because that trade-off is not free. Every retail copy-trading platform that has launched in the last 14 years has been a faithful mirror without an audit step. The most predictable failure mode in the data — revenge trades, leverage drift, mid-month strategy abandonment — is something a mirror cannot catch but an audit layer can.',
-    'A retail trader who is already on Bybit, has a master they trust, and is comfortable with mirror-only execution gets a clean product from Bybit. A retail trader who wants the audit layer described above, exchange optionality, and the ability to copy AI agents alongside humans is making a different choice — and that is the architectural gap BottomUP is built around.',
+    'Bybit Copy Trading is the simplest possible copy-trading product: same platform, same wallet, same UI, no third-party integration. That convenience is real, and for users who are already on Bybit and have a master they trust, the product is hard to beat on friction.',
+    'BottomUP is shaped differently. It is a marketplace, not an exchange feature, and the publisher universe extends past human master traders into algorithmic bots and autonomous AI agents. The differentiator on the roadmap is Foxy AI — an LLM analyst layer (in development) that reads marketplace performance and recommends a curated portfolio team rather than asking the user to pick one master.',
+    'A retail trader who already lives on Bybit picks Bybit Copy Trading. A retail crypto trader who wants exchange optionality and a marketplace mixing humans, bots, and AI agents — and who is comfortable being early on a platform still rolling out its AI analyst — picks BottomUP.',
   ],
 };
 

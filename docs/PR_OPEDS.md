@@ -3,6 +3,17 @@
 > **Owner:** Marketing (PR / Servet) submits, Founder (Deniz) is bylined
 > **Targets:** Mid-tier crypto outlets that accept founder bylines
 > **Submit-ready:** Each article below is final draft. Review tone with founder, then send.
+>
+> **2026-04-26 NOTE:** Article 1 below ("The 50× revenge trade") was drafted
+> when Foxy AI was being framed as a real-time signal-blocking risk firewall.
+> The product Foxy AI is actually building is a portfolio-analyst layer (LLM
+> agent that reads marketplace performance and recommends curated teams of
+> publishers), not a per-trade execution-time firewall. Article 1 needs a
+> rewrite before submission anywhere — the structural-audit-layer thesis is
+> still defensible as a category prediction, but the BottomUP-specific
+> claims ("we audited", "we score every signal") should be removed. Article
+> 2 was sent to Cointelegraph Opinion on 2026-04-26 and is bibliographic
+> only at this point.
 
 ## Where to submit (in pitching priority order)
 

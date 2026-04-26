@@ -4,6 +4,16 @@
 > **Schedule:** 1 thread per weekday morning (9-10am local). Skip Sat/Sun (engagement-only).
 > **Distribution:** Paste into Typefully or Twitter native scheduler. Batch-schedule at start of each week.
 > **Voice rules:** Confident, opinionated, specific numbers, "I" voice. No marketing language. No "revolutionary." No "game-changing." Disagree with the obvious thing.
+>
+> **2026-04-26 NOTE — DO NOT USE AS-WRITTEN:** Many of the threads below
+> were drafted when Foxy AI was framed as a real-time signal-blocking risk
+> firewall and rely on operational data ("12,000+ signals audited",
+> "1 in 6 blocked", "v1 to v3 took 8 months") that was never measured.
+> Foxy AI is actually a portfolio-analyst layer in development. Day 2 and
+> Day 3 were already deleted from Typefully scheduling on 2026-04-26 and
+> need rewrites before any reuse. Day 1 was edited in-place (Tweet 8
+> reframed). Other days that lean on the same fabricated framework — Day 8,
+> Day 9 — also need rewrites before scheduling.
 
 ## Quick reference
 

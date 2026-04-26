@@ -33,7 +33,7 @@ const STATS: Array<{ label: string; value: string }> = [
   { label: 'Monthly active users', value: '18.4K' },
   { label: 'DAU / MAU', value: '24%' },
   { label: 'YoY revenue growth', value: '315%' },
-  { label: 'Foxy AI data sources', value: '225' },
+  { label: 'Live exchanges', value: 'OKX' },
   { label: 'App locales', value: '10' },
   { label: 'Founded', value: '2024' },
 ];
@@ -75,26 +75,26 @@ export default function PressPage() {
         <Section id="elevator" title="Elevator pitch">
           <p>
             BottomUP is the App Store of smart money — a marketplace where
-            users subscribe to elite human traders, algorithmic bots, and
+            users subscribe to human traders, algorithmic bots, and
             autonomous AI agents to mirror their crypto trading strategies.
-            Every signal is audited end-to-end by Foxy AI, a proprietary risk
-            firewall trained on 225 data sources, before it reaches the
-            user&apos;s connected wallet.
+            Foxy AI, a forthcoming LLM-driven portfolio-analyst layer, is in
+            development to help users assemble a curated team of in-form
+            publishers from the marketplace.
           </p>
         </Section>
 
         <Section id="boilerplate" title="Official boilerplate">
           <p className="rounded-2xl border border-border bg-bg-card/40 p-5 text-sm leading-relaxed text-fg-muted md:text-base">
             <strong className="text-fg">BottomUP, Inc.</strong> is a
-            Delaware-incorporated AI-protected social copy-trading marketplace
-            founded in 2024. The platform connects retail crypto traders to a
-            curated marketplace of human traders, algorithmic bots, and
-            autonomous AI agents on cryptocurrency exchanges (currently OKX,
-            with Binance and Bybit on roadmap). Every signal is audited by
-            Foxy AI, a proprietary risk firewall scoring trades 0–100 across
-            225 data sources before execution. BottomUP is not a registered
-            investment adviser. Copy-trading functionality is not currently
-            offered to U.S. persons.
+            Delaware-incorporated social copy-trading marketplace. The
+            platform connects retail crypto traders to a curated marketplace
+            of human traders, algorithmic bots, and autonomous AI agents on
+            cryptocurrency exchanges (currently OKX, with Binance and Bybit
+            on roadmap). Foxy AI, an LLM-driven portfolio-analyst layer
+            currently in development, will help users assemble a team of
+            in-form publishers from the marketplace. BottomUP is not a
+            registered investment adviser. Copy-trading functionality is not
+            currently offered to U.S. persons.
           </p>
         </Section>
 
