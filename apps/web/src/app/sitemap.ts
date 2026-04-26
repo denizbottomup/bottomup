@@ -1,5 +1,6 @@
 import type { MetadataRoute } from 'next';
 import { POSTS } from '@/content/blog';
+import { COMPARISONS } from '@/content/compare';
 import { LOCALES } from '@/lib/locale-config';
 
 const BASE = 'https://bottomup.app';
@@ -45,6 +46,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: 'monthly',
       priority: 0.6,
     },
+    {
+      url: `${BASE}/compare`,
+      lastModified: now,
+      changeFrequency: 'monthly',
+      priority: 0.7,
+    },
   ];
 
   const blogPosts: MetadataRoute.Sitemap = POSTS.map((p) => ({
@@ -54,5 +61,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.7,
   }));
 
-  return [...landingEntries, ...blogIndex, ...blogPosts];
+  const comparisons: MetadataRoute.Sitemap = COMPARISONS.map((c) => ({
+    url: `${BASE}/compare/${c.slug}`,
+    lastModified: new Date(c.modified ?? c.date),
+    changeFrequency: 'monthly',
+    priority: 0.7,
+  }));
+
+  return [...landingEntries, ...blogIndex, ...blogPosts, ...comparisons];
 }
