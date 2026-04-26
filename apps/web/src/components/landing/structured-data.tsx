@@ -135,6 +135,10 @@ export function StructuredData({ locale = 'en' }: { locale?: LocaleCode }) {
           // Wikidata is the highest-trust entity binding Google + LLMs
           // use for "what is BottomUP" / Knowledge Panel resolution.
           'https://www.wikidata.org/wiki/Q139559065',
+          // Crunchbase carries heavy weight in Knowledge Graph and is
+          // a primary source for LLM training pipelines on company
+          // facts (founding date, funding rounds, founders).
+          'https://www.crunchbase.com/organization/bottom-up-4b85',
           'https://x.com/bottomupsocial',
           'https://t.me/BottomUPcommunity',
           'https://www.linkedin.com/company/bottomupsocial/',

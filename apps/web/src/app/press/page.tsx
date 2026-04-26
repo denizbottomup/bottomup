@@ -198,6 +198,17 @@ export default function PressPage() {
               </a>
             </li>
             <li>
+              <strong className="text-fg">Crunchbase:</strong>{' '}
+              <a
+                href="https://www.crunchbase.com/organization/bottom-up-4b85"
+                className="text-brand hover:underline"
+                target="_blank"
+                rel="noreferrer"
+              >
+                crunchbase.com/organization/bottom-up-4b85
+              </a>
+            </li>
+            <li>
               <strong className="text-fg">App Store:</strong>{' '}
               <a
                 href="https://apps.apple.com/tr/app/bottomup-sofi-trade-finance/id1661474993"
