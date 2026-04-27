@@ -243,7 +243,7 @@ function DetailBody({
           <div className="mt-2 flex items-center justify-between text-[11px] text-fg-dim">
             <span>Starting $10,000</span>
             <span className="stat-num">
-              Best ${formatUsd(data.stats.best_trade_pnl)} · Worst $
+              Best {formatUsd(data.stats.best_trade_pnl)} · Worst{' '}
               {formatUsd(data.stats.worst_trade_pnl)}
             </span>
           </div>
@@ -344,20 +344,24 @@ function EquityChart({
       </div>
     );
   }
+  // Sort chronologically — the API doesn't guarantee ascending `t`,
+  // and rendering in array order produced charts that ran backwards
+  // (oldest balance on the right, newest on the left).
+  const sorted = [...curve].sort((a, b) => a.t - b.t);
   const w = 1000;
   const h = 220;
   const pad = { l: 8, r: 8, t: 12, b: 12 };
-  const minV = Math.min(10000, ...curve.map((c) => c.balance));
-  const maxV = Math.max(10000, ...curve.map((c) => c.balance));
+  const minV = Math.min(10000, ...sorted.map((c) => c.balance));
+  const maxV = Math.max(10000, ...sorted.map((c) => c.balance));
   const range = maxV - minV || 1;
   const xs = (i: number) =>
-    pad.l + (i / (curve.length - 1)) * (w - pad.l - pad.r);
+    pad.l + (i / (sorted.length - 1)) * (w - pad.l - pad.r);
   const ys = (v: number) =>
     pad.t + (h - pad.t - pad.b) * (1 - (v - minV) / range);
-  const line = curve
+  const line = sorted
     .map((c, i) => `${i === 0 ? 'M' : 'L'}${xs(i).toFixed(1)},${ys(c.balance).toFixed(1)}`)
     .join(' ');
-  const area = `${line} L${xs(curve.length - 1).toFixed(1)},${(h - pad.b).toFixed(1)} L${xs(0).toFixed(1)},${(h - pad.b).toFixed(1)} Z`;
+  const area = `${line} L${xs(sorted.length - 1).toFixed(1)},${(h - pad.b).toFixed(1)} L${xs(0).toFixed(1)},${(h - pad.b).toFixed(1)} Z`;
   const zeroY = ys(10000);
   const gradientId = `eq-grad-${positive ? 'up' : 'dn'}`;
   const strokeColor = positive ? '#2BC18B' : '#F87171';

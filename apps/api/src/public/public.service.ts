@@ -207,12 +207,21 @@ export class PublicService {
 
     // Closed futures trades (success/stopped). Same filter basis as the
     // leaderboard and admin Metabase query.
+    //
+    // `close_date` is null for a large fraction of stopped trades (the
+    // user closed via stop-loss, not manually), so we fall back through
+    // tp1_date / updated_at / created_at the same way trader.service does.
+    // Without this fallback, those trades drop out of the equity curve
+    // and monthly aggregation entirely, while still being counted in the
+    // headline stats — which produces equity curves that "end" higher
+    // than the true balance and monthly arrays whose net_r doesn't sum
+    // to total_r. See docs/BUG_TRADER_STATS.md for the diagnosis.
     const trades = await this.prisma.$queryRawUnsafe<Array<Record<string, unknown>>>(
       `SELECT s.id::text AS id,
               s.coin_name,
               s.position::text AS position,
               s.status::text AS status,
-              s.close_date,
+              COALESCE(s.close_date, s.tp1_date, p.updated_at, p.created_at) AS close_date,
               COALESCE(p.estimated_pnl, 0) AS pnl,
               COALESCE(p.estimated_pnl_rate, 0) AS r
          FROM setup s
@@ -221,7 +230,7 @@ export class PublicService {
           AND s.trader_id = $1::uuid
           AND s.category = 'futures'::categories_type
           AND s.status IN ('success'::statuses_type,'stopped'::statuses_type)
-        ORDER BY s.close_date ASC NULLS LAST`,
+        ORDER BY COALESCE(s.close_date, s.tp1_date, p.updated_at, p.created_at) ASC NULLS LAST`,
       traderId,
     );
 
@@ -379,6 +388,11 @@ export class PublicService {
   private async topTraders(limit: number): Promise<LandingTrader[]> {
     const capped = Math.max(1, Math.min(20, limit));
     const rows = await this.prisma.$queryRawUnsafe<Array<Record<string, unknown>>>(
+      // `close_date` is null for many stopped trades — same fallback as
+      // getTrader() so the monthly window includes stop-loss closures.
+      // Without this, the leaderboard counts only manually-closed trades,
+      // which biases the win-rate sharply upward (most cards end up
+      // showing 100% WR because every loss is filtered out).
       `WITH monthly AS (
          SELECT s.trader_id,
                 COUNT(*) FILTER (WHERE s.status = 'success'::statuses_type)::int AS success,
@@ -390,7 +404,7 @@ export class PublicService {
           WHERE s.is_deleted = FALSE
             AND s.category = 'futures'::categories_type
             AND s.status IN ('success'::statuses_type,'stopped'::statuses_type)
-            AND s.close_date >= DATE_TRUNC('month', NOW())
+            AND COALESCE(s.close_date, s.tp1_date, p.updated_at, p.created_at) >= DATE_TRUNC('month', NOW())
           GROUP BY s.trader_id
        )
        SELECT u.id::text AS trader_id, u.name, u.first_name, u.last_name, u.image,
