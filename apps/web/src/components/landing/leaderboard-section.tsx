@@ -118,9 +118,6 @@ function TraderCard({
             )}
             <div>
               <div className="text-base font-semibold text-fg">{name}</div>
-              <div className="text-[11px] text-fg-dim stat-num">
-                {trader.followers.toLocaleString('en-US')} {t.lb.followers}
-              </div>
             </div>
           </div>
           <span

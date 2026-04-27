@@ -196,10 +196,11 @@ function DetailBody({
             <h2 className="mt-0.5 text-2xl font-extrabold tracking-tight md:text-3xl">
               {displayName}
             </h2>
-            <div className="mt-1 text-xs text-fg-dim stat-num">
-              {data.trader.followers.toLocaleString('en-US')} followers
-              {data.trader.bio ? ` · ${truncate(data.trader.bio, 80)}` : ''}
-            </div>
+            {data.trader.bio ? (
+              <div className="mt-1 text-xs text-fg-dim">
+                {truncate(data.trader.bio, 100)}
+              </div>
+            ) : null}
           </div>
 
           <div className="text-right">
