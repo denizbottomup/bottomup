@@ -226,14 +226,18 @@ export class PublicService {
     // headline stats — which produces equity curves that "end" higher
     // than the true balance and monthly arrays whose net_r doesn't sum
     // to total_r. See docs/BUG_TRADER_STATS.md for the diagnosis.
+    // Per-trade close timestamp:
+    //   success → s.close_date
+    //   stopped → s.stop_date  (SL trigger moment)
+    //   either  → s.tp1_date / s.last_acted_at as further fallbacks
+    //   last resort → p.updated_at / p.created_at on the PnL row
     const trades = await this.prisma.$queryRawUnsafe<Array<Record<string, unknown>>>(
       `SELECT s.id::text AS id,
               s.coin_name,
               s.position::text AS position,
               s.status::text AS status,
-              COALESCE(s.close_date, s.tp1_date, p.updated_at, p.created_at) AS close_date,
-              s.close_date AS raw_close_date,
-              s.tp1_date   AS tp1_date,
+              COALESCE(s.close_date, s.stop_date, s.tp1_date, s.last_acted_at, p.updated_at, p.created_at) AS close_date,
+              COALESCE(s.close_date, s.stop_date, s.tp1_date, s.last_acted_at) AS real_close_date,
               COALESCE(p.estimated_pnl, 0) AS pnl,
               COALESCE(p.estimated_pnl_rate, 0) AS r
          FROM setup s
@@ -242,7 +246,7 @@ export class PublicService {
           AND s.trader_id = $1::uuid
           AND s.category = 'futures'::categories_type
           AND s.status IN ('success'::statuses_type,'stopped'::statuses_type)
-        ORDER BY COALESCE(s.close_date, s.tp1_date, p.updated_at, p.created_at) ASC NULLS LAST`,
+        ORDER BY COALESCE(s.close_date, s.stop_date, s.tp1_date, s.last_acted_at, p.updated_at, p.created_at) ASC NULLS LAST`,
       traderId,
     );
 
@@ -387,19 +391,14 @@ export class PublicService {
       curve = curve.filter((_, i) => i % step === 0 || i === curve.length - 1);
     }
 
-    // Recent panel: only trades with a real close timestamp
-    // (manually-closed close_date or TP1-hit tp1_date). Stops without
-    // either fall back to updated_at/created_at, which are batch SL
-    // trigger times — those cluster all stopped trades on a single
-    // moment and bury the actual chronology, so we exclude them here.
-    // The aggregate stats / equity curve still include them via the
-    // COALESCE chain.
+    // Recent panel: prefer trades with a real close timestamp from the
+    // setup table (close_date / stop_date / tp1_date / last_acted_at).
+    // The PnL row's updated_at gets touched by daily cron jobs, so if
+    // we sort by it the panel collapses every stopped trade onto a
+    // single batch instant. We use real_close_date for both filtering
+    // and ordering so wins and losses both appear in true chronology.
     const recent = trades
-      .map((t) => {
-        const real =
-          (t.raw_close_date as Date | null) ?? (t.tp1_date as Date | null) ?? null;
-        return { t, real };
-      })
+      .map((t) => ({ t, real: (t.real_close_date as Date | null) ?? null }))
       .filter((x) => x.real != null)
       .sort((a, b) => +new Date(b.real as Date) - +new Date(a.real as Date))
       .slice(0, 8)
@@ -480,7 +479,7 @@ export class PublicService {
           WHERE s.is_deleted = FALSE
             AND s.category = 'futures'::categories_type
             AND s.status IN ('success'::statuses_type,'stopped'::statuses_type)
-            AND COALESCE(s.close_date, s.tp1_date, p.updated_at, p.created_at) >= NOW() - INTERVAL '30 days'
+            AND COALESCE(s.close_date, s.stop_date, s.tp1_date, s.last_acted_at, p.updated_at, p.created_at) >= NOW() - INTERVAL '30 days'
           GROUP BY s.trader_id
        )
        SELECT u.id::text AS trader_id, u.name, u.first_name, u.last_name, u.image,
