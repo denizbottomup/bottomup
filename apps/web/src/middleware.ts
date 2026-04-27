@@ -56,7 +56,14 @@ function detectLocale(pathname: string): string {
  * (`/blog`, `/blog/<slug>`). Anything else on bupcore.ai is treated
  * as accidentally-on-landing and bounced to trade.
  */
-const MARKETING_PREFIXES = ['/blog', '/press'];
+const MARKETING_PREFIXES = [
+  '/blog',
+  '/press',
+  '/compare',
+  '/privacy',
+  '/terms',
+  '/risk-disclosure',
+];
 
 function isLandingPath(pathname: string): boolean {
   if (pathname === '' || pathname === '/') return true;
