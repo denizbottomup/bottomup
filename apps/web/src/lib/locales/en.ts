@@ -168,7 +168,7 @@ export const en: Dict = {
     cta: 'Browse marketplace →',
     empty: 'No closed trades in the last 30 days — check back soon.',
     balance_label: 'Virtual balance',
-    from_label: 'from $10,000 (last 30 days)',
+    from_label: 'from $10,000 · last 30 days',
     trades: 'Trades',
     wins: 'Wins',
     win_rate: 'Win rate',
