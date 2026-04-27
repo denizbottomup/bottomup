@@ -162,13 +162,13 @@ export const en: Dict = {
     headline_1: '$10,000 on day one.',
     headline_2: 'Where are they now?',
     subtitle:
-      'Every trader starts the month with a virtual $10,000. Tap a card for the full analytics dashboard — equity curve, R distribution, monthly P&L, coin breakdown.',
+      'Each trader’s last 30 days on a virtual $10,000. Tap a card for the full analytics dashboard — equity curve, R distribution, monthly P&L, coin breakdown.',
     disclaimer:
       'Simulated results. Hypothetical performance has inherent limitations. Past performance is not indicative of future results.',
     cta: 'Browse marketplace →',
-    empty: "No closed trades yet this month — check back soon.",
+    empty: 'No closed trades in the last 30 days — check back soon.',
     balance_label: 'Virtual balance',
-    from_label: 'from $10,000 this month',
+    from_label: 'from $10,000 (last 30 days)',
     trades: 'Trades',
     wins: 'Wins',
     win_rate: 'Win rate',

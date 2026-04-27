@@ -203,7 +203,7 @@ function DetailBody({
           </div>
 
           <div className="text-right">
-            <div className="mono-label !text-fg-dim">{thisMonthLabel()}</div>
+            <div className="mono-label !text-fg-dim">Last 30 days</div>
             <div className={`stat-num mt-0.5 text-3xl font-extrabold md:text-4xl ${returnTone}`}>
               ${data.stats.virtual_balance_usd.toLocaleString('en-US', {
                 maximumFractionDigits: 0,
@@ -253,7 +253,7 @@ function DetailBody({
 
         <section className="mt-6 rounded-2xl border border-border bg-bg p-5">
           <div className="flex items-center justify-between">
-            <div className="mono-label">Virtual balance · this month</div>
+            <div className="mono-label">Virtual balance · last 30 days</div>
             <span className={`stat-num text-xs font-semibold ${pnlTone}`}>
               {data.stats.total_pnl >= 0 ? '+' : ''}
               {formatUsd(data.stats.total_pnl)} net
@@ -261,13 +261,13 @@ function DetailBody({
           </div>
           {data.equity_curve.length === 0 ? (
             <div className="mt-3 flex h-40 items-center justify-center text-xs text-fg-dim">
-              No closed trades yet this month.
+              No closed trades in the last 30 days.
             </div>
           ) : (
             <EquityChart curve={data.equity_curve} positive={positive} />
           )}
           <div className="mt-2 flex items-center justify-between text-[11px] text-fg-dim">
-            <span>Starts $10,000 each month</span>
+            <span>$10,000 starting balance · 30-day window</span>
             <span className="stat-num">
               Best {formatUsd(data.stats.best_trade_pnl)} · Worst{' '}
               {formatUsd(data.stats.worst_trade_pnl)}
@@ -559,7 +559,3 @@ function truncate(s: string, n: number): string {
   return `${s.slice(0, n - 1).trim()}…`;
 }
 
-function thisMonthLabel(): string {
-  const d = new Date();
-  return `This month · ${d.toLocaleString('en-US', { month: 'short' })}`;
-}

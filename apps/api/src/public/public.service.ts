@@ -320,15 +320,14 @@ export class PublicService {
     const totalTrades = wins + losses;
     const winRate = totalTrades > 0 ? wins / totalTrades : null;
 
-    // Current-month aggregate. The leaderboard card already shows this
-    // month's stats — when the user clicks through, the modal stays in
-    // the same time window so the numbers match. All-time history is
-    // still surfaced via the Monthly R chart, the coin / long-short
-    // breakdown, and the Recent trades panel.
-    const monthStart = new Date();
-    monthStart.setUTCDate(1);
-    monthStart.setUTCHours(0, 0, 0, 0);
-    const monthStartTs = monthStart.getTime();
+    // Last-30-days rolling aggregate. The leaderboard card uses the
+    // same window — the modal stays in sync as the user clicks
+    // through. Calendar months were rejected because the field empties
+    // out on the 1st: a rolling window keeps the headline meaningful
+    // every day. All-time history is still surfaced via the Monthly R
+    // chart, the coin / long-short breakdown, and the Recent trades
+    // panel.
+    const windowStartTs = Date.now() - 30 * 24 * 60 * 60 * 1000;
     let mPnl = 0;
     let mR = 0;
     let mWins = 0;
@@ -341,7 +340,7 @@ export class PublicService {
       const closeAt = t.close_date as Date | null;
       if (!closeAt) continue;
       const ts = new Date(closeAt).getTime();
-      if (ts < monthStartTs) continue;
+      if (ts < windowStartTs) continue;
       const pnl = Number(t.pnl ?? 0);
       const r = Number(t.r ?? 0);
       const isWin = t.status === 'success';
@@ -452,6 +451,9 @@ export class PublicService {
       // Without this, the leaderboard counts only manually-closed trades,
       // which biases the win-rate sharply upward (most cards end up
       // showing 100% WR because every loss is filtered out).
+      // Rolling 30-day window — same as the trader detail modal.
+      // Calendar months emptied the leaderboard on the 1st of every
+      // month; rolling stays meaningful every day.
       `WITH monthly AS (
          SELECT s.trader_id,
                 COUNT(*) FILTER (WHERE s.status = 'success'::statuses_type)::int AS success,
@@ -463,7 +465,7 @@ export class PublicService {
           WHERE s.is_deleted = FALSE
             AND s.category = 'futures'::categories_type
             AND s.status IN ('success'::statuses_type,'stopped'::statuses_type)
-            AND COALESCE(s.close_date, s.tp1_date, p.updated_at, p.created_at) >= DATE_TRUNC('month', NOW())
+            AND COALESCE(s.close_date, s.tp1_date, p.updated_at, p.created_at) >= NOW() - INTERVAL '30 days'
           GROUP BY s.trader_id
        )
        SELECT u.id::text AS trader_id, u.name, u.first_name, u.last_name, u.image,
