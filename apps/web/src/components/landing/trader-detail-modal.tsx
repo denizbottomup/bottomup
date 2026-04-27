@@ -28,6 +28,16 @@ interface TraderDetail {
     virtual_balance_usd: number;
     virtual_return_pct: number;
   };
+  all_time: {
+    trades: number;
+    wins: number;
+    losses: number;
+    win_rate: number | null;
+    total_pnl: number;
+    total_r: number;
+    virtual_balance_usd: number;
+    virtual_return_pct: number;
+  };
   equity_curve: Array<{ t: number; balance: number }>;
   monthly: Array<{ month: string; net_r: number; trades: number }>;
   coins: Array<{
@@ -193,7 +203,7 @@ function DetailBody({
           </div>
 
           <div className="text-right">
-            <div className="mono-label !text-fg-dim">All-time virtual</div>
+            <div className="mono-label !text-fg-dim">{thisMonthLabel()}</div>
             <div className={`stat-num mt-0.5 text-3xl font-extrabold md:text-4xl ${returnTone}`}>
               ${data.stats.virtual_balance_usd.toLocaleString('en-US', {
                 maximumFractionDigits: 0,
@@ -203,6 +213,16 @@ function DetailBody({
               {positive ? '▲ +' : '▼ '}
               {data.stats.virtual_return_pct.toFixed(2)}% from $10,000
             </div>
+            {data.all_time && data.all_time.trades > 0 ? (
+              <div className="mt-2 text-[10px] text-fg-dim stat-num">
+                All-time: ${data.all_time.virtual_balance_usd.toLocaleString('en-US', { maximumFractionDigits: 0 })}
+                {' · '}
+                <span className={data.all_time.virtual_return_pct >= 0 ? 'text-emerald-400/80' : 'text-rose-400/80'}>
+                  {data.all_time.virtual_return_pct >= 0 ? '+' : ''}
+                  {data.all_time.virtual_return_pct.toFixed(2)}%
+                </span>
+              </div>
+            ) : null}
           </div>
         </div>
       </header>
@@ -233,15 +253,21 @@ function DetailBody({
 
         <section className="mt-6 rounded-2xl border border-border bg-bg p-5">
           <div className="flex items-center justify-between">
-            <div className="mono-label">Virtual balance · all closed trades</div>
+            <div className="mono-label">Virtual balance · this month</div>
             <span className={`stat-num text-xs font-semibold ${pnlTone}`}>
               {data.stats.total_pnl >= 0 ? '+' : ''}
               {formatUsd(data.stats.total_pnl)} net
             </span>
           </div>
-          <EquityChart curve={data.equity_curve} positive={positive} />
+          {data.equity_curve.length === 0 ? (
+            <div className="mt-3 flex h-40 items-center justify-center text-xs text-fg-dim">
+              No closed trades yet this month.
+            </div>
+          ) : (
+            <EquityChart curve={data.equity_curve} positive={positive} />
+          )}
           <div className="mt-2 flex items-center justify-between text-[11px] text-fg-dim">
-            <span>Starting $10,000</span>
+            <span>Starts $10,000 each month</span>
             <span className="stat-num">
               Best {formatUsd(data.stats.best_trade_pnl)} · Worst{' '}
               {formatUsd(data.stats.worst_trade_pnl)}
@@ -531,4 +557,9 @@ function formatUsd(n: number): string {
 function truncate(s: string, n: number): string {
   if (s.length <= n) return s;
   return `${s.slice(0, n - 1).trim()}…`;
+}
+
+function thisMonthLabel(): string {
+  const d = new Date();
+  return `This month · ${d.toLocaleString('en-US', { month: 'short' })}`;
 }

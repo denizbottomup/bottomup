@@ -25,6 +25,16 @@ export interface TraderDetailSummary {
     virtual_balance_usd: number;
     virtual_return_pct: number;
   };
+  all_time: {
+    trades: number;
+    wins: number;
+    losses: number;
+    win_rate: number | null;
+    total_pnl: number;
+    total_r: number;
+    virtual_balance_usd: number;
+    virtual_return_pct: number;
+  };
   equity_curve: Array<{ t: number; balance: number }>;
   monthly: Array<{ month: string; net_r: number; trades: number }>;
   coins: Array<{
@@ -310,6 +320,43 @@ export class PublicService {
     const totalTrades = wins + losses;
     const winRate = totalTrades > 0 ? wins / totalTrades : null;
 
+    // Current-month aggregate. The leaderboard card already shows this
+    // month's stats — when the user clicks through, the modal stays in
+    // the same time window so the numbers match. All-time history is
+    // still surfaced via the Monthly R chart, the coin / long-short
+    // breakdown, and the Recent trades panel.
+    const monthStart = new Date();
+    monthStart.setUTCDate(1);
+    monthStart.setUTCHours(0, 0, 0, 0);
+    const monthStartTs = monthStart.getTime();
+    let mPnl = 0;
+    let mR = 0;
+    let mWins = 0;
+    let mLosses = 0;
+    let mBest = -Infinity;
+    let mWorst = Infinity;
+    const mCurve: Array<{ t: number; balance: number }> = [];
+    let mBalance = STARTING;
+    for (const t of trades) {
+      const closeAt = t.close_date as Date | null;
+      if (!closeAt) continue;
+      const ts = new Date(closeAt).getTime();
+      if (ts < monthStartTs) continue;
+      const pnl = Number(t.pnl ?? 0);
+      const r = Number(t.r ?? 0);
+      const isWin = t.status === 'success';
+      mPnl += pnl;
+      mR += r;
+      if (isWin) mWins += 1;
+      else mLosses += 1;
+      if (pnl > mBest) mBest = pnl;
+      if (pnl < mWorst) mWorst = pnl;
+      mBalance += pnl;
+      mCurve.push({ t: ts, balance: mBalance });
+    }
+    const mTrades = mWins + mLosses;
+    const mWinRate = mTrades > 0 ? mWins / mTrades : null;
+
     const coins = Array.from(coinMap.entries())
       .map(([coin, c]) => ({
         coin,
@@ -331,8 +378,9 @@ export class PublicService {
       .sort((a, b) => (a.month < b.month ? -1 : 1))
       .slice(-12);
 
-    // Equity: sample up to 180 points so the SVG sparkline stays tight.
-    let curve = equity;
+    // Equity: sample the *monthly* curve up to 180 points. We show
+    // this-month's balance progression in the modal (matches the card).
+    let curve = mCurve;
     if (curve.length > 180) {
       const step = Math.ceil(curve.length / 180);
       curve = curve.filter((_, i) => i % step === 0 || i === curve.length - 1);
@@ -365,14 +413,25 @@ export class PublicService {
         followers: Number(u.followers ?? 0),
       },
       stats: {
+        trades: mTrades,
+        wins: mWins,
+        losses: mLosses,
+        win_rate: mWinRate,
+        total_pnl: Math.round(mPnl * 100) / 100,
+        total_r: Math.round(mR * 100) / 100,
+        best_trade_pnl: mBest === -Infinity ? 0 : Math.round(mBest * 100) / 100,
+        worst_trade_pnl: mWorst === Infinity ? 0 : Math.round(mWorst * 100) / 100,
+        virtual_balance_usd: Math.round(mBalance * 100) / 100,
+        virtual_return_pct:
+          Math.round(((mBalance - STARTING) / STARTING) * 10000) / 100,
+      },
+      all_time: {
         trades: totalTrades,
         wins,
         losses,
         win_rate: winRate,
         total_pnl: Math.round(totalPnl * 100) / 100,
         total_r: Math.round(totalR * 100) / 100,
-        best_trade_pnl: bestPnl === -Infinity ? 0 : Math.round(bestPnl * 100) / 100,
-        worst_trade_pnl: worstPnl === Infinity ? 0 : Math.round(worstPnl * 100) / 100,
         virtual_balance_usd: Math.round(runningBalance * 100) / 100,
         virtual_return_pct:
           Math.round(((runningBalance - STARTING) / STARTING) * 10000) / 100,
