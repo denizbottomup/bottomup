@@ -232,6 +232,8 @@ export class PublicService {
               s.position::text AS position,
               s.status::text AS status,
               COALESCE(s.close_date, s.tp1_date, p.updated_at, p.created_at) AS close_date,
+              s.close_date AS raw_close_date,
+              s.tp1_date   AS tp1_date,
               COALESCE(p.estimated_pnl, 0) AS pnl,
               COALESCE(p.estimated_pnl_rate, 0) AS r
          FROM setup s
@@ -385,10 +387,23 @@ export class PublicService {
       curve = curve.filter((_, i) => i % step === 0 || i === curve.length - 1);
     }
 
-    const recent = [...trades]
-      .reverse()
+    // Recent panel: only trades with a real close timestamp
+    // (manually-closed close_date or TP1-hit tp1_date). Stops without
+    // either fall back to updated_at/created_at, which are batch SL
+    // trigger times — those cluster all stopped trades on a single
+    // moment and bury the actual chronology, so we exclude them here.
+    // The aggregate stats / equity curve still include them via the
+    // COALESCE chain.
+    const recent = trades
+      .map((t) => {
+        const real =
+          (t.raw_close_date as Date | null) ?? (t.tp1_date as Date | null) ?? null;
+        return { t, real };
+      })
+      .filter((x) => x.real != null)
+      .sort((a, b) => +new Date(b.real as Date) - +new Date(a.real as Date))
       .slice(0, 8)
-      .map((t) => ({
+      .map(({ t, real }) => ({
         id: t.id as string,
         coin: String(t.coin_name ?? ''),
         position:
@@ -396,7 +411,7 @@ export class PublicService {
             ? (t.position as 'long' | 'short')
             : null,
         status: String(t.status ?? ''),
-        close_date: (t.close_date as Date | null) ?? null,
+        close_date: real,
         pnl: Math.round(Number(t.pnl ?? 0) * 100) / 100,
         r: Math.round(Number(t.r ?? 0) * 100) / 100,
       }));
