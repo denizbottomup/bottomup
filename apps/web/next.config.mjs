@@ -22,6 +22,34 @@ const nextConfig = {
   experimental: {
     externalDir: true,
   },
+  async headers() {
+    // robots.txt and sitemap.xml ship with `no-store`-ish caching
+    // (5 min, must-revalidate) so search engines and AI crawlers always
+    // fetch a fresh copy. Without this, Next.js tags /public files as
+    // `max-age=31536000, immutable` and CDN caches stick a stale
+    // robots.txt for a year — exactly what bit us when an old
+    // AI-block file got pinned at the edge.
+    return [
+      {
+        source: '/robots.txt',
+        headers: [
+          { key: 'Cache-Control', value: 'public, max-age=300, must-revalidate' },
+        ],
+      },
+      {
+        source: '/sitemap.xml',
+        headers: [
+          { key: 'Cache-Control', value: 'public, max-age=300, must-revalidate' },
+        ],
+      },
+      {
+        source: '/.well-known/security.txt',
+        headers: [
+          { key: 'Cache-Control', value: 'public, max-age=3600' },
+        ],
+      },
+    ];
+  },
 };
 
 export default withMDX(nextConfig);
