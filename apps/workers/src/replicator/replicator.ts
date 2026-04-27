@@ -127,20 +127,36 @@ export class Replicator {
     }
     if (rows.length === 0) return 0;
 
-    // Fresh target checkout for the upsert transaction
+    // Fresh target checkout for the upsert transaction. Each row is
+    // wrapped in its own SAVEPOINT — a single bad row (e.g. duplicate
+    // email on the user table) fails ROLLBACK TO SAVEPOINT only and
+    // the rest of the batch still commits. Without this, one bad row
+    // poisons the whole batch and the cursor never advances.
     const dst = await this.dst.connect();
+    let skipped = 0;
+    let lastSkipErr: string | null = null;
     try {
       await dst.query('BEGIN');
       await dst.query(`SET LOCAL session_replication_role = 'replica'`);
       const upsertSql = buildUpsert(spec, cols);
-      for (const row of rows) {
+      for (let i = 0; i < rows.length; i++) {
+        const row = rows[i] as Record<string, unknown>;
         const values = cols.map((c) => {
           const v = row[c];
           if (v === undefined || v === null) return null;
           if (jsonCols.has(c) && typeof v === 'object') return JSON.stringify(v);
           return v;
         });
-        await dst.query(upsertSql, values);
+        const sp = `sp_${i}`;
+        await dst.query(`SAVEPOINT ${sp}`);
+        try {
+          await dst.query(upsertSql, values);
+          await dst.query(`RELEASE SAVEPOINT ${sp}`);
+        } catch (err) {
+          await dst.query(`ROLLBACK TO SAVEPOINT ${sp}`);
+          skipped += 1;
+          lastSkipErr = (err as Error).message;
+        }
       }
       await dst.query('COMMIT');
     } catch (err) {
@@ -148,6 +164,12 @@ export class Replicator {
       throw err;
     } finally {
       dst.release();
+    }
+    if (skipped > 0) {
+      this.log.warn(
+        { table: spec.name, skipped, total: rows.length, lastErr: lastSkipErr },
+        'replicator: rows skipped',
+      );
     }
 
     if (spec.cursorCol) {

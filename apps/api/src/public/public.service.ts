@@ -231,6 +231,13 @@ export class PublicService {
     //   stopped → s.stop_date  (SL trigger moment)
     //   either  → s.tp1_date / s.last_acted_at as further fallbacks
     //   last resort → p.updated_at / p.created_at on the PnL row
+    // LEFT JOIN trader_setup_pnl_performance — that table is recomputed
+    // by a daily cron, so trades closed today have a setup row but no
+    // PnL row yet. INNER JOIN dropped them; LEFT JOIN keeps them with
+    // null pnl/r (treated as 0 below). Status filter also includes
+    // 'closed' (manual break-even close): those are real trade activity
+    // and belong in the trade count and recent panel even though they
+    // aren't wins or losses.
     const trades = await this.prisma.$queryRawUnsafe<Array<Record<string, unknown>>>(
       `SELECT s.id::text AS id,
               s.coin_name,
@@ -241,11 +248,11 @@ export class PublicService {
               COALESCE(p.estimated_pnl, 0) AS pnl,
               COALESCE(p.estimated_pnl_rate, 0) AS r
          FROM setup s
-         JOIN trader_setup_pnl_performance p ON p.setup_id = s.id
+         LEFT JOIN trader_setup_pnl_performance p ON p.setup_id = s.id
         WHERE s.is_deleted = FALSE
           AND s.trader_id = $1::uuid
           AND s.category = 'futures'::categories_type
-          AND s.status IN ('success'::statuses_type,'stopped'::statuses_type)
+          AND s.status IN ('success'::statuses_type,'stopped'::statuses_type,'closed'::statuses_type)
         ORDER BY COALESCE(s.close_date, s.stop_date, s.tp1_date, s.last_acted_at, p.updated_at, p.created_at) ASC NULLS LAST`,
       traderId,
     );
@@ -256,6 +263,7 @@ export class PublicService {
     let totalR = 0;
     let wins = 0;
     let losses = 0;
+    let breakEven = 0;
     let bestPnl = -Infinity;
     let worstPnl = Infinity;
 
@@ -275,11 +283,13 @@ export class PublicService {
       const pos = t.position === 'long' || t.position === 'short' ? t.position : null;
       const closeAt = t.close_date as Date | null;
       const isWin = t.status === 'success';
+      const isLoss = t.status === 'stopped';
 
       totalPnl += pnl;
       totalR += r;
       if (isWin) wins += 1;
-      else losses += 1;
+      else if (isLoss) losses += 1;
+      else breakEven += 1;
       if (pnl > bestPnl) bestPnl = pnl;
       if (pnl < worstPnl) worstPnl = pnl;
 
@@ -323,8 +333,10 @@ export class PublicService {
       }
     }
 
-    const totalTrades = wins + losses;
-    const winRate = totalTrades > 0 ? wins / totalTrades : null;
+    const totalTrades = wins + losses + breakEven;
+    // Win rate denominator excludes break-even trades — they're neither
+    // wins nor losses, just exits at entry.
+    const winRate = wins + losses > 0 ? wins / (wins + losses) : null;
 
     // Last-30-days rolling aggregate. The leaderboard card uses the
     // same window — the modal stays in sync as the user clicks
@@ -468,31 +480,42 @@ export class PublicService {
       // Rolling 30-day window — same as the trader detail modal.
       // Calendar months emptied the leaderboard on the 1st of every
       // month; rolling stays meaningful every day.
+      //
+      // LEFT JOIN onto trader_setup_pnl_performance — the PnL table is
+      // refreshed by a daily cron and trails the setup table by up to
+      // 24h. Without LEFT JOIN, today's closed setups disappear from
+      // the leaderboard until the cron runs. With LEFT JOIN, they
+      // count toward trade tallies even before PnL lands (their PnL
+      // contribution is NULL=0 until the cron catches up).
+      // 'closed' (manual break-even close) is included in the trade
+      // count alongside success/stopped.
       `WITH monthly AS (
          SELECT s.trader_id,
                 COUNT(*) FILTER (WHERE s.status = 'success'::statuses_type)::int AS success,
                 COUNT(*) FILTER (WHERE s.status = 'stopped'::statuses_type)::int AS stopped,
+                COUNT(*) FILTER (WHERE s.status = 'closed'::statuses_type)::int AS closed,
                 COALESCE(SUM(p.estimated_pnl), 0) AS net_pnl,
                 COALESCE(SUM(p.estimated_pnl_rate), 0) AS net_r
-           FROM trader_setup_pnl_performance p
-           JOIN setup s ON s.id = p.setup_id
+           FROM setup s
+           LEFT JOIN trader_setup_pnl_performance p ON p.setup_id = s.id
           WHERE s.is_deleted = FALSE
             AND s.category = 'futures'::categories_type
-            AND s.status IN ('success'::statuses_type,'stopped'::statuses_type)
+            AND s.status IN ('success'::statuses_type,'stopped'::statuses_type,'closed'::statuses_type)
             AND COALESCE(s.close_date, s.stop_date, s.tp1_date, s.last_acted_at, p.updated_at, p.created_at) >= NOW() - INTERVAL '30 days'
           GROUP BY s.trader_id
        )
        SELECT u.id::text AS trader_id, u.name, u.first_name, u.last_name, u.image,
               (SELECT COUNT(*)::int FROM follow_notify f
                 WHERE f.trader_id = u.id AND f.follow = TRUE AND f.is_deleted = FALSE) AS followers,
-              COALESCE(m.success + m.stopped, 0) AS trades,
+              COALESCE(m.success + m.stopped + m.closed, 0) AS trades,
               COALESCE(m.success, 0) AS wins,
+              COALESCE(m.success + m.stopped, 0) AS scored_trades,
               COALESCE(m.net_pnl, 0) AS net_pnl,
               COALESCE(m.net_r, 0) AS net_r
          FROM "user" u
          LEFT JOIN monthly m ON m.trader_id = u.id
         WHERE u.is_trader = TRUE AND u.is_active = TRUE AND u.is_deleted = FALSE
-          AND m.success + m.stopped > 0
+          AND m.success + m.stopped + m.closed > 0
         ORDER BY m.net_pnl DESC NULLS LAST
         LIMIT ${capped}`,
     );
@@ -500,6 +523,7 @@ export class PublicService {
     return rows.map((r) => {
       const trades = Number(r.trades ?? 0);
       const wins = Number(r.wins ?? 0);
+      const scored = Number(r.scored_trades ?? 0);
       const netPnl = Number(r.net_pnl ?? 0);
       const balance = STARTING + netPnl;
       const returnPct = ((balance - STARTING) / STARTING) * 100;
@@ -514,7 +538,7 @@ export class PublicService {
         virtual_return_pct: Math.round(returnPct * 100) / 100,
         monthly_trades: trades,
         monthly_wins: wins,
-        monthly_win_rate: trades > 0 ? wins / trades : null,
+        monthly_win_rate: scored > 0 ? wins / scored : null,
       };
     });
   }
