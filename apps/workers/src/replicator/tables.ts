@@ -21,7 +21,12 @@ export const REPLICATED_TABLES: TableReplicationSpec[] = [
   { name: 'trader_profile', pkCols: ['id'], cursorCol: 'updated_at' },
 
   // ─── Setups & social ──────────────────────────────────────────────
-  { name: 'setup', pkCols: ['id'], cursorCol: 'updated_at' },
+  // cursorCol is `last_acted_at` (not `updated_at`): source mobile app
+  // bumps last_acted_at on every status change but doesn't always bump
+  // updated_at, so polling by updated_at silently misses 'active' →
+  // 'closed' / 'success' / 'stopped' transitions and the leaderboard
+  // freezes on the row's first version.
+  { name: 'setup', pkCols: ['id'], cursorCol: 'last_acted_at' },
   { name: 'setup_events', pkCols: ['id'], cursorCol: 'event_time' },
   { name: 'setup_value_history', pkCols: ['id'], cursorCol: 'created_at' },
   { name: 'clap', pkCols: ['id'], cursorCol: 'created_at' },
