@@ -36,6 +36,32 @@ interface SetupsPayload {
   };
 }
 
+interface WhaleTransfer {
+  id: string;
+  ts: string;
+  chain: string;
+  token_symbol: string;
+  unit_value: number;
+  usd_value: number;
+  from: { name: string; address: string; type: string | null };
+  to: { name: string; address: string; type: string | null };
+  flow: 'cex_in' | 'cex_out' | 'between';
+  tx_hash: string;
+}
+
+interface WhalesPayload {
+  coin: string;
+  window_hours: number;
+  min_usd: number;
+  total: number;
+  transfers: WhaleTransfer[];
+  flows: {
+    cex_in_usd: number;
+    cex_out_usd: number;
+    between_usd: number;
+  };
+}
+
 interface DerivativesPayload {
   coin: string;
   liquidation: {
@@ -248,10 +274,7 @@ function FoxyResultView({
             <TradingViewCard coin={coin} />
             <SetupsCard coin={coin} />
             <DerivativesCard coin={coin} />
-            <PlaceholderCard
-              title="Whale moves — Arkham"
-              hint="$1M+ pozisyon açılışları + bakiye değişimleri — Phase 4."
-            />
+            <WhalesCard coin={coin} />
             <PlaceholderCard
               title="Foxy AI summary"
               hint="Claude API tüm verilerden doğal dil yorumu üretecek — Phase 5."
@@ -704,6 +727,180 @@ function formatPrice(n: number): string {
   if (n >= 1) return n.toFixed(4);
   if (n >= 0.01) return n.toFixed(5);
   return n.toFixed(8);
+}
+
+function WhalesCard({ coin }: { coin: CoinMatch }) {
+  const { getIdToken } = useAuth();
+  const [data, setData] = useState<WhalesPayload | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    setLoading(true);
+    setErr(null);
+    setData(null);
+    (async () => {
+      const token = await getIdToken();
+      if (!token) {
+        if (alive) {
+          setErr('Auth gerekli.');
+          setLoading(false);
+        }
+        return;
+      }
+      try {
+        const res = await fetch(
+          `${API_BASE}/me/foxy/whales/${encodeURIComponent(coin.symbol)}`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+            cache: 'no-store',
+          },
+        );
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const json = (await res.json()) as WhalesPayload;
+        if (alive) {
+          setData(json);
+          setLoading(false);
+        }
+      } catch (x) {
+        if (alive) {
+          setErr((x as Error).message);
+          setLoading(false);
+        }
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [coin.symbol, getIdToken]);
+
+  return (
+    <section className="rounded-2xl border border-border bg-bg-card overflow-hidden">
+      <div className="border-b border-border px-5 py-3">
+        <div className="mono-label">Whale moves · {coin.symbol}</div>
+        <div className="mt-0.5 text-[11px] text-fg-dim">
+          Arkham on-chain transfers · $
+          {data ? formatUsdShort(data.min_usd).slice(1) : '1M'}+ · son{' '}
+          {data?.window_hours ?? 24}h
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="p-5 text-sm text-fg-muted">Balina hareketleri yükleniyor…</div>
+      ) : err ? (
+        <div className="p-5 text-sm text-rose-200">Veri alınamadı: {err}</div>
+      ) : data && data.transfers.length > 0 ? (
+        <>
+          <div className="grid grid-cols-3 gap-3 border-b border-border px-5 py-4">
+            <FlowStat
+              label="Borsalara giriş"
+              tone="rose"
+              value={data.flows.cex_in_usd}
+              hint="CEX'e gönderildi"
+            />
+            <FlowStat
+              label="Borsadan çıkış"
+              tone="emerald"
+              value={data.flows.cex_out_usd}
+              hint="CEX'ten çekildi"
+            />
+            <FlowStat
+              label="Aralarında"
+              tone="neutral"
+              value={data.flows.between_usd}
+              hint="OTC / DeFi / wallet"
+            />
+          </div>
+          <div className="divide-y divide-border">
+            {data.transfers.map((t) => (
+              <WhaleRow key={t.id} t={t} />
+            ))}
+          </div>
+          {data.total > data.transfers.length ? (
+            <div className="border-t border-border px-5 py-3 text-[11px] text-fg-dim">
+              Listedeki {data.transfers.length} işlem en büyükleri.{' '}
+              {data.window_hours} saat içinde toplam {data.total} kayıt var.
+            </div>
+          ) : null}
+        </>
+      ) : (
+        <div className="p-5 text-sm text-fg-muted">
+          Son {data?.window_hours ?? 24} saatte ${formatUsdShort(data?.min_usd ?? 1_000_000).slice(1)}+
+          büyüklükte transfer yok. (Bu coin için Arkham haritalı değilse veri boş gelir.)
+        </div>
+      )}
+    </section>
+  );
+}
+
+function FlowStat({
+  label,
+  tone,
+  value,
+  hint,
+}: {
+  label: string;
+  tone: 'rose' | 'emerald' | 'neutral';
+  value: number;
+  hint: string;
+}) {
+  const cls =
+    tone === 'rose'
+      ? 'text-rose-300'
+      : tone === 'emerald'
+        ? 'text-emerald-300'
+        : 'text-fg';
+  return (
+    <div className="rounded-xl border border-border bg-bg p-3">
+      <div className="text-[10px] uppercase tracking-wider text-fg-dim">{label}</div>
+      <div className={`mt-1 text-lg font-bold ${cls}`}>{formatUsdShort(value)}</div>
+      <div className="mt-0.5 text-[10px] text-fg-dim">{hint}</div>
+    </div>
+  );
+}
+
+function WhaleRow({ t }: { t: WhaleTransfer }) {
+  const time = t.ts ? new Date(t.ts) : null;
+  const flowLabel =
+    t.flow === 'cex_in'
+      ? '↗ to CEX'
+      : t.flow === 'cex_out'
+        ? '↙ from CEX'
+        : 'wallet → wallet';
+  const flowTone =
+    t.flow === 'cex_in'
+      ? 'text-rose-300'
+      : t.flow === 'cex_out'
+        ? 'text-emerald-300'
+        : 'text-fg-dim';
+  return (
+    <div className="grid grid-cols-12 items-center gap-3 px-5 py-3 text-[12px] font-mono">
+      <div className="col-span-2 text-fg-dim">
+        {time
+          ? time.toLocaleTimeString('en-GB', {
+              hour: '2-digit',
+              minute: '2-digit',
+            })
+          : '—'}
+      </div>
+      <div className="col-span-3 truncate text-fg">{compactName(t.from.name)}</div>
+      <div className="col-span-1 text-center text-fg-dim">→</div>
+      <div className="col-span-3 truncate text-fg">{compactName(t.to.name)}</div>
+      <div className="col-span-2 text-right text-fg font-bold">
+        {formatUsdShort(t.usd_value)}
+      </div>
+      <div className={`col-span-1 text-right text-[10px] uppercase ${flowTone}`}>
+        {flowLabel}
+      </div>
+    </div>
+  );
+}
+
+function compactName(s: string): string {
+  if (!s) return '—';
+  if (s.startsWith('0x') && s.length > 12) return `${s.slice(0, 6)}…${s.slice(-4)}`;
+  return s.length > 22 ? `${s.slice(0, 22)}…` : s;
 }
 
 function PlaceholderCard({ title, hint }: { title: string; hint: string }) {

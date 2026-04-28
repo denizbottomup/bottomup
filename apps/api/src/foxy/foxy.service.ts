@@ -51,6 +51,42 @@ export interface FoxySetupsByCoin {
   };
 }
 
+export interface FoxyWhaleTransfer {
+  id: string;
+  ts: string; // ISO timestamp
+  chain: string; // 'ethereum', 'bsc', ...
+  token_symbol: string;
+  unit_value: number; // raw token amount
+  usd_value: number; // historical USD
+  from: { name: string; address: string; type: string | null };
+  to: { name: string; address: string; type: string | null };
+  /**
+   * Direction relative to centralized exchanges. 'cex_in' means tokens
+   * moved INTO an exchange (often pre-sell signal); 'cex_out' is the
+   * opposite (often pre-hold). 'between' = neither side is a CEX.
+   */
+  flow: 'cex_in' | 'cex_out' | 'between';
+  tx_hash: string;
+}
+
+export interface FoxyWhales {
+  coin: string;
+  /** Inputs reflected back so the UI can label the time window. */
+  window_hours: number;
+  min_usd: number;
+  /** Total number of transfers Arkham knows about over the window. */
+  total: number;
+  /** Top transfers (by USD desc) we kept on the wire — capped to keep
+   *  payloads small. */
+  transfers: FoxyWhaleTransfer[];
+  /** Aggregated CEX in/out totals across the full window. */
+  flows: {
+    cex_in_usd: number;
+    cex_out_usd: number;
+    between_usd: number;
+  };
+}
+
 export interface FoxyDerivatives {
   /** Bare symbol echoed back (e.g. "ETH"). */
   coin: string;
@@ -404,6 +440,152 @@ export class FoxyService {
     };
   }
 
+  /**
+   * Whale moves card on /home/foxy: large-USD on-chain transfers for
+   * the asset, courtesy of Arkham. We pull the top N transfers in
+   * the last 24h above the configured USD floor (default $1M) and
+   * also aggregate net CEX in/out flow over the same window — that
+   * second number is the actual signal traders care about ("did
+   * whales send ETH to Binance to sell?").
+   *
+   * Auth: API-Key header. Key lives in ARKHAM_API_KEY (Railway env).
+   */
+  async whalesByCoin(
+    coinInput: string,
+    opts: { minUsd?: number; hours?: number; limit?: number } = {},
+  ): Promise<FoxyWhales> {
+    const symbol = normalizeCoinName(coinInput).replace(/USDT$/i, '');
+    const slug = ARKHAM_SLUG[symbol] ?? null;
+    const minUsd = Math.max(50_000, Math.floor(opts.minUsd ?? 1_000_000));
+    const hours = Math.max(1, Math.min(168, Math.floor(opts.hours ?? 24)));
+    const limit = Math.max(1, Math.min(50, Math.floor(opts.limit ?? 20)));
+
+    if (!slug) {
+      // Coin we don't have an Arkham id for yet — return an empty
+      // result so the card renders a clean empty state instead of an
+      // error. Mapping additions land in ARKHAM_SLUG below.
+      return {
+        coin: symbol,
+        window_hours: hours,
+        min_usd: minUsd,
+        total: 0,
+        transfers: [],
+        flows: { cex_in_usd: 0, cex_out_usd: 0, between_usd: 0 },
+      };
+    }
+
+    const apiKey = process.env.ARKHAM_API_KEY;
+    if (!apiKey) {
+      this.log.warn('ARKHAM_API_KEY not set — whales card will be empty');
+      return {
+        coin: symbol,
+        window_hours: hours,
+        min_usd: minUsd,
+        total: 0,
+        transfers: [],
+        flows: { cex_in_usd: 0, cex_out_usd: 0, between_usd: 0 },
+      };
+    }
+
+    const url = new URL('https://api.arkm.com/transfers');
+    url.searchParams.set('tokens', slug);
+    url.searchParams.set('usdGte', String(minUsd));
+    url.searchParams.set('timeLast', `${hours}h`);
+    url.searchParams.set('sortKey', 'usd');
+    url.searchParams.set('sortDir', 'desc');
+    url.searchParams.set('limit', String(limit));
+
+    const res = await fetch(url, {
+      headers: { 'API-Key': apiKey, accept: 'application/json' },
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!res.ok) {
+      this.log.warn(
+        { status: res.status, coin: symbol },
+        'arkham transfers failed',
+      );
+      return {
+        coin: symbol,
+        window_hours: hours,
+        min_usd: minUsd,
+        total: 0,
+        transfers: [],
+        flows: { cex_in_usd: 0, cex_out_usd: 0, between_usd: 0 },
+      };
+    }
+    const json = (await res.json()) as {
+      count?: number;
+      transfers?: Array<Record<string, unknown>>;
+    };
+
+    const transfers: FoxyWhaleTransfer[] = [];
+    let cexIn = 0;
+    let cexOut = 0;
+    let between = 0;
+    for (const t of json.transfers ?? []) {
+      const fromAddr = t.fromAddress as Record<string, unknown> | undefined;
+      const toAddr = t.toAddress as Record<string, unknown> | undefined;
+      const fromEntity = fromAddr?.arkhamEntity as Record<string, unknown> | undefined;
+      const toEntity = toAddr?.arkhamEntity as Record<string, unknown> | undefined;
+      const fromType = (fromEntity?.type as string | undefined) ?? null;
+      const toType = (toEntity?.type as string | undefined) ?? null;
+      const fromIsCex = fromType === 'cex';
+      const toIsCex = toType === 'cex';
+      const usd = Number(t.historicalUSD ?? 0);
+
+      let flow: FoxyWhaleTransfer['flow'] = 'between';
+      if (toIsCex && !fromIsCex) {
+        flow = 'cex_in';
+        cexIn += usd;
+      } else if (fromIsCex && !toIsCex) {
+        flow = 'cex_out';
+        cexOut += usd;
+      } else {
+        between += usd;
+      }
+
+      transfers.push({
+        id: String(t.id ?? `${t.transactionHash}-${t.tokenSymbol}`),
+        ts: String(t.blockTimestamp ?? ''),
+        chain: String(t.chain ?? ''),
+        token_symbol: String(t.tokenSymbol ?? ''),
+        unit_value: Number(t.unitValue ?? 0),
+        usd_value: usd,
+        from: {
+          name:
+            (fromEntity?.name as string | undefined) ??
+            (fromAddr?.address as string | undefined) ??
+            '—',
+          address: (fromAddr?.address as string | undefined) ?? '',
+          type: fromType,
+        },
+        to: {
+          name:
+            (toEntity?.name as string | undefined) ??
+            (toAddr?.address as string | undefined) ??
+            '—',
+          address: (toAddr?.address as string | undefined) ?? '',
+          type: toType,
+        },
+        flow,
+        tx_hash: String(t.transactionHash ?? ''),
+      });
+    }
+
+    return {
+      coin: symbol,
+      window_hours: hours,
+      min_usd: minUsd,
+      total: Number(json.count ?? transfers.length),
+      transfers,
+      flows: {
+        cex_in_usd: Math.round(cexIn),
+        cex_out_usd: Math.round(cexOut),
+        between_usd: Math.round(between),
+      },
+    };
+  }
+
   private async loadSetup(id: string): Promise<SetupRow | null> {
     const rows = await this.prisma.$queryRawUnsafe<Array<Record<string, unknown>>>(
       `SELECT s.id::text AS id, s.coin_name, s.category::text AS category,
@@ -712,3 +894,25 @@ function normalizeCoinName(input: string): string {
   if (raw.endsWith('USD')) return raw + 'T';
   return raw + 'USDT';
 }
+
+/**
+ * Bare-symbol → Arkham token slug (matches CoinGecko pricing IDs).
+ * Used by the whales endpoint when we need to query Arkham's
+ * `/transfers?tokens=…`. Mirrors the coin set we expose on the
+ * frontend `coin-extract.ts`. Add new symbols here as we extend the
+ * supported list.
+ */
+const ARKHAM_SLUG: Record<string, string> = {
+  BTC: 'bitcoin',
+  ETH: 'ethereum',
+  SOL: 'solana',
+  BNB: 'binancecoin',
+  XRP: 'ripple',
+  ADA: 'cardano',
+  DOGE: 'dogecoin',
+  AVAX: 'avalanche-2',
+  LINK: 'chainlink',
+  MATIC: 'matic-network',
+  TRX: 'tron',
+  TON: 'the-open-network',
+};

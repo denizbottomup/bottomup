@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
 import { FirebaseAuthGuard } from '../common/guards/firebase-auth.guard.js';
 import {
   FoxyService,
@@ -6,6 +6,7 @@ import {
   type FoxyDerivatives,
   type FoxySetupsByCoin,
   type FoxyVerdict,
+  type FoxyWhales,
 } from './foxy.service.js';
 
 @Controller()
@@ -54,5 +55,27 @@ export class FoxyController {
     @Param('coin') coin: string,
   ): Promise<FoxyDerivatives> {
     return this.foxy.derivativesByCoin(coin);
+  }
+
+  /**
+   * `/me/foxy/whales/:coin` — large-USD on-chain transfers via
+   * Arkham. Optional query params: `min_usd` (default 1_000_000),
+   * `hours` (default 24), `limit` (default 20).
+   */
+  @Get('/me/foxy/whales/:coin')
+  async whalesByCoin(
+    @Param('coin') coin: string,
+    @Query('min_usd') minUsdRaw?: string,
+    @Query('hours') hoursRaw?: string,
+    @Query('limit') limitRaw?: string,
+  ): Promise<FoxyWhales> {
+    const minUsd = minUsdRaw ? Number(minUsdRaw) : undefined;
+    const hours = hoursRaw ? Number(hoursRaw) : undefined;
+    const limit = limitRaw ? Number(limitRaw) : undefined;
+    return this.foxy.whalesByCoin(coin, {
+      minUsd: Number.isFinite(minUsd) ? minUsd : undefined,
+      hours: Number.isFinite(hours) ? hours : undefined,
+      limit: Number.isFinite(limit) ? limit : undefined,
+    });
   }
 }
