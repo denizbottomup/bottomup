@@ -3,6 +3,7 @@ import { FirebaseAuthGuard } from '../common/guards/firebase-auth.guard.js';
 import {
   FoxyService,
   type FoxyChatMessage,
+  type FoxyDerivatives,
   type FoxySetupsByCoin,
   type FoxyVerdict,
 } from './foxy.service.js';
@@ -40,5 +41,18 @@ export class FoxyController {
     @Param('coin') coin: string,
   ): Promise<FoxySetupsByCoin> {
     return this.foxy.setupsByCoin(coin);
+  }
+
+  /**
+   * `/me/foxy/derivatives/:coin` — liquidations, OI, long/short
+   * ratio and funding rate for the asset Foxy is currently
+   * analysing. Each block is independently nullable so a partial
+   * outage on one source still yields a useful card.
+   */
+  @Get('/me/foxy/derivatives/:coin')
+  async derivativesByCoin(
+    @Param('coin') coin: string,
+  ): Promise<FoxyDerivatives> {
+    return this.foxy.derivativesByCoin(coin);
   }
 }

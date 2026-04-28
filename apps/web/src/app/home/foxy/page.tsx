@@ -36,6 +36,32 @@ interface SetupsPayload {
   };
 }
 
+interface DerivativesPayload {
+  coin: string;
+  liquidation: {
+    long_24h_usd: number;
+    short_24h_usd: number;
+    total_24h_usd: number;
+    total_4h_usd: number;
+    total_1h_usd: number;
+  } | null;
+  oi: {
+    oi_usd: number;
+    change_4h_pct: number | null;
+    change_24h_pct: number | null;
+  } | null;
+  long_short: {
+    long_ratio: number;
+    short_ratio: number;
+    ts: number;
+  } | null;
+  funding: {
+    rate: number;
+    annualized_pct: number;
+    next_funding_ts: number | null;
+  } | null;
+}
+
 const SUGGESTIONS = [
   'Ethereum analizi yapar mısın?',
   'BTC için sinyaller var mı?',
@@ -221,10 +247,7 @@ function FoxyResultView({
             <CoinHeader coin={coin} />
             <TradingViewCard coin={coin} />
             <SetupsCard coin={coin} />
-            <PlaceholderCard
-              title="Derivatives — CoinGlass"
-              hint="Liquidations 24h · OI · Funding · Long/Short — Phase 3."
-            />
+            <DerivativesCard coin={coin} />
             <PlaceholderCard
               title="Whale moves — Arkham"
               hint="$1M+ pozisyon açılışları + bakiye değişimleri — Phase 4."
@@ -461,6 +484,219 @@ function SetupRow({ setup }: { setup: CoinSetup }) {
       </div>
     </div>
   );
+}
+
+function DerivativesCard({ coin }: { coin: CoinMatch }) {
+  const { getIdToken } = useAuth();
+  const [data, setData] = useState<DerivativesPayload | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    setLoading(true);
+    setErr(null);
+    setData(null);
+    (async () => {
+      const token = await getIdToken();
+      if (!token) {
+        if (alive) {
+          setErr('Auth gerekli.');
+          setLoading(false);
+        }
+        return;
+      }
+      try {
+        const res = await fetch(
+          `${API_BASE}/me/foxy/derivatives/${encodeURIComponent(coin.symbol)}`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+            cache: 'no-store',
+          },
+        );
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const json = (await res.json()) as DerivativesPayload;
+        if (alive) {
+          setData(json);
+          setLoading(false);
+        }
+      } catch (x) {
+        if (alive) {
+          setErr((x as Error).message);
+          setLoading(false);
+        }
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [coin.symbol, getIdToken]);
+
+  return (
+    <section className="rounded-2xl border border-border bg-bg-card overflow-hidden">
+      <div className="border-b border-border px-5 py-3">
+        <div className="mono-label">Derivatives · {coin.symbol}</div>
+        <div className="mt-0.5 text-[11px] text-fg-dim">
+          CoinGlass aggregate · Binance futures · 5dk cache
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="p-5 text-sm text-fg-muted">Türev verileri yükleniyor…</div>
+      ) : err ? (
+        <div className="p-5 text-sm text-rose-200">Veri alınamadı: {err}</div>
+      ) : data ? (
+        <div className="grid grid-cols-1 gap-4 p-5 md:grid-cols-2">
+          <LiquidationBlock liq={data.liquidation} />
+          <OiBlock oi={data.oi} />
+          <LongShortBlock ls={data.long_short} />
+          <FundingBlock fund={data.funding} />
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
+function LiquidationBlock({ liq }: { liq: DerivativesPayload['liquidation'] }) {
+  if (!liq) {
+    return <Block title="Liquidations 24h" body={<DataDash />} />;
+  }
+  const longPct = liq.total_24h_usd > 0 ? (liq.long_24h_usd / liq.total_24h_usd) * 100 : 50;
+  return (
+    <Block
+      title="Liquidations 24h"
+      body={
+        <div>
+          <div className="text-2xl font-bold text-fg">
+            {formatUsdShort(liq.total_24h_usd)}
+          </div>
+          <div className="mt-2 flex h-2 overflow-hidden rounded-full bg-rose-400/20">
+            <div className="bg-emerald-400" style={{ width: `${longPct.toFixed(1)}%` }} />
+          </div>
+          <div className="mt-1 flex justify-between text-[10px] text-fg-dim font-mono">
+            <span className="text-emerald-300">Long {formatUsdShort(liq.long_24h_usd)}</span>
+            <span className="text-rose-300">{formatUsdShort(liq.short_24h_usd)} Short</span>
+          </div>
+        </div>
+      }
+    />
+  );
+}
+
+function OiBlock({ oi }: { oi: DerivativesPayload['oi'] }) {
+  if (!oi) {
+    return <Block title="Open interest" body={<DataDash />} />;
+  }
+  const tone24 =
+    oi.change_24h_pct == null
+      ? 'text-fg-dim'
+      : oi.change_24h_pct >= 0
+        ? 'text-emerald-300'
+        : 'text-rose-300';
+  return (
+    <Block
+      title="Open interest"
+      body={
+        <div>
+          <div className="text-2xl font-bold text-fg">{formatUsdShort(oi.oi_usd)}</div>
+          <div className="mt-1 flex gap-3 text-[11px] font-mono">
+            <span className={tone24}>
+              24h{' '}
+              {oi.change_24h_pct == null
+                ? '—'
+                : `${oi.change_24h_pct >= 0 ? '+' : ''}${oi.change_24h_pct.toFixed(2)}%`}
+            </span>
+            <span className="text-fg-dim">
+              4h{' '}
+              {oi.change_4h_pct == null
+                ? '—'
+                : `${oi.change_4h_pct >= 0 ? '+' : ''}${oi.change_4h_pct.toFixed(2)}%`}
+            </span>
+          </div>
+        </div>
+      }
+    />
+  );
+}
+
+function LongShortBlock({ ls }: { ls: DerivativesPayload['long_short'] }) {
+  if (!ls) {
+    return <Block title="Long / Short ratio" body={<DataDash />} />;
+  }
+  const total = ls.long_ratio + ls.short_ratio || 1;
+  const longPct = (ls.long_ratio / total) * 100;
+  return (
+    <Block
+      title="Long / Short ratio"
+      body={
+        <div>
+          <div className="text-2xl font-bold text-fg">
+            {(ls.long_ratio / Math.max(0.01, ls.short_ratio)).toFixed(2)}{' '}
+            <span className="text-xs text-fg-dim">L:S</span>
+          </div>
+          <div className="mt-2 flex h-2 overflow-hidden rounded-full bg-rose-400/20">
+            <div className="bg-emerald-400" style={{ width: `${longPct.toFixed(1)}%` }} />
+          </div>
+          <div className="mt-1 flex justify-between text-[10px] text-fg-dim font-mono">
+            <span className="text-emerald-300">{(ls.long_ratio * 100).toFixed(1)}% Long</span>
+            <span className="text-rose-300">{(ls.short_ratio * 100).toFixed(1)}% Short</span>
+          </div>
+        </div>
+      }
+    />
+  );
+}
+
+function FundingBlock({ fund }: { fund: DerivativesPayload['funding'] }) {
+  if (!fund) {
+    return <Block title="Funding rate" body={<DataDash />} />;
+  }
+  const tone = fund.rate >= 0 ? 'text-emerald-300' : 'text-rose-300';
+  const next = fund.next_funding_ts
+    ? new Date(fund.next_funding_ts).toLocaleTimeString('en-GB', {
+        hour: '2-digit',
+        minute: '2-digit',
+      })
+    : null;
+  return (
+    <Block
+      title="Funding rate"
+      body={
+        <div>
+          <div className={`text-2xl font-bold ${tone}`}>
+            {(fund.rate * 100).toFixed(4)}%
+          </div>
+          <div className="mt-1 text-[11px] font-mono text-fg-dim">
+            Yıllık ≈ {fund.annualized_pct >= 0 ? '+' : ''}
+            {fund.annualized_pct.toFixed(1)}%
+            {next ? ` · sonraki ${next}` : ''}
+          </div>
+        </div>
+      }
+    />
+  );
+}
+
+function Block({ title, body }: { title: string; body: React.ReactNode }) {
+  return (
+    <div className="rounded-xl border border-border bg-bg p-4">
+      <div className="mono-label !text-fg-dim">{title}</div>
+      <div className="mt-2">{body}</div>
+    </div>
+  );
+}
+
+function DataDash() {
+  return <div className="text-sm text-fg-dim">Veri yok.</div>;
+}
+
+function formatUsdShort(n: number): string {
+  const abs = Math.abs(n);
+  const sign = n < 0 ? '-' : '';
+  if (abs >= 1e9) return `${sign}$${(abs / 1e9).toFixed(2)}B`;
+  if (abs >= 1e6) return `${sign}$${(abs / 1e6).toFixed(2)}M`;
+  if (abs >= 1e3) return `${sign}$${(abs / 1e3).toFixed(1)}K`;
+  return `${sign}$${abs.toFixed(0)}`;
 }
 
 function formatPrice(n: number): string {

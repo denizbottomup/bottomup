@@ -2,6 +2,7 @@ import { Inject, Injectable, NotFoundException, Logger } from '@nestjs/common';
 import type { PrismaClient } from '@bottomup/db';
 import Anthropic from '@anthropic-ai/sdk';
 import { PRISMA } from '../common/prisma.module.js';
+import { MarketIntelService } from '../market-intel/market-intel.service.js';
 
 export interface FoxyVerdict {
   risk_score: number;         // 0..100 (0 = low risk)
@@ -50,6 +51,37 @@ export interface FoxySetupsByCoin {
   };
 }
 
+export interface FoxyDerivatives {
+  /** Bare symbol echoed back (e.g. "ETH"). */
+  coin: string;
+  /** Aggregated across exchanges (CoinGlass `coin-list`). */
+  liquidation: {
+    long_24h_usd: number;
+    short_24h_usd: number;
+    total_24h_usd: number;
+    total_4h_usd: number;
+    total_1h_usd: number;
+  } | null;
+  /** Open interest across exchanges (CoinGlass aggregate). */
+  oi: {
+    oi_usd: number;
+    change_4h_pct: number | null;
+    change_24h_pct: number | null;
+  } | null;
+  /** Binance global long/short account ratio (1h window). */
+  long_short: {
+    long_ratio: number;
+    short_ratio: number;
+    ts: number;
+  } | null;
+  /** Binance perpetual funding rate. */
+  funding: {
+    rate: number;
+    annualized_pct: number;
+    next_funding_ts: number | null;
+  } | null;
+}
+
 interface SetupRow {
   id: string;
   coin_name: string;
@@ -79,7 +111,10 @@ export class FoxyService {
   private readonly log = new Logger(FoxyService.name);
   private readonly client: Anthropic | null;
 
-  constructor(@Inject(PRISMA) private readonly prisma: PrismaClient) {
+  constructor(
+    @Inject(PRISMA) private readonly prisma: PrismaClient,
+    private readonly marketIntel: MarketIntelService,
+  ) {
     const key = process.env.ANTHROPIC_API_KEY;
     this.client = key ? new Anthropic({ apiKey: key }) : null;
     if (!this.client) {
@@ -239,6 +274,133 @@ export class FoxyService {
         win_rate: winRate,
         total_r: Math.round(totalR * 100) / 100,
       },
+    };
+  }
+
+  /**
+   * Derivatives card on /home/foxy: liquidations 24h, open interest,
+   * long/short account ratio, and funding rate — all per-coin.
+   *
+   * Liquidation + OI come from CoinGlass via the existing
+   * MarketIntelService (cached, key-rotated). L/S ratio + funding
+   * rate come from Binance's free `fapi` endpoints because they
+   * accept arbitrary `<SYMBOL>USDT` pairs without exhausting our
+   * CoinGlass credits.
+   *
+   * Each block fetches in parallel and degrades independently — if
+   * Binance's fundingRate API hiccups, we still return liquidation
+   * and OI data alongside `funding: null`.
+   */
+  async derivativesByCoin(coinInput: string): Promise<FoxyDerivatives> {
+    const coinName = normalizeCoinName(coinInput); // e.g. ETHUSDT
+    const bare = coinName.replace(/USDT$/i, ''); // e.g. ETH
+
+    const [liqRows, oiRows, ls, funding] = await Promise.all([
+      this.marketIntel.liquidationSummary(30).catch((err) => {
+        this.log.warn(
+          { err: (err as Error).message, coin: bare },
+          'foxy liquidation summary failed',
+        );
+        return [];
+      }),
+      this.marketIntel.openInterest([bare]).catch((err) => {
+        this.log.warn(
+          { err: (err as Error).message, coin: bare },
+          'foxy open interest failed',
+        );
+        return [];
+      }),
+      this.fetchLongShort(coinName).catch((err) => {
+        this.log.warn(
+          { err: (err as Error).message, coin: coinName },
+          'foxy long/short failed',
+        );
+        return null;
+      }),
+      this.fetchFunding(coinName).catch((err) => {
+        this.log.warn(
+          { err: (err as Error).message, coin: coinName },
+          'foxy funding failed',
+        );
+        return null;
+      }),
+    ]);
+
+    // CoinGlass returns liquidation rows keyed by bare symbol.
+    const liqRow = liqRows.find(
+      (r) => r.symbol.toUpperCase() === bare.toUpperCase(),
+    );
+    const oiRow = oiRows[0];
+
+    return {
+      coin: bare,
+      liquidation: liqRow
+        ? {
+            long_24h_usd: liqRow.long_24h_usd,
+            short_24h_usd: liqRow.short_24h_usd,
+            total_24h_usd: liqRow.total_24h_usd,
+            total_4h_usd: liqRow.total_4h_usd,
+            total_1h_usd: liqRow.total_1h_usd,
+          }
+        : null,
+      oi: oiRow
+        ? {
+            oi_usd: oiRow.oi_usd,
+            change_4h_pct: oiRow.oi_change_4h_pct,
+            change_24h_pct: oiRow.oi_change_24h_pct,
+          }
+        : null,
+      long_short: ls,
+      funding,
+    };
+  }
+
+  /** Single-symbol long/short pull from Binance (the existing
+   *  `MarketIntelService.longShort` helper hard-codes a top-coin
+   *  list, so we duplicate the request here for arbitrary pairs).
+   */
+  private async fetchLongShort(symbol: string): Promise<FoxyDerivatives['long_short']> {
+    const res = await fetch(
+      `https://fapi.binance.com/futures/data/globalLongShortAccountRatio?symbol=${encodeURIComponent(
+        symbol,
+      )}&period=1h&limit=1`,
+      { signal: AbortSignal.timeout(6000) },
+    );
+    if (!res.ok) return null;
+    const json = (await res.json()) as Array<{
+      longAccount?: string;
+      shortAccount?: string;
+      timestamp?: number;
+    }>;
+    const first = Array.isArray(json) ? json[0] : null;
+    if (!first) return null;
+    const long = Number(first.longAccount ?? 0);
+    const short = Number(first.shortAccount ?? 0);
+    if (!Number.isFinite(long) || !Number.isFinite(short)) return null;
+    return { long_ratio: long, short_ratio: short, ts: Number(first.timestamp ?? Date.now()) };
+  }
+
+  /** Binance perpetual funding rate (premiumIndex returns the live
+   *  forecasted rate plus the next-funding timestamp). Annualised
+   *  to make the number comparable to traditional yield. */
+  private async fetchFunding(symbol: string): Promise<FoxyDerivatives['funding']> {
+    const res = await fetch(
+      `https://fapi.binance.com/fapi/v1/premiumIndex?symbol=${encodeURIComponent(symbol)}`,
+      { signal: AbortSignal.timeout(6000) },
+    );
+    if (!res.ok) return null;
+    const json = (await res.json()) as {
+      lastFundingRate?: string;
+      nextFundingTime?: number;
+    };
+    const rate = Number(json.lastFundingRate ?? 0);
+    if (!Number.isFinite(rate)) return null;
+    // Funding is paid every 8h, so annualised = rate × 3 × 365.
+    const annualised = rate * 3 * 365 * 100;
+    return {
+      rate,
+      annualized_pct: Math.round(annualised * 100) / 100,
+      next_funding_ts: json.nextFundingTime ?? null,
     };
   }
 
