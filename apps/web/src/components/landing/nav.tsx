@@ -23,10 +23,12 @@ export function LandingNav() {
   // The hero now sits on a light background. Until the user scrolls
   // past it, nav text needs to be dark to stay readable on white;
   // once the user is on the dark sections below, nav goes back to
-  // its glass-on-dark look.
+  // its glass-on-dark look. Both states aim for high contrast — the
+  // earlier `text-fg-muted` on dark and `text-zinc-600` on light
+  // were too faint to read at small nav sizes.
   const linkClass = scrolled
-    ? 'text-fg-muted hover:text-fg'
-    : 'text-zinc-600 hover:text-zinc-900';
+    ? 'text-fg hover:text-brand'
+    : 'text-zinc-900 hover:text-brand';
 
   return (
     <header
@@ -72,8 +74,8 @@ export function LandingNav() {
               href="/account"
               className={`rounded-full border px-4 py-1.5 text-sm font-semibold transition ${
                 scrolled
-                  ? 'border-border text-fg hover:border-white/25'
-                  : 'border-zinc-300 text-zinc-900 hover:border-zinc-500'
+                  ? 'border-white/25 text-fg hover:border-brand hover:text-brand'
+                  : 'border-zinc-400 text-zinc-900 hover:border-brand hover:text-brand'
               }`}
             >
               {t.nav.account ?? 'Account'}
@@ -83,7 +85,7 @@ export function LandingNav() {
               <Link
                 href="/signin"
                 className={`rounded-full px-4 py-1.5 text-sm font-semibold transition ${
-                  scrolled ? 'text-fg-muted hover:text-fg' : 'text-zinc-700 hover:text-zinc-900'
+                  scrolled ? 'text-fg hover:text-brand' : 'text-zinc-900 hover:text-brand'
                 }`}
               >
                 {t.nav.signin}
@@ -127,19 +129,19 @@ export function LandingNav() {
       {mobileOpen ? (
         <div className="border-t border-border bg-bg md:hidden">
           <nav className="flex flex-col p-4 text-sm">
-            <a href="#foxy" className="py-2 text-fg-muted" onClick={() => setMobileOpen(false)}>
+            <a href="#foxy" className="py-2 text-fg hover:text-brand" onClick={() => setMobileOpen(false)}>
               {t.nav.foxy}
             </a>
-            <a href="#marketplace" className="py-2 text-fg-muted" onClick={() => setMobileOpen(false)}>
+            <a href="#marketplace" className="py-2 text-fg hover:text-brand" onClick={() => setMobileOpen(false)}>
               {t.nav.marketplace}
             </a>
-            <a href="#mcp" className="py-2 text-fg-muted" onClick={() => setMobileOpen(false)}>
+            <a href="#mcp" className="py-2 text-fg hover:text-brand" onClick={() => setMobileOpen(false)}>
               {t.nav.mcp}
             </a>
-            <a href="#leaderboard" className="py-2 text-fg-muted" onClick={() => setMobileOpen(false)}>
+            <a href="#leaderboard" className="py-2 text-fg hover:text-brand" onClick={() => setMobileOpen(false)}>
               {t.nav.traders}
             </a>
-            <a href="#pricing" className="py-2 text-fg-muted" onClick={() => setMobileOpen(false)}>
+            <a href="#pricing" className="py-2 text-fg hover:text-brand" onClick={() => setMobileOpen(false)}>
               {t.nav.pricing}
             </a>
             <div className="mt-3 flex flex-col gap-2 border-t border-border pt-3">
@@ -163,7 +165,7 @@ export function LandingNav() {
                   <Link
                     href="/signin"
                     onClick={() => setMobileOpen(false)}
-                    className="rounded-full border border-border px-4 py-2 text-center text-sm font-semibold text-fg-muted"
+                    className="rounded-full border border-white/20 px-4 py-2 text-center text-sm font-semibold text-fg"
                   >
                     {t.nav.signin}
                   </Link>
