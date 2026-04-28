@@ -14,5 +14,8 @@ import { FoxyService } from './foxy.service.js';
   imports: [AuthModule, MarketIntelModule, EntitlementModule],
   controllers: [FoxyController],
   providers: [FoxyService],
+  // RightNowModule re-uses derivativesByCoin + whalesByCoin so the
+  // signal engine doesn't duplicate the CoinGlass/Arkham fetch path.
+  exports: [FoxyService],
 })
 export class FoxyModule {}

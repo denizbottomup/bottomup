@@ -26,6 +26,7 @@ export function HomeSidebar() {
 
   const items: NavItem[] = [
     { href: '/home/foxy', label: 'Foxy', icon: <FoxyIcon /> },
+    { href: '/home/right-now', label: 'Right Now', icon: <RightNowIcon /> },
     { href: '/home/overview', label: 'Overview', icon: <OverviewIcon /> },
     { href: '/home/live', label: 'Live trades', icon: <LiveIcon /> },
     { href: '/home/traders', label: 'Traders', icon: <TradersIcon />, comingSoon: true },
@@ -94,6 +95,15 @@ function FoxyIcon() {
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
       <path d="M14 2c0 4-3 5-3 9s3 6 3 6-7-1-7-7c0-4 4-5 4-8 0 0 3 0 3 0z" />
       <circle cx="12" cy="17" r="3" />
+    </svg>
+  );
+}
+
+function RightNowIcon() {
+  // Lightning bolt — instant directional signal.
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+      <path d="M13 2L4 14h7l-1 8 9-12h-7l1-8z" />
     </svg>
   );
 }
