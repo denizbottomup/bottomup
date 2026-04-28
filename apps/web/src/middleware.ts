@@ -74,6 +74,12 @@ const MARKETING_PREFIXES = [
   '/signin',
   '/signup',
   '/account',
+  // The authenticated app shell. Each `/home/*` page guards itself
+  // (see app/home/layout.tsx) and bounces anonymous viewers back to
+  // /signin — but we still need to keep the path on the marketing
+  // host so the lab branch's new code answers, instead of being
+  // 308'd to the legacy bottomup web service.
+  '/home',
 ];
 
 function isLandingPath(pathname: string): boolean {

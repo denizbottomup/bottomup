@@ -17,7 +17,7 @@ export default function SignUpPage() {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    if (!loading && user) router.replace('/account');
+    if (!loading && user) router.replace('/home');
   }, [loading, user, router]);
 
   const onEmailSignUp = async (e: React.FormEvent): Promise<void> => {

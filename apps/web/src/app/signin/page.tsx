@@ -30,7 +30,7 @@ export default function SignInPage() {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    if (!loading && user) router.replace('/account');
+    if (!loading && user) router.replace('/home');
   }, [loading, user, router]);
 
   const onEmailSignIn = async (e: React.FormEvent): Promise<void> => {

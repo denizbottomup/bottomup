@@ -70,10 +70,10 @@ export function LandingNav() {
           */}
           {authLoading ? null : user ? (
             <Link
-              href="/account"
+              href="/home"
               className="rounded-full border border-white/25 px-4 py-1.5 text-sm font-semibold text-fg transition hover:border-brand hover:text-brand"
             >
-              {t.nav.account ?? 'Account'}
+              {t.nav.account ?? 'Home'}
             </Link>
           ) : (
             <>
@@ -136,11 +136,11 @@ export function LandingNav() {
             <div className="mt-3 flex flex-col gap-2 border-t border-border pt-3">
               {authLoading ? null : user ? (
                 <Link
-                  href="/account"
+                  href="/home"
                   onClick={() => setMobileOpen(false)}
                   className="rounded-full border border-border px-4 py-2 text-center text-sm font-semibold text-fg"
                 >
-                  {t.nav.account ?? 'Account'}
+                  {t.nav.account ?? 'Home'}
                 </Link>
               ) : (
                 <>
