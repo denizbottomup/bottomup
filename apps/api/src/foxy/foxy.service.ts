@@ -15,6 +15,41 @@ export interface FoxyChatMessage {
   content: string;
 }
 
+/**
+ * Result row for the BottomUp setups card on /home/foxy. Each row is
+ * either an `incoming` (entry not yet hit) or `active` (live
+ * position) — closed setups roll up into the `recent` aggregates,
+ * not into this list.
+ */
+export interface FoxyCoinSetup {
+  id: string;
+  status: string;
+  position: 'long' | 'short' | null;
+  entry_value: number | null;
+  stop_value: number | null;
+  profit_taking_1: number | null;
+  r_value: number | null;
+  trader_id: string | null;
+  trader_name: string | null;
+  trader_image: string | null;
+  created_at: Date | null;
+  last_acted_at: Date | null;
+}
+
+export interface FoxySetupsByCoin {
+  coin: string;
+  active: FoxyCoinSetup[];
+  /** Closed setups in the last 30 days, with simple aggregates. */
+  recent: {
+    count: number;
+    wins: number;
+    losses: number;
+    break_even: number;
+    win_rate: number | null;
+    total_r: number;
+  };
+}
+
 interface SetupRow {
   id: string;
   coin_name: string;
@@ -109,6 +144,102 @@ export class FoxyService {
       return 'Foxy şu an cevap veremedi, bir dakika sonra tekrar dener misin?';
     }
     return block.text.trim();
+  }
+
+  /**
+   * BottomUp setups for a given coin — backs the "BottomUp setups"
+   * card on /home/foxy. Caller passes the bare symbol (e.g. "ETH")
+   * or the full pair name ("ETHUSDT"); we normalize to the
+   * `<SYMBOL>USDT` form the setup table stores.
+   *
+   * Returns the live (incoming + active) setups individually plus a
+   * 30-day rollup of closed setups so the UI can answer "how has
+   * this coin been performing across BottomUp recently?" without
+   * a second round-trip.
+   */
+  async setupsByCoin(coinInput: string): Promise<FoxySetupsByCoin> {
+    const coinName = normalizeCoinName(coinInput);
+    const active = await this.prisma.$queryRawUnsafe<Array<Record<string, unknown>>>(
+      `SELECT s.id::text                  AS id,
+              s.status::text              AS status,
+              s.position::text            AS position,
+              s.entry_value               AS entry_value,
+              s.stop_value                AS stop_value,
+              s.profit_taking_1           AS profit_taking_1,
+              s.r_value                   AS r_value,
+              s.trader_id::text           AS trader_id,
+              u.name                      AS trader_name,
+              u.image                     AS trader_image,
+              s.created_at                AS created_at,
+              s.last_acted_at             AS last_acted_at
+         FROM setup s
+         LEFT JOIN "user" u ON u.id = s.trader_id
+        WHERE s.is_deleted = FALSE
+          AND s.coin_name  = $1
+          AND s.category   = 'futures'::categories_type
+          AND s.status IN ('incoming'::statuses_type, 'active'::statuses_type)
+        ORDER BY s.last_acted_at DESC NULLS LAST
+        LIMIT 24`,
+      coinName,
+    );
+
+    const recentRows = await this.prisma.$queryRawUnsafe<Array<{
+      status: string | null;
+      r_value: number | string | null;
+    }>>(
+      `SELECT s.status::text AS status,
+              s.r_value      AS r_value
+         FROM setup s
+        WHERE s.is_deleted = FALSE
+          AND s.coin_name  = $1
+          AND s.category   = 'futures'::categories_type
+          AND s.status IN ('success'::statuses_type,'stopped'::statuses_type,'closed'::statuses_type)
+          AND COALESCE(s.close_date, s.stop_date, s.tp1_date, s.last_acted_at) >= NOW() - INTERVAL '30 days'`,
+      coinName,
+    );
+
+    let wins = 0;
+    let losses = 0;
+    let breakEven = 0;
+    let totalR = 0;
+    for (const row of recentRows) {
+      const r = Number(row.r_value ?? 0);
+      if (Number.isFinite(r)) totalR += r;
+      if (row.status === 'success') wins += 1;
+      else if (row.status === 'stopped') losses += 1;
+      else breakEven += 1;
+    }
+    const scored = wins + losses;
+    const winRate = scored > 0 ? wins / scored : null;
+
+    return {
+      coin: coinName,
+      active: active.map((r) => ({
+        id: r.id as string,
+        status: String(r.status ?? ''),
+        position:
+          r.position === 'long' || r.position === 'short'
+            ? (r.position as 'long' | 'short')
+            : null,
+        entry_value: r.entry_value == null ? null : Number(r.entry_value),
+        stop_value: r.stop_value == null ? null : Number(r.stop_value),
+        profit_taking_1: r.profit_taking_1 == null ? null : Number(r.profit_taking_1),
+        r_value: r.r_value == null ? null : Number(r.r_value),
+        trader_id: (r.trader_id as string | null) ?? null,
+        trader_name: (r.trader_name as string | null) ?? null,
+        trader_image: (r.trader_image as string | null) ?? null,
+        created_at: (r.created_at as Date | null) ?? null,
+        last_acted_at: (r.last_acted_at as Date | null) ?? null,
+      })),
+      recent: {
+        count: recentRows.length,
+        wins,
+        losses,
+        break_even: breakEven,
+        win_rate: winRate,
+        total_r: Math.round(totalR * 100) / 100,
+      },
+    };
   }
 
   private async loadSetup(id: string): Promise<SetupRow | null> {
@@ -404,4 +535,18 @@ function clampPct(n: unknown): number {
   const x = Number(n);
   if (!Number.isFinite(x)) return 50;
   return Math.max(0, Math.min(100, Math.round(x)));
+}
+
+/**
+ * Accept "ETH", "eth", "ETHUSDT", "eth-usdt", "ETH/USDT" and return
+ * "ETHUSDT" — the form the `setup.coin_name` column stores. Falls
+ * back to the input uppercased + "USDT" suffix when no recognised
+ * suffix is present.
+ */
+function normalizeCoinName(input: string): string {
+  const raw = String(input ?? '').trim().toUpperCase().replace(/[\s/_-]/g, '');
+  if (!raw) return '';
+  if (raw.endsWith('USDT')) return raw;
+  if (raw.endsWith('USD')) return raw + 'T';
+  return raw + 'USDT';
 }

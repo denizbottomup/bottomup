@@ -1,7 +1,40 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { extractCoin, KNOWN_COINS, type CoinMatch } from '@/lib/coin-extract';
+import { useAuth } from '@/lib/auth-context';
+
+const API_BASE =
+  process.env.NEXT_PUBLIC_API_BASE_URL ||
+  'https://bottomupapi-production.up.railway.app';
+
+interface CoinSetup {
+  id: string;
+  status: string;
+  position: 'long' | 'short' | null;
+  entry_value: number | null;
+  stop_value: number | null;
+  profit_taking_1: number | null;
+  r_value: number | null;
+  trader_id: string | null;
+  trader_name: string | null;
+  trader_image: string | null;
+  created_at: string | null;
+  last_acted_at: string | null;
+}
+
+interface SetupsPayload {
+  coin: string;
+  active: CoinSetup[];
+  recent: {
+    count: number;
+    wins: number;
+    losses: number;
+    break_even: number;
+    win_rate: number | null;
+    total_r: number;
+  };
+}
 
 const SUGGESTIONS = [
   'Ethereum analizi yapar mısın?',
@@ -187,10 +220,7 @@ function FoxyResultView({
           <div className="mx-auto max-w-5xl space-y-6">
             <CoinHeader coin={coin} />
             <TradingViewCard coin={coin} />
-            <PlaceholderCard
-              title="BottomUp setups"
-              hint={`${coin.symbol}'da aktif setup'lar — Phase 2'de açılıyor.`}
-            />
+            <SetupsCard coin={coin} />
             <PlaceholderCard
               title="Derivatives — CoinGlass"
               hint="Liquidations 24h · OI · Funding · Long/Short — Phase 3."
@@ -282,6 +312,162 @@ function TradingViewCard({ coin }: { coin: CoinMatch }) {
       />
     </section>
   );
+}
+
+function SetupsCard({ coin }: { coin: CoinMatch }) {
+  const { getIdToken } = useAuth();
+  const [data, setData] = useState<SetupsPayload | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    setLoading(true);
+    setErr(null);
+    setData(null);
+    (async () => {
+      const token = await getIdToken();
+      if (!token) {
+        if (alive) {
+          setErr('Auth gerekli.');
+          setLoading(false);
+        }
+        return;
+      }
+      try {
+        const res = await fetch(
+          `${API_BASE}/me/foxy/setups/${encodeURIComponent(coin.symbol)}`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+            cache: 'no-store',
+          },
+        );
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const json = (await res.json()) as SetupsPayload;
+        if (alive) {
+          setData(json);
+          setLoading(false);
+        }
+      } catch (x) {
+        if (alive) {
+          setErr((x as Error).message);
+          setLoading(false);
+        }
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [coin.symbol, getIdToken]);
+
+  return (
+    <section className="rounded-2xl border border-border bg-bg-card overflow-hidden">
+      <div className="flex items-center justify-between border-b border-border px-5 py-3">
+        <div>
+          <div className="mono-label">BottomUp setups · {coin.symbol}</div>
+          {data ? (
+            <div className="mt-1 text-[11px] text-fg-dim">
+              {data.active.length} aktif · son 30 gün:{' '}
+              {data.recent.count} işlem,{' '}
+              {data.recent.win_rate != null
+                ? `${Math.round(data.recent.win_rate * 100)}% WR`
+                : '—'}
+              , {data.recent.total_r >= 0 ? '+' : ''}
+              {data.recent.total_r.toFixed(2)}R
+            </div>
+          ) : null}
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="p-5 text-sm text-fg-muted">
+          BottomUp setupları yükleniyor…
+        </div>
+      ) : err ? (
+        <div className="p-5 text-sm text-rose-200">
+          Setup verisi alınamadı: {err}
+        </div>
+      ) : data && data.active.length > 0 ? (
+        <div className="divide-y divide-border">
+          {data.active.map((s) => (
+            <SetupRow key={s.id} setup={s} />
+          ))}
+        </div>
+      ) : (
+        <div className="p-5 text-sm text-fg-muted">
+          {coin.symbol}'da şu an aktif setup yok.{' '}
+          {data && data.recent.count > 0
+            ? `Son 30 günde ${data.recent.count} kapanmış işlem var.`
+            : null}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function SetupRow({ setup }: { setup: CoinSetup }) {
+  const posTone =
+    setup.position === 'long'
+      ? 'text-emerald-300 bg-emerald-400/10 ring-emerald-400/30'
+      : 'text-rose-300 bg-rose-400/10 ring-rose-400/30';
+  const statusTone =
+    setup.status === 'active'
+      ? 'text-emerald-300'
+      : setup.status === 'incoming'
+        ? 'text-amber-300'
+        : 'text-fg-dim';
+  return (
+    <div className="grid grid-cols-12 items-center gap-3 px-5 py-3 text-[12px] font-mono">
+      <div className="col-span-4 flex items-center gap-2 min-w-0">
+        {setup.trader_image ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={setup.trader_image}
+            alt=""
+            className="h-7 w-7 rounded-full object-cover ring-1 ring-white/10"
+          />
+        ) : (
+          <div className="flex h-7 w-7 items-center justify-center rounded-full bg-white/5 text-[10px] text-fg ring-1 ring-white/10">
+            {setup.trader_name?.[0]?.toUpperCase() ?? '?'}
+          </div>
+        )}
+        <div className="truncate">
+          <div className="truncate font-sans text-[13px] font-semibold text-fg">
+            {setup.trader_name ?? 'Unknown'}
+          </div>
+          <div className={`text-[10px] uppercase tracking-wider ${statusTone}`}>
+            {setup.status}
+          </div>
+        </div>
+      </div>
+
+      <div className="col-span-2">
+        <span className={`rounded-full px-2 py-0.5 text-[10px] uppercase ring-1 ${posTone}`}>
+          {setup.position === 'long' ? '↑ LONG' : setup.position === 'short' ? '↓ SHORT' : '—'}
+        </span>
+      </div>
+
+      <div className="col-span-2 text-fg">
+        <div className="text-[10px] uppercase text-fg-dim">Entry</div>
+        <div>{setup.entry_value != null ? formatPrice(setup.entry_value) : '—'}</div>
+      </div>
+      <div className="col-span-2 text-rose-300">
+        <div className="text-[10px] uppercase text-fg-dim">Stop</div>
+        <div>{setup.stop_value != null ? formatPrice(setup.stop_value) : '—'}</div>
+      </div>
+      <div className="col-span-2 text-emerald-300">
+        <div className="text-[10px] uppercase text-fg-dim">TP1</div>
+        <div>{setup.profit_taking_1 != null ? formatPrice(setup.profit_taking_1) : '—'}</div>
+      </div>
+    </div>
+  );
+}
+
+function formatPrice(n: number): string {
+  if (n >= 1000) return n.toFixed(2);
+  if (n >= 1) return n.toFixed(4);
+  if (n >= 0.01) return n.toFixed(5);
+  return n.toFixed(8);
 }
 
 function PlaceholderCard({ title, hint }: { title: string; hint: string }) {
