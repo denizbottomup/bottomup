@@ -1,8 +1,20 @@
-import { Inject, Injectable, NotFoundException, Logger } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Inject,
+  Injectable,
+  Logger,
+  NotFoundException,
+  type OnModuleInit,
+} from '@nestjs/common';
 import type { PrismaClient } from '@bottomup/db';
 import Anthropic from '@anthropic-ai/sdk';
 import { PRISMA } from '../common/prisma.module.js';
 import { MarketIntelService } from '../market-intel/market-intel.service.js';
+import {
+  EntitlementService,
+  type Entitlement,
+} from '../entitlement/entitlement.service.js';
+import type { AuthedUser } from '../common/decorators/current-user.decorator.js';
 
 export interface FoxyVerdict {
   risk_score: number;         // 0..100 (0 = low risk)
@@ -87,6 +99,24 @@ export interface FoxyWhales {
   };
 }
 
+export interface FoxyQuotaState {
+  used: number;
+  limit: number;
+  /** ISO of the start of the current ISO-week window (Monday 00:00 UTC). */
+  window_starts_at: string;
+  /** Convenience: epoch ms of the same window. */
+  resets_at: string;
+}
+
+export interface FoxyQueryReply {
+  prompt: string;
+  coin: string | null;
+  reply: string;
+  quota: FoxyQuotaState;
+  /** Echoed for the UI to show the tier badge. */
+  entitlement: Entitlement;
+}
+
 export interface FoxyDerivatives {
   /** Bare symbol echoed back (e.g. "ETH"). */
   coin: string;
@@ -143,18 +173,50 @@ const CACHE_TTL_MS = 5 * 60 * 1000;
 const cache = new Map<string, { at: number; value: FoxyVerdict }>();
 
 @Injectable()
-export class FoxyService {
+export class FoxyService implements OnModuleInit {
   private readonly log = new Logger(FoxyService.name);
   private readonly client: Anthropic | null;
 
   constructor(
     @Inject(PRISMA) private readonly prisma: PrismaClient,
     private readonly marketIntel: MarketIntelService,
+    private readonly entitlement: EntitlementService,
   ) {
     const key = process.env.ANTHROPIC_API_KEY;
     this.client = key ? new Anthropic({ apiKey: key }) : null;
     if (!this.client) {
       this.log.warn('ANTHROPIC_API_KEY not set — FoxyService will return stub verdicts');
+    }
+  }
+
+  /**
+   * Lazy-create the `foxy_query_log` table on first boot. Avoids
+   * shipping a Prisma migration just for the Foxy weekly quota — the
+   * table is self-contained, indexed by (user_id, created_at), and
+   * shape only ever appended-to. If the table already exists this is
+   * a no-op.
+   */
+  async onModuleInit(): Promise<void> {
+    try {
+      await this.prisma.$executeRawUnsafe(`
+        CREATE TABLE IF NOT EXISTS foxy_query_log (
+          id          uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+          user_id     uuid        NOT NULL,
+          prompt      text        NOT NULL,
+          coin        varchar(16),
+          tier        varchar(16) NOT NULL,
+          created_at  timestamptz NOT NULL DEFAULT NOW()
+        );
+      `);
+      await this.prisma.$executeRawUnsafe(`
+        CREATE INDEX IF NOT EXISTS ix_foxy_query_log_user_week
+          ON foxy_query_log (user_id, created_at DESC);
+      `);
+    } catch (err) {
+      this.log.warn(
+        { err: (err as Error).message },
+        'foxy_query_log bootstrap failed (will try again next boot)',
+      );
     }
   }
 
@@ -586,6 +648,204 @@ export class FoxyService {
     };
   }
 
+  /**
+   * The /home/foxy "Analiz et" button hits this. We:
+   *   1. Resolve the viewer's tier and check the weekly quota
+   *      (5 free / 100 trial / 100 premium per ISO-week).
+   *   2. Fetch the same data the cards already show (setups,
+   *      derivatives, whales) — they cache server-side, so this is
+   *      essentially free even on a cold cache.
+   *   3. Hand the bundle + the user's prompt to Claude with a
+   *      tightly-scoped Turkish system prompt.
+   *   4. Insert a row in `foxy_query_log` so the next call sees
+   *      this query in its weekly count.
+   * Quota is enforced in step 1; we throw 403 with the latest
+   * counter so the UI can render an "upgrade" CTA instead of a
+   * generic error.
+   */
+  async query(
+    viewer: AuthedUser,
+    prompt: string,
+    coinHint?: string | null,
+  ): Promise<FoxyQueryReply> {
+    const ent = await this.entitlement.forUser(viewer);
+    const userId = await this.resolveViewerId(viewer);
+    const limit = quotaLimitFor(ent);
+
+    const quota = await this.currentQuota(userId, limit);
+    if (quota.used >= quota.limit) {
+      throw new ForbiddenException({
+        code: 'FOXY_QUOTA_EXCEEDED',
+        message:
+          ent.tier === 'free'
+            ? 'Bu hafta 5 ücretsiz Foxy sorgunu tamamladın. Premium ile daha fazla sor.'
+            : 'Bu hafta Foxy sorgu limitine ulaştın.',
+        quota,
+        entitlement: ent,
+      });
+    }
+
+    const coin = (coinHint ?? '').trim() || null;
+    const coinNorm = coin ? normalizeCoinName(coin).replace(/USDT$/i, '') : null;
+
+    // Pull the same context the cards do. Each call independently
+    // degrades to null/empty; we still send the prompt to Claude
+    // even if some sources are down.
+    const [setups, derivatives, whales] = await Promise.all([
+      coinNorm
+        ? this.setupsByCoin(coinNorm).catch(() => null)
+        : Promise.resolve(null),
+      coinNorm
+        ? this.derivativesByCoin(coinNorm).catch(() => null)
+        : Promise.resolve(null),
+      coinNorm
+        ? this.whalesByCoin(coinNorm).catch(() => null)
+        : Promise.resolve(null),
+    ]);
+
+    const reply = this.client
+      ? await this.askClaudeForSummary(prompt, coinNorm, setups, derivatives, whales)
+      : 'Foxy AI anahtarı ayarlı değil. Yöneticiyle iletişime geç.';
+
+    // Log the query last — only successful, non-rate-limited calls
+    // count toward the quota. (Claude failures still count to avoid
+    // people retrying as a way around the limit.)
+    await this.logQuery(userId, prompt, coinNorm, ent.tier).catch((err) =>
+      this.log.warn({ err: (err as Error).message }, 'foxy log insert failed'),
+    );
+
+    return {
+      prompt,
+      coin: coinNorm,
+      reply,
+      quota: {
+        ...quota,
+        used: quota.used + 1, // reflect the row we just inserted
+      },
+      entitlement: ent,
+    };
+  }
+
+  private async resolveViewerId(viewer: AuthedUser): Promise<string> {
+    if (viewer.kind === 'jwt') return viewer.sub;
+    const rows = await this.prisma.$queryRawUnsafe<Array<{ id: string }>>(
+      `SELECT id::text AS id FROM "user" WHERE uid = $1 LIMIT 1`,
+      viewer.uid,
+    );
+    const row = rows[0];
+    if (!row) throw new NotFoundException(`Viewer not found for uid ${viewer.uid}`);
+    return row.id;
+  }
+
+  private async currentQuota(userId: string, limit: number): Promise<FoxyQuotaState> {
+    const window = isoWeekStart(new Date());
+    const rows = await this.prisma.$queryRawUnsafe<Array<{ n: bigint | number }>>(
+      `SELECT COUNT(*)::bigint AS n
+         FROM foxy_query_log
+        WHERE user_id    = $1::uuid
+          AND created_at >= $2::timestamptz`,
+      userId,
+      window.toISOString(),
+    );
+    const used = Number(rows[0]?.n ?? 0);
+    return {
+      used,
+      limit,
+      window_starts_at: window.toISOString(),
+      resets_at: nextIsoWeekStart(window).toISOString(),
+    };
+  }
+
+  private async logQuery(
+    userId: string,
+    prompt: string,
+    coin: string | null,
+    tier: Entitlement['tier'],
+  ): Promise<void> {
+    await this.prisma.$executeRawUnsafe(
+      `INSERT INTO foxy_query_log (user_id, prompt, coin, tier)
+       VALUES ($1::uuid, $2, $3, $4)`,
+      userId,
+      prompt.slice(0, 2000),
+      coin,
+      tier,
+    );
+  }
+
+  private async askClaudeForSummary(
+    prompt: string,
+    coin: string | null,
+    setups: FoxySetupsByCoin | null,
+    derivatives: FoxyDerivatives | null,
+    whales: FoxyWhales | null,
+  ): Promise<string> {
+    if (!this.client) return 'Foxy AI offline.';
+
+    const context = JSON.stringify(
+      {
+        coin,
+        setups: setups
+          ? {
+              active_count: setups.active.length,
+              recent_30d: setups.recent,
+              top_active: setups.active.slice(0, 8).map((s) => ({
+                trader: s.trader_name,
+                position: s.position,
+                status: s.status,
+                entry: s.entry_value,
+                stop: s.stop_value,
+                tp1: s.profit_taking_1,
+                r: s.r_value,
+              })),
+            }
+          : null,
+        derivatives,
+        whales: whales
+          ? {
+              window_hours: whales.window_hours,
+              min_usd: whales.min_usd,
+              total_count: whales.total,
+              flows: whales.flows,
+              top: whales.transfers.slice(0, 8).map((t) => ({
+                from: t.from.name,
+                to: t.to.name,
+                usd: t.usd_value,
+                flow: t.flow,
+                ts: t.ts,
+              })),
+            }
+          : null,
+      },
+      null,
+      2,
+    );
+
+    const res = await this.client.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 900,
+      system: FOXY_QUERY_SYSTEM_PROMPT,
+      messages: [
+        {
+          role: 'user',
+          content: [
+            `Kullanıcı sorusu: ${prompt}`,
+            '',
+            'Bağlam (BottomUp setupları, türev verileri, balina hareketleri):',
+            context,
+            '',
+            'Bu bağlamı kullanarak soruyu Türkçe olarak yanıtla.',
+          ].join('\n'),
+        },
+      ],
+    });
+
+    const block = res.content.find((c) => c.type === 'text');
+    if (!block || block.type !== 'text') {
+      return 'Foxy şu an cevap veremedi, biraz sonra tekrar dener misin?';
+    }
+    return block.text.trim();
+  }
+
   private async loadSetup(id: string): Promise<SetupRow | null> {
     const rows = await this.prisma.$queryRawUnsafe<Array<Record<string, unknown>>>(
       `SELECT s.id::text AS id, s.coin_name, s.category::text AS category,
@@ -902,6 +1162,52 @@ function normalizeCoinName(input: string): string {
  * frontend `coin-extract.ts`. Add new symbols here as we extend the
  * supported list.
  */
+const FOXY_QUERY_SYSTEM_PROMPT = [
+  'Sen Foxy AI — bottomUP kripto trading platformunun analist asistanısın.',
+  'Kullanıcılar sana coin / piyasa durumu hakkında soru sorar.',
+  '',
+  'Sana her zaman 4 kaynaktan ham veri verilir:',
+  '  • setups: BottomUp trader topluluğunun o coinde açtığı setup\'lar +',
+  '    son 30 gün performans rollup\'ı (win rate, total R, kapanmış işlem sayısı)',
+  '  • derivatives: liquidations 24h, open interest + 24h değişim, long/short ratio,',
+  '    funding rate (8h + yıllıklandırılmış)',
+  '  • whales: Arkham\'dan son 24 saatteki büyük on-chain transferler ve',
+  '    CEX in/out USD akışları',
+  '',
+  'Cevap kuralları:',
+  '  1. Türkçe, konuşma diline yakın, profesyonel ama jargon-ağır olma',
+  '  2. 3-5 paragraf max. İlk paragraf bir cümlelik özet/verdict olsun',
+  '  3. Sayıları net ver: "$166M Binance girişi", "%34 win rate, +12.4R", "0.012% funding"',
+  '  4. Kaynaklar arasında bağlantı kur: "Whale\'ler son 24h\'de $400M ETH\'i CEX\'lere',
+  '     yolladı, paralel olarak BottomUp trader\'ları %62 short — alış sinyali zayıf"',
+  '  5. Bağlamda ilgili veri YOKSA "veri yetersiz" de, uydurma',
+  '  6. Yatırım tavsiyesi verme — "şahsen ben olsam" dilini kullanma',
+  '  7. Markdown kullanma — düz paragraflar yeterli, kalın yazıda sadece sayılar olabilir',
+].join('\n');
+
+/**
+ * Per-tier weekly Foxy query budget. Free 5 / week per the Phase 1
+ * product spec; trial + premium share the same generous bucket
+ * until we tune separately.
+ */
+function quotaLimitFor(ent: Entitlement): number {
+  if (ent.tier === 'free') return 5;
+  return 100;
+}
+
+/** Monday 00:00 UTC of the ISO week the date sits in. */
+function isoWeekStart(d: Date): Date {
+  const day = (d.getUTCDay() + 6) % 7; // 0 = Monday … 6 = Sunday
+  const start = new Date(
+    Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - day, 0, 0, 0, 0),
+  );
+  return start;
+}
+
+function nextIsoWeekStart(weekStart: Date): Date {
+  return new Date(weekStart.getTime() + 7 * 24 * 60 * 60 * 1000);
+}
+
 const ARKHAM_SLUG: Record<string, string> = {
   BTC: 'bitcoin',
   ETH: 'ethereum',

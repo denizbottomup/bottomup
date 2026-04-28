@@ -36,6 +36,25 @@ interface SetupsPayload {
   };
 }
 
+interface QuotaState {
+  used: number;
+  limit: number;
+  window_starts_at: string;
+  resets_at: string;
+}
+
+interface QueryReply {
+  prompt: string;
+  coin: string | null;
+  reply: string;
+  quota: QuotaState;
+  entitlement: {
+    tier: 'free' | 'trial' | 'premium';
+    expires_at: string | null;
+    is_trial: boolean;
+  };
+}
+
 interface WhaleTransfer {
   id: string;
   ts: string;
@@ -275,10 +294,7 @@ function FoxyResultView({
             <SetupsCard coin={coin} />
             <DerivativesCard coin={coin} />
             <WhalesCard coin={coin} />
-            <PlaceholderCard
-              title="Foxy AI summary"
-              hint="Claude API tüm verilerden doğal dil yorumu üretecek — Phase 5."
-            />
+            <AISummaryCard prompt={lastPrompt} coin={coin} />
           </div>
         ) : null}
       </div>
@@ -901,6 +917,120 @@ function compactName(s: string): string {
   if (!s) return '—';
   if (s.startsWith('0x') && s.length > 12) return `${s.slice(0, 6)}…${s.slice(-4)}`;
   return s.length > 22 ? `${s.slice(0, 22)}…` : s;
+}
+
+function AISummaryCard({ prompt, coin }: { prompt: string; coin: CoinMatch }) {
+  const { getIdToken } = useAuth();
+  const [data, setData] = useState<QueryReply | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState<{ message: string; quota?: QuotaState } | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    setLoading(true);
+    setErr(null);
+    setData(null);
+    (async () => {
+      const token = await getIdToken();
+      if (!token) {
+        if (alive) {
+          setErr({ message: 'Auth gerekli.' });
+          setLoading(false);
+        }
+        return;
+      }
+      try {
+        const res = await fetch(`${API_BASE}/me/foxy/query`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ prompt, coin: coin.symbol }),
+        });
+        if (res.status === 403) {
+          const j = (await res.json()) as { message?: string; quota?: QuotaState };
+          if (alive) {
+            setErr({
+              message: j.message ?? 'Foxy quota dolu.',
+              quota: j.quota,
+            });
+            setLoading(false);
+          }
+          return;
+        }
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const json = (await res.json()) as QueryReply;
+        if (alive) {
+          setData(json);
+          setLoading(false);
+        }
+      } catch (x) {
+        if (alive) {
+          setErr({ message: (x as Error).message });
+          setLoading(false);
+        }
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [prompt, coin.symbol, getIdToken]);
+
+  return (
+    <section className="rounded-2xl border border-brand/30 bg-gradient-to-br from-brand/[0.06] to-transparent overflow-hidden">
+      <div className="flex items-center justify-between border-b border-brand/20 px-5 py-3">
+        <div>
+          <div className="mono-label !text-brand">Foxy AI · özet</div>
+          <div className="mt-0.5 text-[11px] text-fg-dim">
+            Claude · {coin.symbol} bağlamlı analiz
+          </div>
+        </div>
+        {data?.quota ? (
+          <div className="text-right text-[11px] text-fg-dim font-mono">
+            {data.quota.used}/{data.quota.limit} bu hafta
+          </div>
+        ) : null}
+      </div>
+
+      {loading ? (
+        <div className="p-5 text-sm text-fg-muted animate-pulse">
+          Foxy düşünüyor… ({coin.symbol} setupları, türev verileri ve balina
+          akışları okunuyor)
+        </div>
+      ) : err ? (
+        <div className="p-5">
+          <div className="text-sm text-rose-200">{err.message}</div>
+          {err.quota ? (
+            <div className="mt-3 flex flex-col items-start gap-2">
+              <div className="text-[11px] text-fg-dim font-mono">
+                {err.quota.used}/{err.quota.limit} sorgu kullanıldı · sıfırlanma{' '}
+                {new Date(err.quota.resets_at).toLocaleDateString('en-GB', {
+                  day: 'numeric',
+                  month: 'short',
+                })}
+              </div>
+              <a
+                href="/account"
+                className="rounded-full bg-brand px-3 py-1.5 text-xs font-semibold text-black hover:bg-brand/90"
+              >
+                Premium ile sınırsız sor →
+              </a>
+            </div>
+          ) : null}
+        </div>
+      ) : data ? (
+        <div className="p-5">
+          <div className="whitespace-pre-wrap text-sm leading-relaxed text-fg">
+            {data.reply}
+          </div>
+          <div className="mt-4 border-t border-border pt-3 text-[10px] uppercase tracking-wider text-fg-dim">
+            Foxy AI yorumu yatırım tavsiyesi değildir.
+          </div>
+        </div>
+      ) : null}
+    </section>
+  );
 }
 
 function PlaceholderCard({ title, hint }: { title: string; hint: string }) {

@@ -1,9 +1,11 @@
 import { BadRequestException, Body, Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
 import { FirebaseAuthGuard } from '../common/guards/firebase-auth.guard.js';
+import { CurrentUser, type AuthedUser } from '../common/decorators/current-user.decorator.js';
 import {
   FoxyService,
   type FoxyChatMessage,
   type FoxyDerivatives,
+  type FoxyQueryReply,
   type FoxySetupsByCoin,
   type FoxyVerdict,
   type FoxyWhales,
@@ -77,5 +79,21 @@ export class FoxyController {
       hours: Number.isFinite(hours) ? hours : undefined,
       limit: Number.isFinite(limit) ? limit : undefined,
     });
+  }
+
+  /**
+   * `/me/foxy/query` — Claude-backed summary across all the Foxy
+   * data sources. Body: { prompt, coin? }. Throws 403 with the
+   * latest quota counter when the user has burned the weekly
+   * budget; the UI reads that to render an upgrade CTA.
+   */
+  @Post('/me/foxy/query')
+  async query(
+    @CurrentUser() user: AuthedUser,
+    @Body() body: { prompt?: string; coin?: string },
+  ): Promise<FoxyQueryReply> {
+    const prompt = String(body?.prompt ?? '').trim();
+    if (!prompt) throw new BadRequestException('prompt required');
+    return this.foxy.query(user, prompt, body?.coin ?? null);
   }
 }
