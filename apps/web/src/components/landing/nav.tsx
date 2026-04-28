@@ -20,15 +20,14 @@ export function LandingNav() {
     return () => window.removeEventListener('scroll', h);
   }, []);
 
-  // The hero now sits on a light background. Until the user scrolls
-  // past it, nav text needs to be dark to stay readable on white;
-  // once the user is on the dark sections below, nav goes back to
-  // its glass-on-dark look. Both states aim for high contrast — the
-  // earlier `text-fg-muted` on dark and `text-zinc-600` on light
-  // were too faint to read at small nav sizes.
-  const linkClass = scrolled
-    ? 'text-fg hover:text-brand'
-    : 'text-zinc-900 hover:text-brand';
+  // The hero is dark in every state — the white-hero variant we used
+  // to ship was retired. Nav links + CTAs use the high-contrast `fg`
+  // token over both transparent (top-of-page) and `bg/80` (scrolled)
+  // backgrounds; brand-orange marks the hover affordance. We keep
+  // the `scrolled` flag only to swap in the glass-blur backdrop, not
+  // to change text color — the previous `text-zinc-900` (assuming a
+  // white hero) rendered black-on-black and was unreadable.
+  const linkClass = 'text-fg hover:text-brand';
 
   return (
     <header
@@ -72,11 +71,7 @@ export function LandingNav() {
           {authLoading ? null : user ? (
             <Link
               href="/account"
-              className={`rounded-full border px-4 py-1.5 text-sm font-semibold transition ${
-                scrolled
-                  ? 'border-white/25 text-fg hover:border-brand hover:text-brand'
-                  : 'border-zinc-400 text-zinc-900 hover:border-brand hover:text-brand'
-              }`}
+              className="rounded-full border border-white/25 px-4 py-1.5 text-sm font-semibold text-fg transition hover:border-brand hover:text-brand"
             >
               {t.nav.account ?? 'Account'}
             </Link>
@@ -84,9 +79,7 @@ export function LandingNav() {
             <>
               <Link
                 href="/signin"
-                className={`rounded-full px-4 py-1.5 text-sm font-semibold transition ${
-                  scrolled ? 'text-fg hover:text-brand' : 'text-zinc-900 hover:text-brand'
-                }`}
+                className="rounded-full px-4 py-1.5 text-sm font-semibold text-fg transition hover:text-brand"
               >
                 {t.nav.signin}
               </Link>
@@ -101,11 +94,7 @@ export function LandingNav() {
         </div>
 
         <button
-          className={`md:hidden rounded-lg border p-2 ${
-            scrolled
-              ? 'border-border text-fg'
-              : 'border-zinc-300 text-zinc-700'
-          }`}
+          className="md:hidden rounded-lg border border-white/20 p-2 text-fg"
           onClick={() => setMobileOpen((v) => !v)}
           aria-label="Menu"
         >
