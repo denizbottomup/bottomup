@@ -63,6 +63,17 @@ const MARKETING_PREFIXES = [
   '/privacy',
   '/terms',
   '/risk-disclosure',
+  // Auth + post-auth routes are now first-class on the marketing
+  // host. Phase 1 ships a brand-new `/signin`, `/signup`, and
+  // `/account` UI (subscription card, entitlement-aware modal, etc.)
+  // that only exists on lab/main; without keeping these paths local,
+  // the middleware redirected viewers to trade.bupcore.ai which still
+  // runs the older release-branch placeholder ('Web app coming
+  // soon'), and signups appeared to fail because users landed on the
+  // wrong app.
+  '/signin',
+  '/signup',
+  '/account',
 ];
 
 function isLandingPath(pathname: string): boolean {
