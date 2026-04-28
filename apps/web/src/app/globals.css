@@ -200,3 +200,37 @@
   font-variant-numeric: tabular-nums;
   font-feature-settings: 'tnum' on, 'lnum' on;
 }
+
+
+/* ------------------------------------------------------------------
+   Live trades feed: a row "yanar söner" — flashes its side colour
+   on insert, then fades to the panel background. We pre-define
+   three intensity tiers so the animation gets brighter for larger
+   USD trades without the JSX needing inline styles.
+   ----------------------------------------------------------------*/
+@keyframes flashBuy {
+  0%   { background-color: rgba(34, 197, 94, 0.30); }
+  60%  { background-color: rgba(34, 197, 94, 0.14); }
+  100% { background-color: transparent; }
+}
+@keyframes flashSell {
+  0%   { background-color: rgba(244, 63, 94, 0.30); }
+  60%  { background-color: rgba(244, 63, 94, 0.14); }
+  100% { background-color: transparent; }
+}
+@keyframes flashBuyHard {
+  0%   { background-color: rgba(34, 197, 94, 0.55); box-shadow: inset 0 0 0 1px rgba(34, 197, 94, 0.6); }
+  60%  { background-color: rgba(34, 197, 94, 0.22); }
+  100% { background-color: transparent; box-shadow: none; }
+}
+@keyframes flashSellHard {
+  0%   { background-color: rgba(244, 63, 94, 0.55); box-shadow: inset 0 0 0 1px rgba(244, 63, 94, 0.6); }
+  60%  { background-color: rgba(244, 63, 94, 0.22); }
+  100% { background-color: transparent; box-shadow: none; }
+}
+
+.flash-buy        { animation: flashBuy        900ms ease-out 1; }
+.flash-sell       { animation: flashSell       900ms ease-out 1; }
+.flash-buy-hard   { animation: flashBuyHard   1200ms ease-out 1; }
+.flash-sell-hard  { animation: flashSellHard  1200ms ease-out 1; }
+

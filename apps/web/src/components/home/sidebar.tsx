@@ -26,8 +26,8 @@ export function HomeSidebar() {
 
   const items: NavItem[] = [
     { href: '/home/foxy', label: 'Foxy', icon: <FoxyIcon /> },
+    { href: '/home/live', label: 'Live trades', icon: <LiveIcon /> },
     { href: '/home/traders', label: 'Traders', icon: <TradersIcon />, comingSoon: true },
-    { href: '/home/feed', label: 'Feed', icon: <FeedIcon />, comingSoon: true },
     { href: '/home/copies', label: 'Copy trades', icon: <CopyIcon />, comingSoon: true },
     { href: '/account', label: 'Account', icon: <AccountIcon /> },
   ];
@@ -106,12 +106,13 @@ function TradersIcon() {
   );
 }
 
-function FeedIcon() {
+function LiveIcon() {
+  // Pulse-style icon — concentric circle suggests the live feed.
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
-      <rect x="3" y="4" width="18" height="4" rx="1" />
-      <rect x="3" y="10" width="18" height="4" rx="1" />
-      <rect x="3" y="16" width="18" height="4" rx="1" />
+      <circle cx="12" cy="12" r="3" fill="currentColor" />
+      <circle cx="12" cy="12" r="7" />
+      <circle cx="12" cy="12" r="11" opacity="0.4" />
     </svg>
   );
 }
