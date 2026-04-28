@@ -14,6 +14,8 @@ import { MarketIntelModule } from './market-intel/market-intel.module.js';
 import { MiscModule } from './misc/misc.module.js';
 import { OkxModule } from './okx/okx.module.js';
 import { PublicModule } from './public/public.module.js';
+import { EntitlementModule } from './entitlement/entitlement.module.js';
+import { MeModule } from './me/me.module.js';
 import { PrismaModule } from './common/prisma.module.js';
 
 @Module({
@@ -34,6 +36,8 @@ import { PrismaModule } from './common/prisma.module.js';
     MiscModule,
     OkxModule,
     PublicModule,
+    EntitlementModule,
+    MeModule,
   ],
 })
 export class AppModule implements NestModule {

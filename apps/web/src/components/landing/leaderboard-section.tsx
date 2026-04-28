@@ -1,22 +1,24 @@
 'use client';
 
-import { useState } from 'react';
-import { displayName, type LandingPayload } from './landing-data';
+import { useEffect, useState } from 'react';
+import {
+  displayName,
+  fetchMyLeaderboard,
+  type LeaderboardTrader,
+} from './landing-data';
 import { TraderDetailModal } from './trader-detail-modal';
 import { useT } from '@/lib/i18n';
+import { AuthGate } from '@/components/auth-gate';
+import { useAuth } from '@/lib/auth-context';
 
-export function LeaderboardSection({
-  traders,
-}: {
-  traders: LandingPayload['top_traders'];
-}) {
+/**
+ * The trader leaderboard now lives behind the auth wall — anonymous
+ * visitors see a blurred preview + signup CTA. The marketing header
+ * (label, headline, subtitle, disclaimer) renders for everyone so the
+ * section still has SEO value and conveys the pitch.
+ */
+export function LeaderboardSection() {
   const { t } = useT();
-  const shown = traders.filter((tr) => tr.monthly_trades > 0).slice(0, 6);
-  const [active, setActive] = useState<
-    | { analyst: string; displayName: string }
-    | null
-  >(null);
-
   return (
     <section id="leaderboard" className="relative overflow-hidden">
       <div className="pointer-events-none absolute inset-0 -z-10 grid-pattern opacity-40" />
@@ -37,27 +39,71 @@ export function LeaderboardSection({
           </div>
         </header>
 
-        {shown.length === 0 ? (
-          <div className="mt-10 rounded-2xl border border-dashed border-border px-4 py-12 text-center text-sm text-fg-dim">
-            {t.lb.empty}
-          </div>
-        ) : (
-          <div className="mt-10 grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
-            {shown.map((tr, i) => (
-              <TraderCard
-                key={tr.trader_id}
-                trader={tr}
-                rank={i + 1}
-                onOpen={() => {
-                  const name = displayName(tr);
-                  setActive({ analyst: name, displayName: name });
-                }}
-              />
-            ))}
-          </div>
-        )}
+        <div className="mt-10">
+          <AuthGate fallback="leaderboard-blur">
+            <LeaderboardCards />
+          </AuthGate>
+        </div>
       </div>
+    </section>
+  );
+}
 
+function LeaderboardCards() {
+  const { t } = useT();
+  const { getIdToken } = useAuth();
+  const [traders, setTraders] = useState<LeaderboardTrader[] | null>(null);
+  const [active, setActive] = useState<
+    | { analyst: string; displayName: string }
+    | null
+  >(null);
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      const token = await getIdToken();
+      if (!token) return;
+      const items = await fetchMyLeaderboard(token, 12);
+      if (alive) setTraders(items);
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [getIdToken]);
+
+  if (traders == null) {
+    return (
+      <div className="rounded-2xl border border-dashed border-border px-4 py-12 text-center text-sm text-fg-dim">
+        Loading leaderboard…
+      </div>
+    );
+  }
+
+  const shown = traders.filter((tr) => tr.monthly_trades > 0).slice(0, 6);
+
+  if (shown.length === 0) {
+    return (
+      <div className="rounded-2xl border border-dashed border-border px-4 py-12 text-center text-sm text-fg-dim">
+        {t.lb.empty}
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
+        {shown.map((tr, i) => (
+          <TraderCard
+            key={tr.trader_id}
+            trader={tr}
+            rank={i + 1}
+            onOpen={() => {
+              const name = displayName(tr);
+              setActive({ analyst: name, displayName: name });
+            }}
+          />
+        ))}
+      </div>
       {active ? (
         <TraderDetailModal
           analyst={active.analyst}
@@ -65,7 +111,7 @@ export function LeaderboardSection({
           onClose={() => setActive(null)}
         />
       ) : null}
-    </section>
+    </>
   );
 }
 
@@ -74,7 +120,7 @@ function TraderCard({
   rank,
   onOpen,
 }: {
-  trader: LandingPayload['top_traders'][0];
+  trader: LeaderboardTrader;
   rank: number;
   onOpen: () => void;
 }) {

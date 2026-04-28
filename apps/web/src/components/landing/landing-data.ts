@@ -1,3 +1,23 @@
+/**
+ * Trader card payload. Used to be inside `LandingPayload.top_traders`,
+ * but the trader leaderboard is now behind the auth wall — anonymous
+ * landing visitors don't see real cards. Logged-in clients fetch this
+ * shape from `/me/leaderboard`.
+ */
+export interface LeaderboardTrader {
+  trader_id: string;
+  name: string | null;
+  first_name: string | null;
+  last_name: string | null;
+  image: string | null;
+  followers: number;
+  virtual_balance_usd: number;
+  virtual_return_pct: number;
+  monthly_trades: number;
+  monthly_wins: number;
+  monthly_win_rate: number | null;
+}
+
 export interface LandingPayload {
   stats: {
     total_traders: number;
@@ -5,34 +25,6 @@ export interface LandingPayload {
     success_rate_30d: number | null;
     active_setups: number;
   };
-  top_traders: Array<{
-    trader_id: string;
-    name: string | null;
-    first_name: string | null;
-    last_name: string | null;
-    image: string | null;
-    followers: number;
-    virtual_balance_usd: number;
-    virtual_return_pct: number;
-    monthly_trades: number;
-    monthly_wins: number;
-    monthly_win_rate: number | null;
-  }>;
-  latest_setups: Array<{
-    id: string;
-    coin_name: string;
-    status: string;
-    position: string | null;
-    category: string;
-    entry_value: number;
-    stop_value: number | null;
-    profit_taking_1: number | null;
-    r_value: number | null;
-    trader_name: string | null;
-    trader_image: string | null;
-    coin_image: string | null;
-    created_at: string | null;
-  }>;
   news: Array<{
     id: string;
     title: string | null;
@@ -111,6 +103,29 @@ export async function fetchLanding(locale = 'en'): Promise<LandingPayload | null
     return (await res.json()) as LandingPayload;
   } catch {
     return null;
+  }
+}
+
+/**
+ * Authenticated leaderboard fetch. Caller must pass the Firebase
+ * ID token (or our internal JWT) it already holds — this endpoint
+ * 401s otherwise. Used by `<LeaderboardSection>` once it knows the
+ * viewer is logged in.
+ */
+export async function fetchMyLeaderboard(
+  idToken: string,
+  limit = 6,
+): Promise<LeaderboardTrader[]> {
+  try {
+    const res = await fetch(`${API_BASE}/me/leaderboard?limit=${limit}`, {
+      headers: { Authorization: `Bearer ${idToken}` },
+      cache: 'no-store',
+    });
+    if (!res.ok) return [];
+    const json = (await res.json()) as { items: LeaderboardTrader[] };
+    return json.items ?? [];
+  } catch {
+    return [];
   }
 }
 

@@ -1,4 +1,4 @@
-import { Controller, Get, NotFoundException, Param, Query } from '@nestjs/common';
+import { Controller, Get, GoneException, Query } from '@nestjs/common';
 import { PublicService } from './public.service.js';
 
 const SUPPORTED_LOCALES = new Set([
@@ -47,12 +47,19 @@ export class PublicController {
     return this.pub.news(cap, normalizeLocale(locale));
   }
 
+  /**
+   * The previous `/public/trader/:name` returned a full trader detail
+   * payload to anyone — it powered the unauthenticated landing modal.
+   * That endpoint has been retired: the same data now lives behind
+   * the auth wall at `/me/trader/:name`, and free-tier viewers see
+   * 80% of the trades locked. Returning 410 (and not 404) so any
+   * stale clients log a clear "endpoint moved" rather than thinking
+   * the trader simply doesn't exist.
+   */
   @Get('/trader/:name')
-  async trader(
-    @Param('name') name: string,
-  ): ReturnType<PublicService['traderDetail']> {
-    const row = await this.pub.traderDetail(decodeURIComponent(name));
-    if (!row) throw new NotFoundException('Trader not found');
-    return row;
+  trader(): never {
+    throw new GoneException(
+      'GET /public/trader/:name has moved. Authenticated callers should use GET /me/trader/:name.',
+    );
   }
 }

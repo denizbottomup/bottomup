@@ -1,10 +1,17 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useAuth } from '@/lib/auth-context';
 
 const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE_URL ||
   'https://bottomupapi-production.up.railway.app';
+
+interface Entitlement {
+  tier: 'free' | 'trial' | 'premium';
+  expires_at: string | null;
+  is_trial: boolean;
+}
 
 interface TraderDetail {
   trader: {
@@ -60,7 +67,16 @@ interface TraderDetail {
     close_date: string | null;
     pnl: number;
     r: number;
+    /**
+     * 0-based index of the trade in the trader's full chronological
+     * stream. Free viewers see only `index % 5 === 0`; the rest come
+     * back as locked teaser rows.
+     */
+    index: number;
+    /** True for free viewers on locked trades — fields are stripped. */
+    is_locked: boolean;
   }>;
+  entitlement: Entitlement;
 }
 
 export function TraderDetailModal({
@@ -74,24 +90,32 @@ export function TraderDetailModal({
 }) {
   const [data, setData] = useState<TraderDetail | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const { getIdToken } = useAuth();
 
   useEffect(() => {
     let alive = true;
-    fetch(`${API_BASE}/public/trader/${encodeURIComponent(analyst)}`)
-      .then((r) => {
-        if (!r.ok) throw new Error(`HTTP ${r.status}`);
-        return r.json();
-      })
-      .then((json: TraderDetail) => {
+    (async () => {
+      const token = await getIdToken();
+      if (!token) {
+        if (alive) setErr('AUTH_REQUIRED');
+        return;
+      }
+      try {
+        const res = await fetch(
+          `${API_BASE}/me/trader/${encodeURIComponent(analyst)}`,
+          { headers: { Authorization: `Bearer ${token}` } },
+        );
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const json = (await res.json()) as TraderDetail;
         if (alive) setData(json);
-      })
-      .catch((x: Error) => {
-        if (alive) setErr(x.message);
-      });
+      } catch (x) {
+        if (alive) setErr((x as Error).message);
+      }
+    })();
     return () => {
       alive = false;
     };
-  }, [analyst]);
+  }, [analyst, getIdToken]);
 
   useEffect(() => {
     const prev = document.body.style.overflow;
@@ -316,7 +340,18 @@ function DetailBody({
 
         {data.recent.length > 0 ? (
           <section className="mt-4 rounded-2xl border border-border bg-bg p-5">
-            <div className="mono-label">Last {data.recent.length} trades</div>
+            <div className="flex items-center justify-between">
+              <div className="mono-label">Last {data.recent.length} trades</div>
+              {data.entitlement.tier === 'free' &&
+              data.recent.some((t) => t.is_locked) ? (
+                <a
+                  href="https://trade.bupcore.ai/account"
+                  className="text-[11px] font-semibold text-brand hover:underline"
+                >
+                  Unlock all → premium
+                </a>
+              ) : null}
+            </div>
             <div className="mt-3 space-y-1.5">
               {data.recent.map((t) => (
                 <RecentRow key={t.id} t={t} />
@@ -505,6 +540,39 @@ function CoinRow({ c }: { c: TraderDetail['coins'][0] }) {
 }
 
 function RecentRow({ t }: { t: TraderDetail['recent'][0] }) {
+  // Free-tier locked teaser: trader+coin+position only, all numeric
+  // fields hidden behind a 🔒 placeholder + upgrade CTA. We
+  // deliberately don't show win/loss status either — that would still
+  // be valuable signal to a free user.
+  if (t.is_locked) {
+    const posTone =
+      t.position === 'long'
+        ? 'text-emerald-300'
+        : t.position === 'short'
+          ? 'text-rose-300'
+          : 'text-fg-dim';
+    return (
+      <a
+        href="https://trade.bupcore.ai/account"
+        className="group flex items-center gap-3 rounded-lg bg-white/[0.02] px-3 py-2 font-mono text-[11px] hover:bg-white/[0.04] transition"
+        title="Premium ile aç"
+      >
+        <span className="w-16 font-semibold text-fg-dim">
+          {t.coin.replace('USDT', '')}
+        </span>
+        <span className={`w-10 ${posTone} opacity-60`}>
+          {t.position === 'long' ? '↑ L' : t.position === 'short' ? '↓ S' : '—'}
+        </span>
+        <span className="ml-auto flex items-center gap-2 text-fg-dim">
+          <span aria-hidden>🔒</span>
+          <span className="text-[10px] uppercase tracking-wider group-hover:text-brand">
+            Premium
+          </span>
+        </span>
+      </a>
+    );
+  }
+
   const posTone =
     t.position === 'long'
       ? 'text-emerald-300'

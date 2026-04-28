@@ -44,7 +44,7 @@ export async function LandingShell({ locale }: { locale: LocaleCode }) {
       <FoxyFirewallSection />
       <MarketplaceSection />
 
-      {data ? <LeaderboardSection traders={data.top_traders} /> : null}
+      <LeaderboardSection />
 
       <McpSuiteSection />
 

@@ -8,5 +8,8 @@ import { PublicService } from './public.service.js';
   imports: [PrismaModule, MarketIntelModule],
   controllers: [PublicController],
   providers: [PublicService],
+  // MeModule re-uses PublicService for trader detail / leaderboard
+  // data and layers entitlement-aware filtering on top.
+  exports: [PublicService],
 })
 export class PublicModule {}

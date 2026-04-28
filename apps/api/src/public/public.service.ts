@@ -57,6 +57,19 @@ export interface TraderDetailSummary {
     close_date: Date | null;
     pnl: number;
     r: number;
+    /**
+     * Index of this trade in the trader's full chronological stream
+     * (close_date ASC, 0-based). Stable across requests — used by
+     * downstream entitlement filters to decide whether the trade is
+     * unlocked for free viewers (`index % 5 === 0`).
+     */
+    index: number;
+    /**
+     * False from this layer; the entitlement filter on `MeService`
+     * may flip it to true and strip price/PnL fields when serving a
+     * free viewer. The public surface always returns full data.
+     */
+    is_locked: boolean;
   }>;
 }
 
@@ -116,17 +129,19 @@ export class PublicService {
     private readonly intel: MarketIntelService,
   ) {}
 
+  /**
+   * Marketing-safe landing payload. After the Phase 1 signup wall the
+   * trader leaderboard and live setup feed moved behind auth (`/me/*`).
+   * `landing` keeps only the stats counters, news feed, and pulse —
+   * data that's fine to surface to anonymous SEO/LLM crawlers.
+   */
   async landing(locale = 'en'): Promise<{
     stats: LandingStats;
-    top_traders: LandingTrader[];
-    latest_setups: LandingSetup[];
     news: LandingNews[];
     pulse: Awaited<ReturnType<MarketIntelService['pulse']>>;
   }> {
-    const [stats, traders, setups, news, pulse] = await Promise.all([
+    const [stats, news, pulse] = await Promise.all([
       this.stats(),
-      this.topTraders(6),
-      this.latestSetups(8),
       this.latestNews(6, locale),
       this.intel.pulse().catch(() => ({
         fear_greed: null,
@@ -140,7 +155,7 @@ export class PublicService {
         whale_positions: [],
       })),
     ]);
-    return { stats, top_traders: traders, latest_setups: setups, news, pulse };
+    return { stats, news, pulse };
   }
 
   /**
@@ -409,12 +424,23 @@ export class PublicService {
     // we sort by it the panel collapses every stopped trade onto a
     // single batch instant. We use real_close_date for both filtering
     // and ordering so wins and losses both appear in true chronology.
-    const recent = trades
-      .map((t) => ({ t, real: (t.real_close_date as Date | null) ?? null }))
-      .filter((x) => x.real != null)
+    //
+    // `index` is the 0-based position in the trader's *full* close_date
+    // ASC stream. Downstream `MeService` consults it to apply the free
+    // tier's "every 5th trade is unlocked" rule (`index % 5 === 0`).
+    // We attach it here so the lock policy and the index calculation
+    // never drift.
+    const realClosed = trades
+      .map((t, fullIdx) => ({
+        t,
+        real: (t.real_close_date as Date | null) ?? null,
+        fullIdx,
+      }))
+      .filter((x) => x.real != null);
+    const recent = realClosed
       .sort((a, b) => +new Date(b.real as Date) - +new Date(a.real as Date))
       .slice(0, 8)
-      .map(({ t, real }) => ({
+      .map(({ t, real, fullIdx }) => ({
         id: t.id as string,
         coin: String(t.coin_name ?? ''),
         position:
@@ -425,6 +451,8 @@ export class PublicService {
         close_date: real,
         pnl: Math.round(Number(t.pnl ?? 0) * 100) / 100,
         r: Math.round(Number(t.r ?? 0) * 100) / 100,
+        index: fullIdx,
+        is_locked: false,
       }));
 
     return {
@@ -469,7 +497,13 @@ export class PublicService {
     };
   }
 
-  private async topTraders(limit: number): Promise<LandingTrader[]> {
+  /**
+   * Trader leaderboard (rolling 30-day net PnL). Public method so the
+   * authenticated `/me/leaderboard` controller can call it without
+   * needing its own SQL — feature gates and per-viewer flags will
+   * layer on top of this same projection.
+   */
+  async topTraders(limit: number): Promise<LandingTrader[]> {
     const capped = Math.max(1, Math.min(20, limit));
     const rows = await this.prisma.$queryRawUnsafe<Array<Record<string, unknown>>>(
       // `close_date` is null for many stopped trades — same fallback as
