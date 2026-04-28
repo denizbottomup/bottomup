@@ -117,6 +117,36 @@ export interface FoxyQueryReply {
   entitlement: Entitlement;
 }
 
+export interface FoxyAssetMarket {
+  price: number;
+  change_24h_pct: number;
+  high_24h: number | null;
+  low_24h: number | null;
+  quote_volume_24h: number | null;
+}
+
+export interface FoxyOverviewAsset {
+  coin: string;
+  market: FoxyAssetMarket | null;
+  derivatives: FoxyDerivatives | null;
+  whales: FoxyWhales | null;
+  /**
+   * Claude-generated 2-3 paragraph Turkish briefing. Synthesises
+   * leverage stacking, funding bias, liquidation pressure, whale
+   * accumulation/distribution, and gives a tactical "şu an nereden
+   * trade alınır" call-out.
+   */
+  ai_brief: string;
+}
+
+export interface FoxyOverview {
+  assets: FoxyOverviewAsset[];
+  generated_at: string;
+  /** Server-side cache TTL (seconds). The whole response is shared
+   *  across all viewers — no per-user counter is consumed. */
+  cached_for_seconds: number;
+}
+
 export interface FoxyDerivatives {
   /** Bare symbol echoed back (e.g. "ETH"). */
   coin: string;
@@ -726,6 +756,142 @@ export class FoxyService implements OnModuleInit {
     };
   }
 
+  /**
+   * Auto-generated market briefing across BTC + ETH. Shared response
+   * cached server-side for 5 min so the page is cheap to load even
+   * under traffic — no Foxy quota consumed. Phase 1 covers BTC and
+   * ETH; widen `OVERVIEW_COINS` once the wording proves out.
+   */
+  async overview(): Promise<FoxyOverview> {
+    const cached = overviewCache;
+    if (cached && Date.now() - cached.at < OVERVIEW_TTL_MS) {
+      return cached.value;
+    }
+
+    const assets = await Promise.all(
+      OVERVIEW_COINS.map(async (coin) => this.gatherAsset(coin)),
+    );
+
+    const ai_briefs = this.client
+      ? await this.askClaudeForOverview(assets)
+      : assets.map(() => 'Foxy AI anahtarı ayarlı değil. Yöneticiyle iletişime geç.');
+
+    const value: FoxyOverview = {
+      assets: assets.map((a, i) => ({
+        ...a,
+        ai_brief: ai_briefs[i] ?? '',
+      })),
+      generated_at: new Date().toISOString(),
+      cached_for_seconds: Math.floor(OVERVIEW_TTL_MS / 1000),
+    };
+    overviewCache = { at: Date.now(), value };
+    return value;
+  }
+
+  private async gatherAsset(coin: string): Promise<{
+    coin: string;
+    market: FoxyAssetMarket | null;
+    derivatives: FoxyDerivatives | null;
+    whales: FoxyWhales | null;
+  }> {
+    const [market, derivatives, whales] = await Promise.all([
+      this.fetchMarket24h(`${coin}USDT`).catch(() => null),
+      this.derivativesByCoin(coin).catch(() => null),
+      this.whalesByCoin(coin).catch(() => null),
+    ]);
+    return { coin, market, derivatives, whales };
+  }
+
+  /**
+   * 24h ticker from Binance spot — public, no key, returns last
+   * price + change + day range + quote-volume. Re-uses the existing
+   * fetchJson helper.
+   */
+  private async fetchMarket24h(symbol: string): Promise<FoxyAssetMarket | null> {
+    const json = await fetchJson<{
+      lastPrice?: string;
+      priceChangePercent?: string;
+      highPrice?: string;
+      lowPrice?: string;
+      quoteVolume?: string;
+    }>(
+      `https://api.binance.com/api/v3/ticker/24hr?symbol=${encodeURIComponent(symbol)}`,
+    );
+    const price = Number(json.lastPrice ?? 0);
+    if (!Number.isFinite(price) || price <= 0) return null;
+    return {
+      price,
+      change_24h_pct: Number(json.priceChangePercent ?? 0),
+      high_24h: json.highPrice == null ? null : Number(json.highPrice),
+      low_24h: json.lowPrice == null ? null : Number(json.lowPrice),
+      quote_volume_24h:
+        json.quoteVolume == null ? null : Number(json.quoteVolume),
+    };
+  }
+
+  /**
+   * Single Claude call with both assets bundled — gives the model a
+   * chance to draw cross-asset comparisons ('ETH OI yüzdesel olarak
+   * BTC'den daha hızlı arttı, beta yüksek') without spending two
+   * round-trips. Returns one text block per asset, in the same order
+   * they were sent.
+   */
+  private async askClaudeForOverview(
+    assets: Awaited<ReturnType<FoxyService['gatherAsset']>>[],
+  ): Promise<string[]> {
+    if (!this.client) return assets.map(() => '');
+
+    const context = JSON.stringify(
+      assets.map((a) => ({
+        coin: a.coin,
+        market: a.market,
+        derivatives: a.derivatives,
+        whales: a.whales
+          ? {
+              window_hours: a.whales.window_hours,
+              total_count: a.whales.total,
+              flows: a.whales.flows,
+              top: a.whales.transfers.slice(0, 6).map((t) => ({
+                from: t.from.name,
+                to: t.to.name,
+                usd: t.usd_value,
+                flow: t.flow,
+                ts: t.ts,
+              })),
+            }
+          : null,
+      })),
+      null,
+      2,
+    );
+
+    const res = await this.client.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 1400,
+      system: FOXY_OVERVIEW_SYSTEM_PROMPT,
+      messages: [
+        {
+          role: 'user',
+          content: [
+            'Aşağıdaki ham verileri kullanarak her coin için ayrı bir',
+            'değerlendirme yaz. Sıra ve format aşağıdaki şablona aynen uy:',
+            '',
+            '===<COIN>===',
+            '<2-3 paragraf Türkçe analiz>',
+            '===END===',
+            '',
+            'Veriler:',
+            context,
+          ].join('\n'),
+        },
+      ],
+    });
+
+    const block = res.content.find((c) => c.type === 'text');
+    const text = block && block.type === 'text' ? block.text : '';
+    return assets.map((a) => extractBriefSection(text, a.coin));
+  }
+
   private async resolveViewerId(viewer: AuthedUser): Promise<string> {
     if (viewer.kind === 'jwt') return viewer.sub;
     const rows = await this.prisma.$queryRawUnsafe<Array<{ id: string }>>(
@@ -1162,6 +1328,74 @@ function normalizeCoinName(input: string): string {
  * frontend `coin-extract.ts`. Add new symbols here as we extend the
  * supported list.
  */
+/**
+ * Coins included on /home/overview. BTC + ETH first per product
+ * spec; widen this list once the wording is proven.
+ */
+const OVERVIEW_COINS = ['BTC', 'ETH'] as const;
+
+const OVERVIEW_TTL_MS = 5 * 60 * 1000;
+
+interface OverviewCacheEntry {
+  at: number;
+  value: FoxyOverview;
+}
+let overviewCache: OverviewCacheEntry | null = null;
+
+const FOXY_OVERVIEW_SYSTEM_PROMPT = [
+  'Sen Foxy AI — bottomUP\'ın market analist asistanısın. Görevin:',
+  'her sabah pro masa yorumu yazmak. Kendi sözlerinle, Türkçe,',
+  'profesyonel ama açık dille.',
+  '',
+  'Her coin için 2-3 kısa paragraf üret. Format:',
+  '  ===<COIN>===',
+  '  <metin>',
+  '  ===END===',
+  '',
+  'Paragraflar şunları kapsamalı (sırasıyla, ama başlık atma):',
+  '  1) Yön ve tek cümlelik karar: "BTC short-bias, $X-Y aralığında',
+  '     trade alınır" gibi net bir cümle. Geri kalan paragraflar',
+  '     bunu destekler.',
+  '  2) Pozisyonlanma: OI değişimi, funding işareti + büyüklüğü,',
+  '     long/short ratio, son 24h liquidations long vs short.',
+  '     "Funding %0.012 (yıllık ~%13) — long-bias yüksek, squeeze',
+  '     riski mevcut" gibi.',
+  '  3) Akış: balina hareketleri (CEX in/out USD net), top transfer',
+  '     örneği. "Son 24h\'de $400M ETH whale\'ler tarafından Binance\'e',
+  '     gönderildi — distribution baskısı".',
+  '  4) Tactical: "şu an elimde olsa…" lehçesinde değil, "X destek',
+  '     korunursa Y\'ye kadar long, Z kırılırsa short cascade"',
+  '     biçiminde net seviye + senaryo. Liquidation cluster\'ları',
+  '     OI ve fiyatla birlikte tahmin et — "65500 altı 50x\'lerin',
+  '     liq olduğu zone, oraya gelirse dump zinciri açılabilir".',
+  '',
+  'Kurallar:',
+  '  - Markdown YOK, başlık YOK. Sadece düz paragraf.',
+  '  - Sayıları net ver: $X, %Y, R, kaç bps, kaç M\'lik bayrak…',
+  '  - "Yatırım tavsiyesi değildir" satırı YAZMA — frontend kendi',
+  '    altında ekliyor.',
+  '  - Bağlamda veri eksikse "veri yetersiz" de, uydurma.',
+  '  - "Şahsen ben olsam" / "kesin yükselir" / "garanti" kullanma.',
+].join('\n');
+
+/**
+ * Pull a single coin's section out of Claude's combined response.
+ * Tolerant to slight format wobble — looks for both "===BTC===" and
+ * "===BTC ===" / "===btc===" variants.
+ */
+function extractBriefSection(text: string, coin: string): string {
+  const re = new RegExp(
+    `===\\s*${coin}\\s*===([\\s\\S]*?)(?:===\\s*END\\s*===|===\\s*[A-Z]{2,}\\s*===|$)`,
+    'i',
+  );
+  const m = text.match(re);
+  if (m && m[1]) return m[1].trim();
+  // Fallback: if Claude returned plain prose without delimiters, send
+  // the full text on the first asset and an empty string on the rest
+  // — prevents both being blank when the model misformats.
+  return text.trim();
+}
+
 const FOXY_QUERY_SYSTEM_PROMPT = [
   'Sen Foxy AI — bottomUP kripto trading platformunun analist asistanısın.',
   'Kullanıcılar sana coin / piyasa durumu hakkında soru sorar.',

@@ -5,6 +5,7 @@ import {
   FoxyService,
   type FoxyChatMessage,
   type FoxyDerivatives,
+  type FoxyOverview,
   type FoxyQueryReply,
   type FoxySetupsByCoin,
   type FoxyVerdict,
@@ -95,5 +96,17 @@ export class FoxyController {
     const prompt = String(body?.prompt ?? '').trim();
     if (!prompt) throw new BadRequestException('prompt required');
     return this.foxy.query(user, prompt, body?.coin ?? null);
+  }
+
+  /**
+   * `/me/overview` — auto-generated daily market briefing across the
+   * Phase-1 coin set (BTC + ETH). Same Claude pipeline Foxy uses,
+   * but the response is shared across all viewers and cached
+   * server-side for 5 min, so loading the page does not consume any
+   * per-user weekly Foxy quota.
+   */
+  @Get('/me/overview')
+  async overview(): Promise<FoxyOverview> {
+    return this.foxy.overview();
   }
 }
