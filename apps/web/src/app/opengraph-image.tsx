@@ -27,9 +27,15 @@ export default function OpengraphImage(): ImageResponse {
           justifyContent: 'center',
           alignItems: 'flex-start',
           padding: 80,
-          backgroundColor: '#0a0a0c',
-          backgroundImage:
-            'radial-gradient(circle at 20% 20%, rgba(124,92,255,0.35), transparent 55%), radial-gradient(circle at 80% 75%, rgba(255,138,76,0.30), transparent 60%)',
+          // Satori in @vercel/og 0.6+ rejects the
+          // `backgroundColor` + `backgroundImage` split that older
+          // versions accepted: it tries to validate the color string
+          // as an image URL and fails with
+          // `Invalid background image: "#0a0a0c"`. The shorthand
+          // `background:` property layers the gradients over the
+          // solid color in one go and parses cleanly.
+          background:
+            'radial-gradient(circle at 20% 20%, rgba(124,92,255,0.35), transparent 55%), radial-gradient(circle at 80% 75%, rgba(255,138,76,0.30), transparent 60%), #0a0a0c',
           color: '#ffffff',
           fontFamily: 'sans-serif',
         }}
