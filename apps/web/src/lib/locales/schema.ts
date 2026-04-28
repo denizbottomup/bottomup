@@ -17,6 +17,12 @@ export interface Dict {
     pricing: string;
     signin: string;
     signup: string;
+    /**
+     * Label of the header CTA shown to authenticated viewers (links
+     * to /account). Optional so existing locale files don't break;
+     * the nav falls back to "Account" when missing.
+     */
+    account?: string;
   };
   hero: {
     headline_1: string;

@@ -17,6 +17,7 @@ export const en: Dict = {
     pricing: 'Pricing',
     signin: 'Sign in',
     signup: 'Get started free',
+    account: 'Account',
   },
   hero: {
     headline_1: 'The App Store of',

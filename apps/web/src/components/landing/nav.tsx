@@ -1,12 +1,15 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { Logo } from '@/components/logo';
 import { useT } from '@/lib/i18n';
+import { useAuth } from '@/lib/auth-context';
 import { LanguageSwitcher } from './language-switcher';
 
 export function LandingNav() {
   const { t } = useT();
+  const { user, loading: authLoading } = useAuth();
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -57,6 +60,42 @@ export function LandingNav() {
 
         <div className="hidden items-center gap-2 md:flex">
           <LanguageSwitcher />
+          {/*
+            Auth CTAs sit in the nav at all times — logged-out
+            visitors see Sign in + Sign up free; signed-in users see
+            their Account link. We render nothing while Firebase is
+            still resolving (`authLoading`) to avoid the CTA briefly
+            flickering for already-signed-in viewers on hard reload.
+          */}
+          {authLoading ? null : user ? (
+            <Link
+              href="/account"
+              className={`rounded-full border px-4 py-1.5 text-sm font-semibold transition ${
+                scrolled
+                  ? 'border-border text-fg hover:border-white/25'
+                  : 'border-zinc-300 text-zinc-900 hover:border-zinc-500'
+              }`}
+            >
+              {t.nav.account ?? 'Account'}
+            </Link>
+          ) : (
+            <>
+              <Link
+                href="/signin"
+                className={`rounded-full px-4 py-1.5 text-sm font-semibold transition ${
+                  scrolled ? 'text-fg-muted hover:text-fg' : 'text-zinc-700 hover:text-zinc-900'
+                }`}
+              >
+                {t.nav.signin}
+              </Link>
+              <Link
+                href="/signup"
+                className="rounded-full bg-brand px-4 py-1.5 text-sm font-semibold text-black hover:bg-brand/90"
+              >
+                {t.nav.signup}
+              </Link>
+            </>
+          )}
         </div>
 
         <button
@@ -103,8 +142,36 @@ export function LandingNav() {
             <a href="#pricing" className="py-2 text-fg-muted" onClick={() => setMobileOpen(false)}>
               {t.nav.pricing}
             </a>
-            <div className="mt-3 flex justify-center border-t border-border pt-3">
-              <LanguageSwitcher />
+            <div className="mt-3 flex flex-col gap-2 border-t border-border pt-3">
+              {authLoading ? null : user ? (
+                <Link
+                  href="/account"
+                  onClick={() => setMobileOpen(false)}
+                  className="rounded-full border border-border px-4 py-2 text-center text-sm font-semibold text-fg"
+                >
+                  {t.nav.account ?? 'Account'}
+                </Link>
+              ) : (
+                <>
+                  <Link
+                    href="/signup"
+                    onClick={() => setMobileOpen(false)}
+                    className="rounded-full bg-brand px-4 py-2 text-center text-sm font-semibold text-black"
+                  >
+                    {t.nav.signup}
+                  </Link>
+                  <Link
+                    href="/signin"
+                    onClick={() => setMobileOpen(false)}
+                    className="rounded-full border border-border px-4 py-2 text-center text-sm font-semibold text-fg-muted"
+                  >
+                    {t.nav.signin}
+                  </Link>
+                </>
+              )}
+              <div className="mt-2 flex justify-center">
+                <LanguageSwitcher />
+              </div>
             </div>
           </nav>
         </div>
