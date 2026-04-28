@@ -1,22 +1,32 @@
 /**
- * Multi-exchange live trades stream — Binance, Bybit, OKX perp
- * (USDT-margined) feeds, normalized into one shape. Used by
- * /home/live to render a flashing tape.
+ * Multi-exchange live trades stream — Binance, Bybit, OKX, Coinbase.
+ * Both spot and USDT-margined perpetual feeds, normalised into one
+ * shape. Used by /home/live to render a flashing tape with
+ * per-exchange and per-market filtering.
  *
- * No backend needed: each exchange exposes a free public WS that
- * accepts browser connections. We keep one socket per exchange and
- * normalise their payloads into `LiveTrade`. A small reconnect helper
- * retries with linear backoff on close.
+ * No backend needed: each exchange exposes a free public WebSocket
+ * that accepts browser connections. We keep one socket per
+ * (exchange × market) and normalise their payloads into LiveTrade.
+ * A small reconnect helper retries with linear backoff on close.
  */
 
 export type Side = 'buy' | 'sell';
 
-export type Exchange = 'binance' | 'bybit' | 'okx';
+export type Exchange = 'binance' | 'bybit' | 'okx' | 'coinbase';
+
+export type Market = 'spot' | 'futures';
+
+/** Stable feed identity — one supervised socket per pair of these. */
+export interface FeedKey {
+  exchange: Exchange;
+  market: Market;
+}
 
 export interface LiveTrade {
-  /** Stable id across reconnects (`{exchange}-{exchangeTradeId}`). */
+  /** Stable id across reconnects (`{exchange}-{market}-{tradeId}`). */
   id: string;
   exchange: Exchange;
+  market: Market;
   /** Display symbol (e.g. "BTC"). */
   symbol: string;
   /** Pair name as stored upstream — debug-friendly only. */
@@ -30,9 +40,9 @@ export interface LiveTrade {
 }
 
 /**
- * Top USDT-perp pairs we subscribe to on every exchange. Adding a
- * symbol here is the only change needed to widen the feed — the
- * per-exchange URL builders below pick them up automatically.
+ * Top symbols available across most major exchanges. Each opener
+ * prunes this list down to whatever its venue actually lists (e.g.
+ * Coinbase has no BNB/TRX/TON, so they're skipped there).
  */
 export const SUPPORTED_SYMBOLS = [
   'BTC',
@@ -51,9 +61,25 @@ export const SUPPORTED_SYMBOLS = [
 
 type Sym = (typeof SUPPORTED_SYMBOLS)[number];
 
+/** Coinbase doesn't list BNB / TRX / TON; subscribe to the rest. */
+const COINBASE_SYMBOLS: readonly Sym[] = [
+  'BTC',
+  'ETH',
+  'SOL',
+  'XRP',
+  'DOGE',
+  'ADA',
+  'AVAX',
+  'LINK',
+  'LTC',
+];
+
 interface SubscribeOpts {
   onTrade: (trade: LiveTrade) => void;
-  onStatus: (exchange: Exchange, status: 'connecting' | 'open' | 'closed' | 'error') => void;
+  onStatus: (
+    feed: FeedKey,
+    status: 'connecting' | 'open' | 'closed' | 'error',
+  ) => void;
 }
 
 interface Handle {
@@ -61,14 +87,18 @@ interface Handle {
 }
 
 /**
- * Open all three exchange feeds. Returns a handle that closes them
- * all when called (used in a React useEffect cleanup).
+ * Open every (exchange, market) feed. Returns a handle that closes
+ * them all when called (used in a React useEffect cleanup).
  */
 export function subscribeLiveTrades({ onTrade, onStatus }: SubscribeOpts): Handle {
   const closers = [
-    openBinance(onTrade, onStatus),
-    openBybit(onTrade, onStatus),
-    openOkx(onTrade, onStatus),
+    openBinance(onTrade, onStatus, 'futures'),
+    openBinance(onTrade, onStatus, 'spot'),
+    openBybit(onTrade, onStatus, 'futures'),
+    openBybit(onTrade, onStatus, 'spot'),
+    openOkx(onTrade, onStatus, 'futures'),
+    openOkx(onTrade, onStatus, 'spot'),
+    openCoinbase(onTrade, onStatus),
   ];
   return {
     close: () => {
@@ -78,13 +108,21 @@ export function subscribeLiveTrades({ onTrade, onStatus }: SubscribeOpts): Handl
 }
 
 // ─────────────────────────────────────────────────────────────────
-// Binance — USDT-M futures aggTrade. Public, no auth.
+// Binance — aggTrade. fstream for USDT-M futures, stream for spot.
 // `m: false` → buyer is taker → BUY.
 // ─────────────────────────────────────────────────────────────────
-function openBinance(onTrade: (t: LiveTrade) => void, onStatus: SubscribeOpts['onStatus']): () => void {
+function openBinance(
+  onTrade: (t: LiveTrade) => void,
+  onStatus: SubscribeOpts['onStatus'],
+  market: Market,
+): () => void {
   const streams = SUPPORTED_SYMBOLS.map((s) => `${s.toLowerCase()}usdt@aggTrade`).join('/');
-  const url = `wss://fstream.binance.com/stream?streams=${streams}`;
-  return runSocket('binance', url, {
+  const host =
+    market === 'futures'
+      ? 'fstream.binance.com'
+      : 'stream.binance.com:9443';
+  const url = `wss://${host}/stream?streams=${streams}`;
+  return runSocket({ exchange: 'binance', market }, url, {
     onStatus,
     onMessage: (raw) => {
       const env = JSON.parse(raw) as { stream?: string; data?: Record<string, unknown> };
@@ -97,8 +135,9 @@ function openBinance(onTrade: (t: LiveTrade) => void, onStatus: SubscribeOpts['o
       const amount = Number(d.q);
       if (!Number.isFinite(price) || !Number.isFinite(amount)) return;
       onTrade({
-        id: `binance-${pair}-${d.a}`,
+        id: `binance-${market}-${pair}-${d.a}`,
         exchange: 'binance',
+        market,
         symbol,
         pair,
         side: d.m === true ? 'sell' : 'buy',
@@ -112,14 +151,20 @@ function openBinance(onTrade: (t: LiveTrade) => void, onStatus: SubscribeOpts['o
 }
 
 // ─────────────────────────────────────────────────────────────────
-// Bybit — v5 public linear (USDT perpetual). Subscribe message:
-// {op:"subscribe", args:["publicTrade.BTCUSDT", ...]}
+// Bybit — v5 public. /linear for USDT perpetual, /spot for spot.
 // `S: "Buy"|"Sell"` is the taker side.
 // ─────────────────────────────────────────────────────────────────
-function openBybit(onTrade: (t: LiveTrade) => void, onStatus: SubscribeOpts['onStatus']): () => void {
-  const url = 'wss://stream.bybit.com/v5/public/linear';
+function openBybit(
+  onTrade: (t: LiveTrade) => void,
+  onStatus: SubscribeOpts['onStatus'],
+  market: Market,
+): () => void {
+  const url =
+    market === 'futures'
+      ? 'wss://stream.bybit.com/v5/public/linear'
+      : 'wss://stream.bybit.com/v5/public/spot';
   const args = SUPPORTED_SYMBOLS.map((s) => `publicTrade.${s}USDT`);
-  return runSocket('bybit', url, {
+  return runSocket({ exchange: 'bybit', market }, url, {
     onStatus,
     onOpen: (ws) => {
       ws.send(JSON.stringify({ op: 'subscribe', args }));
@@ -145,8 +190,9 @@ function openBybit(onTrade: (t: LiveTrade) => void, onStatus: SubscribeOpts['onS
         const amount = Number(d.v);
         if (!Number.isFinite(price) || !Number.isFinite(amount)) continue;
         onTrade({
-          id: `bybit-${d.i ?? `${pair}-${d.T}`}`,
+          id: `bybit-${market}-${d.i ?? `${pair}-${d.T}`}`,
           exchange: 'bybit',
+          market,
           symbol,
           pair,
           side: d.S === 'Sell' ? 'sell' : 'buy',
@@ -161,17 +207,20 @@ function openBybit(onTrade: (t: LiveTrade) => void, onStatus: SubscribeOpts['onS
 }
 
 // ─────────────────────────────────────────────────────────────────
-// OKX — v5 public, channel "trades" on USDT-margined SWAP. Subscribe:
-// {op:"subscribe", args:[{channel:"trades", instId:"BTC-USDT-SWAP"}, ...]}
-// `side: "buy"|"sell"` is the taker side.
+// OKX — v5 public. Same WS for both markets, instId differs:
+// `BTC-USDT-SWAP` (perp) vs `BTC-USDT` (spot).
 // ─────────────────────────────────────────────────────────────────
-function openOkx(onTrade: (t: LiveTrade) => void, onStatus: SubscribeOpts['onStatus']): () => void {
+function openOkx(
+  onTrade: (t: LiveTrade) => void,
+  onStatus: SubscribeOpts['onStatus'],
+  market: Market,
+): () => void {
   const url = 'wss://ws.okx.com:8443/ws/v5/public';
   const args = SUPPORTED_SYMBOLS.map((s) => ({
     channel: 'trades',
-    instId: `${s}-USDT-SWAP`,
+    instId: market === 'futures' ? `${s}-USDT-SWAP` : `${s}-USDT`,
   }));
-  return runSocket('okx', url, {
+  return runSocket({ exchange: 'okx', market }, url, {
     onStatus,
     onOpen: (ws) => {
       ws.send(JSON.stringify({ op: 'subscribe', args }));
@@ -191,21 +240,27 @@ function openOkx(onTrade: (t: LiveTrade) => void, onStatus: SubscribeOpts['onSta
       if (env.arg?.channel !== 'trades' || !Array.isArray(env.data)) return;
       for (const d of env.data) {
         const inst = String(d.instId ?? '');
-        const symbol = inst.replace(/-USDT-SWAP$/i, '').replace(/-USDT$/i, '');
+        // Mismatch guard: a single OKX socket *could* deliver both
+        // markets if subscriptions ever overlap — only emit rows that
+        // match this opener's market so callers still see the right
+        // tag.
+        const isSwap = inst.endsWith('-SWAP');
+        if ((market === 'futures') !== isSwap) continue;
+        const symbol = inst
+          .replace(/-USDT-SWAP$/i, '')
+          .replace(/-USDT$/i, '');
         if (!isSupported(symbol)) continue;
         const price = Number(d.px);
-        // OKX swap `sz` is contract count, not coin amount. For USDT-M perps
-        // the contract face value is 1 coin for major USDT pairs, so
-        // amount === sz. For pairs where this isn't true (rare in our
-        // SUPPORTED_SYMBOLS), USD would still be ≈ price × sz × contractMul,
-        // and the filter only cares about USD floor — so this is OK in
-        // practice. If we add unusual pairs later we'll pull contract
-        // size via OKX REST.
+        // OKX swap `sz` is contract count, not coin amount. For
+        // USDT-M perps the contract face value is 1 coin for major
+        // USDT pairs, so amount === sz. Spot `sz` is always the
+        // coin amount directly.
         const amount = Number(d.sz);
         if (!Number.isFinite(price) || !Number.isFinite(amount)) continue;
         onTrade({
-          id: `okx-${d.tradeId}`,
+          id: `okx-${market}-${d.tradeId}`,
           exchange: 'okx',
+          market,
           symbol,
           pair: inst,
           side: d.side === 'sell' ? 'sell' : 'buy',
@@ -215,6 +270,65 @@ function openOkx(onTrade: (t: LiveTrade) => void, onStatus: SubscribeOpts['onSta
           ts: Number(d.ts ?? Date.now()),
         });
       }
+    },
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Coinbase Exchange — public matches channel. Spot only (USD-quoted).
+// `side: "buy"|"sell"` is the taker side already.
+// ─────────────────────────────────────────────────────────────────
+function openCoinbase(
+  onTrade: (t: LiveTrade) => void,
+  onStatus: SubscribeOpts['onStatus'],
+): () => void {
+  const url = 'wss://ws-feed.exchange.coinbase.com';
+  const product_ids = COINBASE_SYMBOLS.map((s) => `${s}-USD`);
+  return runSocket({ exchange: 'coinbase', market: 'spot' }, url, {
+    onStatus,
+    onOpen: (ws) => {
+      ws.send(
+        JSON.stringify({
+          type: 'subscribe',
+          product_ids,
+          channels: [{ name: 'matches' }],
+        }),
+      );
+    },
+    onMessage: (raw) => {
+      const env = JSON.parse(raw) as {
+        type?: string;
+        side?: 'buy' | 'sell';
+        size?: string;
+        price?: string;
+        product_id?: string;
+        time?: string;
+        trade_id?: number | string;
+      };
+      // Coinbase emits `match` for live trades and `last_match` once
+      // on subscribe (the immediately-previous trade). Treat both
+      // identically — the dedupe set in the page guards against
+      // double-counting on reconnect.
+      if (env.type !== 'match' && env.type !== 'last_match') return;
+      const product = String(env.product_id ?? '');
+      const symbol = product.replace(/-USD$/i, '');
+      if (!isSupported(symbol)) return;
+      const price = Number(env.price);
+      const amount = Number(env.size);
+      if (!Number.isFinite(price) || !Number.isFinite(amount)) return;
+      const ts = env.time ? Date.parse(env.time) : Date.now();
+      onTrade({
+        id: `coinbase-spot-${env.trade_id}`,
+        exchange: 'coinbase',
+        market: 'spot',
+        symbol,
+        pair: product,
+        side: env.side === 'sell' ? 'sell' : 'buy',
+        price,
+        amount,
+        usd: price * amount,
+        ts,
+      });
     },
   });
 }
@@ -234,7 +348,7 @@ interface RunSocketOpts {
  * reconnects with linear backoff (3s + 1s per attempt, capped at
  * 15s). The returned closer permanently stops reconnects.
  */
-function runSocket(exchange: Exchange, url: string, opts: RunSocketOpts): () => void {
+function runSocket(feed: FeedKey, url: string, opts: RunSocketOpts): () => void {
   let attempt = 0;
   let stopped = false;
   let ws: WebSocket | null = null;
@@ -242,21 +356,20 @@ function runSocket(exchange: Exchange, url: string, opts: RunSocketOpts): () => 
 
   const open = () => {
     if (stopped) return;
-    opts.onStatus(exchange, 'connecting');
+    opts.onStatus(feed, 'connecting');
     try {
       ws = new WebSocket(url);
     } catch {
-      opts.onStatus(exchange, 'error');
+      opts.onStatus(feed, 'error');
       schedule();
       return;
     }
     ws.onopen = () => {
       attempt = 0;
-      opts.onStatus(exchange, 'open');
+      opts.onStatus(feed, 'open');
       // Bybit + OKX both close idle connections at ~30s. Send a
-      // text-frame ping every 20s to keep them warm. Binance handles
-      // pings server-side and ignores client text frames, so this is
-      // harmless there.
+      // text-frame ping every 20s to keep them warm. Binance and
+      // Coinbase ignore client text frames here, so this is harmless.
       pingTimer = setInterval(() => {
         try {
           ws?.send('ping');
@@ -280,14 +393,14 @@ function runSocket(exchange: Exchange, url: string, opts: RunSocketOpts): () => 
       }
     };
     ws.onerror = () => {
-      opts.onStatus(exchange, 'error');
+      opts.onStatus(feed, 'error');
     };
     ws.onclose = () => {
       if (pingTimer) {
         clearInterval(pingTimer);
         pingTimer = null;
       }
-      opts.onStatus(exchange, 'closed');
+      opts.onStatus(feed, 'closed');
       schedule();
     };
   };

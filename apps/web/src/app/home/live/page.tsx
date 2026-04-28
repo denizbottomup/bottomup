@@ -5,6 +5,7 @@ import {
   subscribeLiveTrades,
   type Exchange,
   type LiveTrade,
+  type Market,
 } from '@/lib/live-trades';
 
 const THRESHOLDS = [50_000, 100_000, 250_000, 500_000, 1_000_000] as const;
@@ -15,20 +16,45 @@ const MAX_ROWS = 80;
 
 type Status = 'connecting' | 'open' | 'closed' | 'error';
 
+type MarketFilter = 'both' | Market;
+
+const ALL_EXCHANGES: Exchange[] = ['binance', 'bybit', 'okx', 'coinbase'];
+
+const EXCHANGE_LABEL: Record<Exchange, string> = {
+  binance: 'Binance',
+  bybit: 'Bybit',
+  okx: 'OKX',
+  coinbase: 'Coinbase',
+};
+
+/**
+ * Coinbase doesn't list futures — every Coinbase row is spot. Hide
+ * the chip when the market filter is set to futures-only so the
+ * user isn't confused by an "off / no-data" pill they can't fix.
+ */
+function exchangeAvailableInMarket(ex: Exchange, m: MarketFilter): boolean {
+  if (m === 'futures' && ex === 'coinbase') return false;
+  return true;
+}
+
 export default function LivePage() {
   const [threshold, setThreshold] = useState<Threshold>(DEFAULT_THRESHOLD);
   const [trades, setTrades] = useState<LiveTrade[]>([]);
-  const [status, setStatus] = useState<Record<Exchange, Status>>({
-    binance: 'connecting',
-    bybit: 'connecting',
-    okx: 'connecting',
-  });
+  const [marketFilter, setMarketFilter] = useState<MarketFilter>('both');
+  const [enabledExchanges, setEnabledExchanges] = useState<Set<Exchange>>(
+    new Set(ALL_EXCHANGES),
+  );
+  const [status, setStatus] = useState<Record<string, Status>>({});
 
-  // Threshold + dedupe live in refs so the WS callback doesn't
-  // re-subscribe every render. The callback is stable; the trades
-  // array still re-renders via setTrades.
+  // Filter state lives in refs so the WS callback doesn't have to be
+  // re-created on every change — that would tear down + reopen all
+  // seven sockets every click.
   const thresholdRef = useRef<Threshold>(DEFAULT_THRESHOLD);
   thresholdRef.current = threshold;
+  const marketRef = useRef<MarketFilter>('both');
+  marketRef.current = marketFilter;
+  const exchangesRef = useRef<Set<Exchange>>(enabledExchanges);
+  exchangesRef.current = enabledExchanges;
 
   const seenRef = useRef<Set<string>>(new Set());
 
@@ -36,25 +62,27 @@ export default function LivePage() {
     const handle = subscribeLiveTrades({
       onTrade: (t) => {
         if (t.usd < thresholdRef.current) return;
-        // Dedupe across exchanges — Bybit sometimes ships the same
-        // trade in both `snapshot` and `delta` waves. The id
-        // includes the exchange already.
+        if (
+          marketRef.current !== 'both' &&
+          marketRef.current !== t.market
+        ) {
+          return;
+        }
+        if (!exchangesRef.current.has(t.exchange)) return;
         if (seenRef.current.has(t.id)) return;
         seenRef.current.add(t.id);
-        if (seenRef.current.size > 500) {
-          // Trim the dedupe set so it doesn't grow without bound. We
-          // keep ~250 most recent ids — much more than MAX_ROWS so a
-          // stale duplicate ~30s in the past is still caught.
+        if (seenRef.current.size > 800) {
           const arr = Array.from(seenRef.current);
-          seenRef.current = new Set(arr.slice(arr.length - 250));
+          seenRef.current = new Set(arr.slice(arr.length - 400));
         }
         setTrades((prev) => {
           const next = [t, ...prev];
           return next.length > MAX_ROWS ? next.slice(0, MAX_ROWS) : next;
         });
       },
-      onStatus: (exchange, s) => {
-        setStatus((prev) => ({ ...prev, [exchange]: s }));
+      onStatus: (feed, s) => {
+        const key = `${feed.exchange}-${feed.market}`;
+        setStatus((prev) => ({ ...prev, [key]: s }));
       },
     });
     return () => {
@@ -66,6 +94,24 @@ export default function LivePage() {
     const cutoff = Date.now() - 60_000;
     return trades.filter((t) => t.ts >= cutoff).reduce((sum, t) => sum + t.usd, 0);
   }, [trades]);
+
+  function toggleExchange(ex: Exchange) {
+    setEnabledExchanges((prev) => {
+      const next = new Set(prev);
+      if (next.has(ex)) {
+        // Don't let the user disable everything — the page would just
+        // stand still. Keep at least one venue.
+        if (next.size === 1) return prev;
+        next.delete(ex);
+      } else {
+        next.add(ex);
+      }
+      return next;
+    });
+    // Drop any trades from the now-hidden exchange so the table
+    // doesn't show stale rows that are no longer eligible.
+    setTrades((prev) => prev.filter((t) => t.exchange !== ex || enabledExchanges.has(ex)));
+  }
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -80,21 +126,76 @@ export default function LivePage() {
               Live trades
             </div>
             <h1 className="mt-1 text-2xl font-extrabold tracking-tight md:text-3xl">
-              Major exchanges · USDT perp
+              Major exchanges · Spot + Perp
             </h1>
             <div className="mt-1 text-[12px] text-fg-dim">
-              Binance fstream · Bybit linear · OKX swap · 12 pair
+              Binance · Bybit · OKX · Coinbase · 12 pair (spot) / 12 pair (perp)
             </div>
           </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            <ExchangeBadge name="Binance" status={status.binance} />
-            <ExchangeBadge name="Bybit" status={status.bybit} />
-            <ExchangeBadge name="OKX" status={status.okx} />
-          </div>
+          <span className="text-[11px] text-fg-dim font-mono">
+            son 60s · {formatUsdShort(totalUsdLastMin)} hacim
+          </span>
         </div>
 
-        <div className="mt-4 flex flex-wrap items-center gap-3">
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          <span className="text-[11px] uppercase tracking-wider text-fg-dim">
+            Market
+          </span>
+          {(['both', 'spot', 'futures'] as const).map((m) => (
+            <button
+              key={m}
+              onClick={() => setMarketFilter(m)}
+              className={`rounded-full px-3 py-1 text-xs font-mono transition ${
+                marketFilter === m
+                  ? 'bg-fg text-black'
+                  : 'border border-white/15 text-fg hover:border-white/35'
+              }`}
+            >
+              {m === 'both' ? 'Tümü' : m === 'spot' ? 'Spot' : 'Futures'}
+            </button>
+          ))}
+
+          <span className="ml-3 text-[11px] uppercase tracking-wider text-fg-dim">
+            Exchange
+          </span>
+          {ALL_EXCHANGES.filter((ex) =>
+            exchangeAvailableInMarket(ex, marketFilter),
+          ).map((ex) => {
+            const active = enabledExchanges.has(ex);
+            // Look up status — for "futures only", show futures status;
+            // for "spot only", show spot status; for "both", treat as
+            // open if either is open. Coinbase has only spot.
+            const feedStatuses: Status[] = (['spot', 'futures'] as const)
+              .filter(
+                (m) =>
+                  marketFilter === 'both' ||
+                  marketFilter === m,
+              )
+              .filter((m) => !(ex === 'coinbase' && m === 'futures'))
+              .map((m) => status[`${ex}-${m}`] ?? 'connecting');
+            const dot = feedStatuses.includes('open')
+              ? 'bg-emerald-400'
+              : feedStatuses.includes('connecting')
+                ? 'bg-amber-300'
+                : 'bg-rose-400';
+            return (
+              <button
+                key={ex}
+                onClick={() => toggleExchange(ex)}
+                className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-mono transition ${
+                  active
+                    ? 'bg-white/[0.08] text-fg ring-1 ring-white/20'
+                    : 'border border-white/10 text-fg-dim hover:text-fg hover:border-white/25'
+                }`}
+              >
+                <span className={`h-1.5 w-1.5 rounded-full ${dot}`} />
+                {EXCHANGE_LABEL[ex]}
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="mt-3 flex flex-wrap items-center gap-2">
           <span className="text-[11px] uppercase tracking-wider text-fg-dim">
             Min size
           </span>
@@ -114,9 +215,6 @@ export default function LivePage() {
               </button>
             );
           })}
-          <span className="ml-auto text-[11px] text-fg-dim font-mono">
-            son 60s · {formatUsdShort(totalUsdLastMin)} hacim
-          </span>
         </div>
       </header>
 
@@ -125,8 +223,8 @@ export default function LivePage() {
         <div className="col-span-2">Size</div>
         <div className="col-span-1">Symbol</div>
         <div className="col-span-2 text-right">Amount</div>
-        <div className="col-span-3 text-right">Price</div>
-        <div className="col-span-2">Exchange</div>
+        <div className="col-span-2 text-right">Price</div>
+        <div className="col-span-3">Venue</div>
         <div className="col-span-1 text-right">Time</div>
       </div>
 
@@ -134,7 +232,7 @@ export default function LivePage() {
         {trades.length === 0 ? (
           <div className="flex h-[280px] items-center justify-center text-sm text-fg-muted">
             ${formatThresholdShort(threshold)}+ büyüklüğünde işlem
-            bekleniyor… (Tezgah açık, balıklar büyüdükçe akacak)
+            bekleniyor…
           </div>
         ) : (
           trades.map((t) => <TradeRow key={t.id} t={t} />)
@@ -145,8 +243,6 @@ export default function LivePage() {
 }
 
 function TradeRow({ t }: { t: LiveTrade }) {
-  // Tier the flash + emphasis by USD size. Bigger fish, longer
-  // flash + brighter inline highlight + bolder font.
   const tier: 's' | 'm' | 'l' | 'xl' =
     t.usd >= 1_000_000
       ? 'xl'
@@ -179,7 +275,6 @@ function TradeRow({ t }: { t: LiveTrade }) {
         ? 'text-sm font-bold'
         : 'text-xs font-semibold';
 
-  const amountFmt = formatAmount(t.amount);
   const time = new Date(t.ts).toLocaleTimeString('en-GB', {
     hour: '2-digit',
     minute: '2-digit',
@@ -201,39 +296,24 @@ function TradeRow({ t }: { t: LiveTrade }) {
         {formatUsdShort(t.usd)}
       </div>
       <div className="col-span-1 font-semibold text-fg">{t.symbol}</div>
-      <div className="col-span-2 text-right text-fg">{amountFmt}</div>
-      <div className={`col-span-3 text-right ${priceTone}`}>
+      <div className="col-span-2 text-right text-fg">{formatAmount(t.amount)}</div>
+      <div className={`col-span-2 text-right ${priceTone}`}>
         {formatPrice(t.price)}
       </div>
-      <div className="col-span-2 text-fg-dim uppercase text-[10px]">
-        {t.exchange}
+      <div className="col-span-3 flex items-center gap-2 text-fg-dim text-[10px] uppercase">
+        <span className="text-fg">{EXCHANGE_LABEL[t.exchange]}</span>
+        <span
+          className={`rounded px-1.5 py-0.5 ring-1 ${
+            t.market === 'spot'
+              ? 'bg-sky-400/10 text-sky-300 ring-sky-400/30'
+              : 'bg-violet-400/10 text-violet-300 ring-violet-400/30'
+          }`}
+        >
+          {t.market === 'spot' ? 'spot' : 'perp'}
+        </span>
       </div>
       <div className="col-span-1 text-right text-fg-dim">{time}</div>
     </div>
-  );
-}
-
-function ExchangeBadge({ name, status }: { name: string; status: Status }) {
-  const colour =
-    status === 'open'
-      ? 'bg-emerald-400'
-      : status === 'connecting'
-        ? 'bg-amber-300'
-        : 'bg-rose-400';
-  const label =
-    status === 'open'
-      ? 'live'
-      : status === 'connecting'
-        ? 'connecting…'
-        : status === 'error'
-          ? 'error'
-          : 'closed';
-  return (
-    <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 px-2 py-1 text-[10px] font-mono">
-      <span className={`h-1.5 w-1.5 rounded-full ${colour}`} />
-      <span className="text-fg">{name}</span>
-      <span className="text-fg-dim">{label}</span>
-    </span>
   );
 }
 
