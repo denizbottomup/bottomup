@@ -17,6 +17,40 @@ import type {
   FoxyWhales,
 } from '../foxy/foxy.service.js';
 
+/**
+ * Klasik OI ↔ Price 4-quadrant okuması. Her durum kendi yönlü
+ * yorumunu taşır:
+ *
+ *   bullish_confirmation : OI ↑ + Price ↑  (taze long para, sağlıklı)
+ *   bearish_confirmation : OI ↑ + Price ↓  (taze short açılıyor, devam)
+ *   short_squeeze        : OI ↓ + Price ↑  (mekanik unwind, weak rally)
+ *   long_capitulation    : OI ↓ + Price ↓  (pozisyon kapanıyor, dip yakın)
+ *   neutral              : değişimler eşik altında
+ */
+export type OiPriceRegime =
+  | 'bullish_confirmation'
+  | 'bearish_confirmation'
+  | 'short_squeeze'
+  | 'long_capitulation'
+  | 'neutral';
+
+const OI_THRESHOLD_PCT = 1.5; // |OI 24h %|
+const PRICE_THRESHOLD_PCT = 0.5; // |Price 24h %|
+
+export function classifyOiPriceRegime(
+  oi24hPct: number | null,
+  price24hPct: number | null,
+): OiPriceRegime {
+  if (oi24hPct == null || price24hPct == null) return 'neutral';
+  if (Math.abs(oi24hPct) < OI_THRESHOLD_PCT) return 'neutral';
+  if (Math.abs(price24hPct) < PRICE_THRESHOLD_PCT) return 'neutral';
+  if (oi24hPct > 0 && price24hPct > 0) return 'bullish_confirmation';
+  if (oi24hPct > 0 && price24hPct < 0) return 'bearish_confirmation';
+  if (oi24hPct < 0 && price24hPct > 0) return 'short_squeeze';
+  if (oi24hPct < 0 && price24hPct < 0) return 'long_capitulation';
+  return 'neutral';
+}
+
 export type SignalKind = 'long' | 'short' | 'wait';
 
 export interface KeyLevels {
@@ -47,6 +81,9 @@ export interface SignalContext {
   /** Top-trader vs retail long/short kıyası. Cross-source divergence
    *  signal — slow but strong, downweighted on 5m. */
   positioning: FoxyPositioning | null;
+  /** Pre-computed by the orchestrator off OI 24h % vs price 24h %.
+   *  Asset-level (TF-blind) — same regime applies across all TFs. */
+  regime: OiPriceRegime;
   /** Used to prefer whale flow on lower TFs less than higher ones. */
   tf: '5m' | '15m' | '1h';
 }
@@ -114,12 +151,18 @@ export function computeSignal(ctx: SignalContext): TfSignal {
       else if (ratio < 0.5) push(factors, 'L/S short-heavy', 0.15 * dwt);
       else if (ratio < 0.7) push(factors, 'L/S leans short', 0.08 * dwt);
     }
+    // OI direction is consumed via the regime block below; keeping a
+    // raw OI factor here too would double-count. We only break it out
+    // for extreme moves (|24h| > 8%) as a magnitude amplifier.
     if (d.oi && d.oi.change_24h_pct != null) {
       const oiChg = d.oi.change_24h_pct;
-      // Rising OI + rising price = trend confirmation, vice versa.
-      if (oiChg > 5 && ctx.pa.trend === 'up') push(factors, 'OI ↑ on uptrend', 0.15 * dwt);
-      else if (oiChg > 5 && ctx.pa.trend === 'down') push(factors, 'OI ↑ on downtrend', -0.15 * dwt);
-      else if (oiChg < -5) push(factors, 'OI ↓ thinning', 0.0); // neutral noted
+      if (Math.abs(oiChg) > 8) {
+        push(
+          factors,
+          oiChg > 0 ? 'OI surge' : 'OI flush',
+          (oiChg > 0 ? 0.05 : 0.05) * dwt,
+        );
+      }
     }
     if (d.liquidation) {
       const total = d.liquidation.total_24h_usd || 1;
@@ -131,7 +174,31 @@ export function computeSignal(ctx: SignalContext): TfSignal {
     }
   }
 
-  // 3) Smart-money vs retail (positioning divergence) ----------------
+  // 3) OI ↔ Price 4-quadrant regime ----------------------------------
+  // Bu klasik derivative read; hem yön hem kalite (sürdürülebilirlik)
+  // taşır. Magnitude TF'den bağımsız (24h pencere) — yine de TF
+  // weight'iyle yumuşatıyoruz çünkü 5m'lik bir hareket 24h regime
+  // okumasıyla doğrudan ilişkili olmayabilir.
+  switch (ctx.regime) {
+    case 'bullish_confirmation':
+      push(factors, 'OI↑ + Price↑ confirm', 0.22 * dwt);
+      break;
+    case 'bearish_confirmation':
+      push(factors, 'OI↑ + Price↓ confirm', -0.22 * dwt);
+      break;
+    case 'short_squeeze':
+      // Mekanik rally, sürdürülebilir değil → counter-trend short bias.
+      push(factors, 'OI↓ + Price↑ squeeze', -0.18 * dwt);
+      break;
+    case 'long_capitulation':
+      // Pozisyonlar zorla kapanıyor → exhaustion, dip yakınsama.
+      push(factors, 'OI↓ + Price↓ capitulation', 0.15 * dwt);
+      break;
+    default:
+      break;
+  }
+
+  // 4) Smart-money vs retail (positioning divergence) ----------------
   const pwt = TF_POSITIONING_WEIGHT[ctx.tf];
   if (ctx.positioning) {
     switch (ctx.positioning.divergence) {
@@ -161,7 +228,7 @@ export function computeSignal(ctx: SignalContext): TfSignal {
     }
   }
 
-  // 4) Whale flow (Arkham) -------------------------------------------
+  // 5) Whale flow (Arkham) -------------------------------------------
   const wwt = TF_WHALE_WEIGHT[ctx.tf];
   if (ctx.whales) {
     const f = ctx.whales.flows;

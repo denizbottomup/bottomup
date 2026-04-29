@@ -2,7 +2,13 @@ import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/commo
 import Anthropic from '@anthropic-ai/sdk';
 import { fetchKlines, type Tf } from './klines.js';
 import { analyzePriceAction, type PriceActionRead } from './price-action.js';
-import { computeSignal, type SignalKind, type TfSignal } from './signal-engine.js';
+import {
+  classifyOiPriceRegime,
+  computeSignal,
+  type OiPriceRegime,
+  type SignalKind,
+  type TfSignal,
+} from './signal-engine.js';
 import { FoxyService, type FoxyPositioning } from '../foxy/foxy.service.js';
 
 /**
@@ -62,6 +68,16 @@ export interface RightNowAsset {
    *  cross-source structural read; UI shows it as a "balinalar / küçükler"
    *  strip on the asset card. */
   positioning: FoxyPositioning | null;
+  /**
+   * OI ↔ Price 24h 4-quadrant okuyuşu. Asset-level (TF-blind) çünkü
+   * 24h penceresinde değerlendiriliyor. UI'da kombine header'ın
+   * altında dedicated bir rozet olarak gösterilir.
+   */
+  regime: OiPriceRegime;
+  /** Raw inputs that drove the regime read — UI tooltip + AI prompt
+   *  context use these directly. */
+  oi_change_24h_pct: number | null;
+  price_change_24h_pct: number | null;
   /** AI-generated prose overlay; null until first AI tick lands. */
   ai: RightNowAi | null;
 }
@@ -140,6 +156,9 @@ export class RightNowService implements OnModuleInit, OnModuleDestroy {
           combined: 'wait' as SignalKind,
           combined_confidence: 0,
           positioning: null,
+          regime: 'neutral' as OiPriceRegime,
+          oi_change_24h_pct: null,
+          price_change_24h_pct: null,
           ai,
         };
       }
@@ -193,9 +212,16 @@ export class RightNowService implements OnModuleInit, OnModuleDestroy {
       this.foxy.positioningByCoin(coin, '1h').catch(() => null),
     ]);
 
-    const tf5 = this.buildBlock(k5, '5m', derivatives, whales, positioning);
-    const tf15 = this.buildBlock(k15, '15m', derivatives, whales, positioning);
-    const tf1h = this.buildBlock(k1h, '1h', derivatives, whales, positioning);
+    // 24h price change from 1h klines (last 24 bars). The OI 24h %
+    // already lives on derivatives.oi.change_24h_pct; together they
+    // feed the OI/Price regime classifier.
+    const price_change_24h_pct = priceChangeFromKlines(k1h, 24);
+    const oi_change_24h_pct = derivatives?.oi?.change_24h_pct ?? null;
+    const regime = classifyOiPriceRegime(oi_change_24h_pct, price_change_24h_pct);
+
+    const tf5 = this.buildBlock(k5, '5m', derivatives, whales, positioning, regime);
+    const tf15 = this.buildBlock(k15, '15m', derivatives, whales, positioning, regime);
+    const tf1h = this.buildBlock(k1h, '1h', derivatives, whales, positioning, regime);
 
     // Combined direction: 1h gets 50% weight, 15m 30%, 5m 20%.
     const score =
@@ -214,6 +240,10 @@ export class RightNowService implements OnModuleInit, OnModuleDestroy {
       combined,
       combined_confidence: round(combined_confidence, 2),
       positioning,
+      regime,
+      oi_change_24h_pct: oi_change_24h_pct != null ? round(oi_change_24h_pct, 2) : null,
+      price_change_24h_pct:
+        price_change_24h_pct != null ? round(price_change_24h_pct, 2) : null,
     };
   }
 
@@ -223,9 +253,10 @@ export class RightNowService implements OnModuleInit, OnModuleDestroy {
     derivatives: Awaited<ReturnType<FoxyService['derivativesByCoin']>> | null,
     whales: Awaited<ReturnType<FoxyService['whalesByCoin']>> | null,
     positioning: FoxyPositioning | null,
+    regime: OiPriceRegime,
   ): RightNowTfBlock {
     const pa = analyzePriceAction(klines);
-    const sig = computeSignal({ pa, derivatives, whales, positioning, tf });
+    const sig = computeSignal({ pa, derivatives, whales, positioning, regime, tf });
     return {
       ...sig,
       last: pa.last,
@@ -256,6 +287,9 @@ export class RightNowService implements OnModuleInit, OnModuleDestroy {
           coin,
           combined: raw.combined,
           combined_confidence: raw.combined_confidence,
+          regime: raw.regime,
+          oi_24h_pct: raw.oi_change_24h_pct,
+          price_24h_pct: raw.price_change_24h_pct,
           positioning: raw.positioning
             ? {
                 divergence: raw.positioning.divergence,
@@ -386,21 +420,51 @@ function round(x: number, dp: number): number {
   return Math.round(x * p) / p;
 }
 
+/**
+ * % change from N bars back to the latest close. With 1h klines,
+ * `lookback = 24` gives the canonical 24-hour change without an
+ * extra HTTP call.
+ */
+function priceChangeFromKlines(
+  klines: Awaited<ReturnType<typeof fetchKlines>>,
+  lookback: number,
+): number | null {
+  if (klines.length < lookback + 1) return null;
+  const start = klines.at(-(lookback + 1))?.c;
+  const end = klines.at(-1)?.c;
+  if (!start || !end) return null;
+  return ((end - start) / start) * 100;
+}
+
 const AI_SYSTEM_PROMPT = [
   'Sen Right Now — bottomUP\'ın anlık yön motoru. Bir desk analistisin.',
-  'Sana 3 TF\'lik (5m/15m/1h) deterministic confluence skoru ve',
-  'kombine yön verilir. Senin işin bunu trader\'a tek cümlelik',
+  'Sana 3 TF\'lik (5m/15m/1h) deterministic confluence skoru, kombine',
+  'yön, OI ↔ Price 24h regime\'i, balina vs retail pozisyon kıyası',
+  've fiyat seviyeleri verilir. Senin işin bunu trader\'a tek cümlelik',
   'aksiyonlanabilir bir görüş + tek cümlelik invalidation\'a çevirmek.',
+  '',
+  'OI ↔ Price regime nasıl okunur:',
+  '  bullish_confirmation = OI↑ + Price↑ → taze long para, sağlıklı trend',
+  '  bearish_confirmation = OI↑ + Price↓ → taze short açılıyor, devam riski',
+  '  short_squeeze        = OI↓ + Price↑ → mekanik unwind, weak rally,',
+  '                                         sürdürülebilir değil',
+  '  long_capitulation    = OI↓ + Price↓ → exhaustion, dip yakınsama',
+  'Bu okumayı headline\'da geçirmeyi tercih et — "kapı arkasındaki yapı"',
+  'çoğunlukla saf yön sinyalinden daha bilgilendiricidir.',
+  '',
+  'Pozisyon kıyası nasıl okunur:',
+  '  smart_bulls / capitulation_setup → balinalar long bias, takip',
+  '  top_heavy / smart_bears          → retail euforik, distribution riski',
   '',
   'Kurallar:',
   '  - Türkçe, profesyonel masa dili. Markdown YOK.',
-  '  - Headline 1 cümle, max 18 kelime. Yön + neden + zaman dilimi.',
-  '    İYİ: "BTC 1h\'de bos_up + funding ılımlı; 5m\'de minor pullback,',
-  '    62300 üzeri tutarsa scalp long bias." (uzun ama ok, 18 kelime).',
+  '  - Headline 1 cümle, max 22 kelime. Yön + neden + zaman dilimi.',
+  '    İYİ: "BTC OI↓ + Price↑ short squeeze yapısında, 1h CHOCH yok;',
+  '    62300 üzeri tutsa bile rally weak, scalp uzun riskli."',
   '    KÖTÜ: "BTC long sinyali var" (boş, neden yok).',
   '  - Invalidation 1 cümle, spesifik fiyat seviyesi şart. "X altında',
   '     kapanış tezi siler" formatında.',
-  '  - Sayıları kullan (price, RSI, factor weight\'leri).',
+  '  - Sayıları kullan (price, RSI, OI %, price 24h %).',
   '  - "Şahsen ben olsam", "kesin", "garanti" YASAK.',
   '  - JSON dışında bir şey yazma — kod-fence bile.',
 ].join('\n');

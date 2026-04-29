@@ -56,6 +56,13 @@ interface Positioning {
     | 'neutral';
 }
 
+type Regime =
+  | 'bullish_confirmation'
+  | 'bearish_confirmation'
+  | 'short_squeeze'
+  | 'long_capitulation'
+  | 'neutral';
+
 interface Asset {
   coin: string;
   tf_5m: TfBlock | null;
@@ -64,6 +71,9 @@ interface Asset {
   combined: SignalKind;
   combined_confidence: number;
   positioning: Positioning | null;
+  regime: Regime;
+  oi_change_24h_pct: number | null;
+  price_change_24h_pct: number | null;
   ai: {
     headline: string;
     invalidation: string;
@@ -233,6 +243,11 @@ function AssetCard({ asset }: { asset: Asset }) {
           bir tazelenir.)
         </div>
       )}
+      <RegimeStrip
+        regime={asset.regime}
+        oi24h={asset.oi_change_24h_pct}
+        price24h={asset.price_change_24h_pct}
+      />
       <PositioningStrip positioning={asset.positioning} />
       <div className="grid grid-cols-1 divide-y divide-border md:grid-cols-3 md:divide-x md:divide-y-0">
         <TfPanel label="5m" tf={asset.tf_5m} />
@@ -240,6 +255,174 @@ function AssetCard({ asset }: { asset: Asset }) {
         <TfPanel label="1h" tf={asset.tf_1h} />
       </div>
     </section>
+  );
+}
+
+function RegimeStrip({
+  regime,
+  oi24h,
+  price24h,
+}: {
+  regime: Regime;
+  oi24h: number | null;
+  price24h: number | null;
+}) {
+  const meta = regimeCopy(regime);
+  return (
+    <div className={`flex items-center justify-between gap-3 border-b border-border px-5 py-3 ${meta.bg}`}>
+      <div className="flex items-center gap-3">
+        <div className={`flex h-9 w-9 items-center justify-center rounded-lg ring-1 ${meta.iconBg} ${meta.iconRing}`}>
+          <RegimeGlyph regime={regime} className={`h-4 w-4 ${meta.iconText}`} />
+        </div>
+        <div>
+          <div className="flex items-center gap-2">
+            <span className="mono-label !text-fg-dim">OI ↔ fiyat rejimi</span>
+            <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ring-1 ${meta.pillBg} ${meta.pillRing} ${meta.text}`}>
+              {meta.label}
+            </span>
+          </div>
+          <div className="mt-0.5 text-[12px] text-fg">{meta.message}</div>
+        </div>
+      </div>
+      <div className="text-right text-[10px] font-mono text-fg-dim leading-snug">
+        <div>
+          OI 24h{' '}
+          <span
+            className={`font-bold ${
+              oi24h == null ? '' : oi24h >= 0 ? 'text-emerald-300' : 'text-rose-300'
+            }`}
+          >
+            {oi24h == null ? '—' : `${oi24h >= 0 ? '+' : ''}${oi24h.toFixed(2)}%`}
+          </span>
+        </div>
+        <div>
+          Px 24h{' '}
+          <span
+            className={`font-bold ${
+              price24h == null ? '' : price24h >= 0 ? 'text-emerald-300' : 'text-rose-300'
+            }`}
+          >
+            {price24h == null ? '—' : `${price24h >= 0 ? '+' : ''}${price24h.toFixed(2)}%`}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function regimeCopy(r: Regime): {
+  label: string;
+  text: string;
+  bg: string;
+  iconBg: string;
+  iconRing: string;
+  iconText: string;
+  pillBg: string;
+  pillRing: string;
+  message: string;
+} {
+  switch (r) {
+    case 'bullish_confirmation':
+      return {
+        label: 'Sağlıklı uptrend',
+        text: 'text-emerald-300',
+        bg: 'bg-emerald-400/[0.05]',
+        iconBg: 'bg-emerald-400/10',
+        iconRing: 'ring-emerald-400/30',
+        iconText: 'text-emerald-300',
+        pillBg: 'bg-emerald-400/10',
+        pillRing: 'ring-emerald-400/30',
+        message: 'OI ↑ + Fiyat ↑ — taze long para giriyor, trend sağlıklı.',
+      };
+    case 'bearish_confirmation':
+      return {
+        label: 'Trend devam (down)',
+        text: 'text-rose-300',
+        bg: 'bg-rose-400/[0.05]',
+        iconBg: 'bg-rose-400/10',
+        iconRing: 'ring-rose-400/30',
+        iconText: 'text-rose-300',
+        pillBg: 'bg-rose-400/10',
+        pillRing: 'ring-rose-400/30',
+        message: 'OI ↑ + Fiyat ↓ — taze short açılıyor, downtrend devam edebilir.',
+      };
+    case 'short_squeeze':
+      return {
+        label: 'Weak rally',
+        text: 'text-amber-300',
+        bg: 'bg-amber-400/[0.04]',
+        iconBg: 'bg-amber-400/10',
+        iconRing: 'ring-amber-400/30',
+        iconText: 'text-amber-300',
+        pillBg: 'bg-amber-400/10',
+        pillRing: 'ring-amber-400/30',
+        message:
+          'OI ↓ + Fiyat ↑ — short squeeze / unwind. Mekanik rally, sürdürülebilir değil.',
+      };
+    case 'long_capitulation':
+      return {
+        label: 'Long exhaustion',
+        text: 'text-sky-300',
+        bg: 'bg-sky-400/[0.04]',
+        iconBg: 'bg-sky-400/10',
+        iconRing: 'ring-sky-400/30',
+        iconText: 'text-sky-300',
+        pillBg: 'bg-sky-400/10',
+        pillRing: 'ring-sky-400/30',
+        message: 'OI ↓ + Fiyat ↓ — long\'lar zorla kapanıyor, dip yakınsayabilir.',
+      };
+    default:
+      return {
+        label: 'Nötr',
+        text: 'text-fg-muted',
+        bg: 'bg-bg/40',
+        iconBg: 'bg-white/5',
+        iconRing: 'ring-white/10',
+        iconText: 'text-fg-muted',
+        pillBg: 'bg-white/5',
+        pillRing: 'ring-white/10',
+        message: 'OI ve fiyat 24 saatlik değişimleri eşik altında — net regime yok.',
+      };
+  }
+}
+
+function RegimeGlyph({ regime, className }: { regime: Regime; className: string }) {
+  // Two arrows that show the OI ↔ Price relationship.
+  if (regime === 'bullish_confirmation') {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+        <path d="M7 16l3-3 3 3 4-7" />
+        <path d="M14 6h6v6" />
+      </svg>
+    );
+  }
+  if (regime === 'bearish_confirmation') {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+        <path d="M7 8l3 3 3-3 4 7" />
+        <path d="M14 18h6v-6" />
+      </svg>
+    );
+  }
+  if (regime === 'short_squeeze') {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+        <path d="M5 5l14 14M19 5L5 19" />
+      </svg>
+    );
+  }
+  if (regime === 'long_capitulation') {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+        <path d="M12 4v12" />
+        <path d="M6 14l6 6 6-6" />
+      </svg>
+    );
+  }
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <line x1="5" y1="12" x2="19" y2="12" />
+    </svg>
   );
 }
 
