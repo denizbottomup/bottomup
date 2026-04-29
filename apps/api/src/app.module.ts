@@ -4,6 +4,7 @@ import { HealthModule } from './health/health.module.js';
 import { UserModule } from './user/user.module.js';
 import { FeedModule } from './feed/feed.module.js';
 import { FoxyModule } from './foxy/foxy.module.js';
+import { LivecastModule } from './livecast/livecast.module.js';
 import { RightNowModule } from './right-now/right-now.module.js';
 import { TraderModule } from './trader/trader.module.js';
 import { SetupModule } from './setup/setup.module.js';
@@ -28,6 +29,7 @@ import { PrismaModule } from './common/prisma.module.js';
     FeedModule,
     FoxyModule,
     RightNowModule,
+    LivecastModule,
     TraderModule,
     SetupModule,
     WatchlistModule,
