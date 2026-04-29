@@ -130,18 +130,25 @@ export class PublicService {
   ) {}
 
   /**
-   * Marketing-safe landing payload. After the Phase 1 signup wall the
-   * trader leaderboard and live setup feed moved behind auth (`/me/*`).
-   * `landing` keeps only the stats counters, news feed, and pulse —
-   * data that's fine to surface to anonymous SEO/LLM crawlers.
+   * Marketing-safe landing payload. The Phase-1 signup wall locked
+   * `latest_setups` behind /me/* (live entry/stop/TP is paid content)
+   * but the rolling-30-day trader leaderboard is a public showcase —
+   * trader name, image, virtual return %, win rate and trade count
+   * are precisely the proof-points new visitors come to see, and none
+   * of those fields leak per-trade pricing. Hiding them broke the
+   * landing's value proposition (and crashed the page when the field
+   * went undefined). `top_traders` is back; `latest_setups` stays
+   * gated.
    */
   async landing(locale = 'en'): Promise<{
     stats: LandingStats;
+    top_traders: LandingTrader[];
     news: LandingNews[];
     pulse: Awaited<ReturnType<MarketIntelService['pulse']>>;
   }> {
-    const [stats, news, pulse] = await Promise.all([
+    const [stats, top_traders, news, pulse] = await Promise.all([
       this.stats(),
+      this.topTraders(6).catch(() => [] as LandingTrader[]),
       this.latestNews(6, locale),
       this.intel.pulse().catch(() => ({
         fear_greed: null,
@@ -155,7 +162,7 @@ export class PublicService {
         whale_positions: [],
       })),
     ]);
-    return { stats, news, pulse };
+    return { stats, top_traders, news, pulse };
   }
 
   /**
