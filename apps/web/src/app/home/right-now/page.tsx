@@ -93,6 +93,24 @@ interface Etf {
   asset: string;
 }
 
+interface Vwap {
+  vwap: number;
+  deviation_pct: number;
+  bias:
+    | 'extended_long'
+    | 'mild_long'
+    | 'neutral'
+    | 'mild_short'
+    | 'extended_short';
+}
+
+interface CrossAsset {
+  btc_dominance_pct: number;
+  eth_dominance_pct: number;
+  eth_btc_ratio: number;
+  rotation: 'btc_lead' | 'alt_lead' | 'mixed';
+}
+
 interface Macro {
   dxy: { price: number; change_pct: number } | null;
   es_futures: { price: number; change_pct: number } | null;
@@ -106,7 +124,7 @@ interface Coverage {
 }
 
 interface Flip {
-  tf: Tf;
+  tf: Tf | 'combined';
   from: SignalKind;
   to: SignalKind;
   at: string;
@@ -129,7 +147,9 @@ interface Asset {
   funding_velocity: FundingVelocity | null;
   liq_clusters: LiqClusters;
   etf: Etf | null;
+  vwap: Vwap | null;
   flips: Flip[];
+  combined_flip: Flip | null;
   ai: {
     big_picture: string;
     tactical_now: string;
@@ -141,6 +161,7 @@ interface Asset {
 interface Payload {
   assets: Asset[];
   macro: Macro | null;
+  cross_asset: CrossAsset | null;
   coverage: Coverage[];
   computed_at: string;
   ai_at: string | null;
@@ -166,7 +187,17 @@ export default function RightNowPage() {
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [now, setNow] = useState(() => Date.now());
+  const [soundOn, setSoundOn] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    return window.localStorage.getItem('rightnow.sound') === '1';
+  });
   const tokenRef = useRef<string | null>(null);
+  const lastCombinedRef = useRef<Map<string, SignalKind>>(new Map());
+
+  // Drive tab-title flicker + audio ping when a combined direction flip
+  // arrives in the new poll. Only fires the *first* time we observe a
+  // change — subsequent polls with the same combined keep things quiet.
+  useFlipAlerts(data, lastCombinedRef, soundOn);
 
   useEffect(() => {
     let alive = true;
@@ -223,20 +254,25 @@ export default function RightNowPage() {
               <span className="logo-gradient">ne yapmalı?</span>
             </h1>
           </div>
-          <FreshnessPill data={data} now={now} />
+          <div className="flex items-center gap-2">
+            <PushToggle getIdToken={getIdToken} />
+            <SoundToggle on={soundOn} setOn={setSoundOn} />
+            <FreshnessPill data={data} now={now} />
+          </div>
         </div>
         <p className="mt-1 max-w-2xl text-sm text-fg-muted">
-          BTC ve ETH için 5dk → 1g zaman dilimlerinde price-action,
-          türev verileri, balina akışı, smart vs retail pozisyon, OI/Price
-          rejimi, spot/perp basis, funding velocity, ETF günlük flow ve
-          makro bağlam — tek ekranda. Her 60 saniyede güncellenir.
+          BTC, ETH, SOL, BNB, XRP için 5dk → 1g zaman dilimlerinde
+          price-action, türev verileri, balina akışı, smart vs retail
+          pozisyon, OI/Price rejimi, spot/perp basis, funding velocity,
+          ETF (BTC + ETH) ve makro bağlam — tek ekranda. Her 60 saniyede
+          güncellenir, kombine yön değiştiğinde bildirim alırsın.
         </p>
       </header>
 
       <div className="flex-1 overflow-y-auto px-4 py-6 md:px-8">
         <div className="mx-auto max-w-6xl space-y-5">
           {loading ? (
-            <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+            <div className="grid grid-cols-1 gap-5 lg:grid-cols-2 xl:grid-cols-2">
               <SkeletonCard />
               <SkeletonCard />
             </div>
@@ -246,8 +282,15 @@ export default function RightNowPage() {
             </div>
           ) : data ? (
             <>
-              {data.macro ? <MacroBar macro={data.macro} /> : null}
-              <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+              {data.macro || data.cross_asset ? (
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                  {data.macro ? <MacroBar macro={data.macro} /> : null}
+                  {data.cross_asset ? (
+                    <CrossAssetBar cross={data.cross_asset} />
+                  ) : null}
+                </div>
+              ) : null}
+              <div className="grid grid-cols-1 gap-5 lg:grid-cols-2 xl:grid-cols-2">
                 {data.assets.map((a) => (
                   <AssetCard key={a.coin} asset={a} />
                 ))}
@@ -335,18 +378,188 @@ function MacroBar({ macro }: { macro: Macro }) {
   );
 }
 
+function CrossAssetBar({ cross }: { cross: CrossAsset }) {
+  const label =
+    cross.rotation === 'btc_lead'
+      ? 'BTC liderlik'
+      : cross.rotation === 'alt_lead'
+        ? 'Alt sezon'
+        : 'karışık';
+  const tone =
+    cross.rotation === 'btc_lead'
+      ? 'border-amber-400/25 bg-amber-400/[0.04] text-amber-200'
+      : cross.rotation === 'alt_lead'
+        ? 'border-violet-400/25 bg-violet-400/[0.04] text-violet-200'
+        : 'border-white/10 bg-bg-card text-fg-muted';
+  return (
+    <div className={`flex flex-wrap items-center justify-between gap-3 rounded-xl border px-4 py-2.5 ${tone}`}>
+      <div className="flex items-center gap-2">
+        <span className="mono-label !text-fg-dim">Rotasyon</span>
+        <span className="rounded-full bg-bg/50 px-2 py-0.5 text-[10px] font-bold uppercase ring-1 ring-white/10">
+          {label}
+        </span>
+      </div>
+      <div className="flex flex-wrap items-center gap-4 text-[11px] font-mono">
+        <span>
+          BTC.D <span className="text-fg">{cross.btc_dominance_pct.toFixed(1)}%</span>
+        </span>
+        <span>
+          ETH.D <span className="text-fg">{cross.eth_dominance_pct.toFixed(1)}%</span>
+        </span>
+        <span>
+          ETH/BTC <span className="text-fg">{cross.eth_btc_ratio.toFixed(5)}</span>
+        </span>
+      </div>
+    </div>
+  );
+}
+
 function AssetCard({ asset }: { asset: Asset }) {
   return (
     <section className="rounded-2xl border border-border bg-bg-card overflow-hidden">
+      {asset.combined_flip ? (
+        <FlipBanner coin={asset.coin} flip={asset.combined_flip} />
+      ) : null}
       <CombinedHeader asset={asset} />
       <AiBlock ai={asset.ai} />
       <ContextStrip asset={asset} />
       <TfStack asset={asset} />
+      <ChartSection asset={asset} />
       <PositioningStrip positioning={asset.positioning} />
       <LiqMapStrip clusters={asset.liq_clusters} last={asset.tf_1h?.last ?? null} />
       <FlipsFooter flips={asset.flips} />
     </section>
   );
+}
+
+function ChartSection({ asset }: { asset: Asset }) {
+  const [open, setOpen] = useState(false);
+  const [tf, setTf] = useState<'15' | '60' | '240' | 'D'>('60');
+  // Pull key levels from the matching TF block. Defaults to 1h since
+  // that's our canonical multi-TF anchor.
+  const blockMap: Record<string, TfBlock | null> = {
+    '15': asset.tf_15m,
+    '60': asset.tf_1h,
+    '240': asset.tf_4h,
+    D: asset.tf_1d,
+  };
+  const block = blockMap[tf] ?? asset.tf_1h;
+  const levels = block?.key_levels ?? null;
+  const last = block?.last ?? null;
+  const tvSymbol = `BINANCE:${asset.coin}USDT.P`;
+  // chartonly=1 + theme=dark + interval matches TF dropdown.
+  const src = `https://www.tradingview.com/widgetembed/?symbol=${encodeURIComponent(
+    tvSymbol,
+  )}&interval=${tf}&theme=dark&style=1&toolbarbg=rgba(0,0,0,0)&hideideas=1&withdateranges=1&timezone=Etc/UTC`;
+
+  return (
+    <div className="border-b border-border">
+      <div className="flex items-center justify-between gap-2 px-5 py-2">
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          className="flex items-center gap-2 text-[12px] text-fg-muted hover:text-fg transition"
+        >
+          <span aria-hidden>{open ? '▾' : '▸'}</span>
+          <span className="mono-label !text-fg-dim">Chart · TradingView</span>
+        </button>
+        {open ? (
+          <div className="flex items-center gap-1">
+            {(['15', '60', '240', 'D'] as const).map((v) => (
+              <button
+                key={v}
+                onClick={() => setTf(v)}
+                className={`rounded-full px-2 py-0.5 text-[10px] font-mono transition ${
+                  tf === v
+                    ? 'bg-brand/15 text-brand ring-1 ring-brand/30'
+                    : 'text-fg-dim hover:text-fg'
+                }`}
+              >
+                {tfLabel(v)}
+              </button>
+            ))}
+          </div>
+        ) : null}
+      </div>
+
+      {open ? (
+        <div className="px-5 pb-4">
+          <div className="overflow-hidden rounded-xl border border-border">
+            <iframe
+              src={src}
+              title={`${asset.coin}USDT TradingView`}
+              loading="lazy"
+              className="block h-[360px] w-full"
+            />
+          </div>
+          {levels && last != null ? (
+            <div className="mt-3 grid grid-cols-2 gap-2 text-[11px] font-mono md:grid-cols-4">
+              <LevelTile
+                label="Spot"
+                value={`$${formatPrice(last)}`}
+                tone="neutral"
+              />
+              {levels.entry_low != null && levels.entry_high != null ? (
+                <LevelTile
+                  label="Giriş"
+                  value={`$${formatPrice(levels.entry_low)} – $${formatPrice(levels.entry_high)}`}
+                  tone={block?.signal === 'short' ? 'rose' : 'emerald'}
+                />
+              ) : null}
+              {levels.invalidation != null ? (
+                <LevelTile
+                  label="İnvalidasyon"
+                  value={`$${formatPrice(levels.invalidation)}`}
+                  tone="rose"
+                />
+              ) : null}
+              {levels.target != null ? (
+                <LevelTile
+                  label="Hedef"
+                  value={`$${formatPrice(levels.target)}`}
+                  tone="emerald"
+                />
+              ) : null}
+            </div>
+          ) : null}
+          <div className="mt-2 text-[10px] text-fg-dim">
+            Seviyeler {tfLabel(tf)} TF'inden — Right Now signal engine'in OB/FVG/swing
+            okumasıyla hesaplanmıştır.
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function LevelTile({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: string;
+  tone: 'emerald' | 'rose' | 'neutral';
+}) {
+  const cls =
+    tone === 'emerald'
+      ? 'text-emerald-300'
+      : tone === 'rose'
+        ? 'text-rose-300'
+        : 'text-fg';
+  return (
+    <div className="rounded-lg border border-white/5 bg-bg/40 px-2.5 py-2">
+      <div className="text-[9px] uppercase tracking-wider text-fg-dim">{label}</div>
+      <div className={`mt-0.5 ${cls}`}>{value}</div>
+    </div>
+  );
+}
+
+function tfLabel(v: '15' | '60' | '240' | 'D'): string {
+  if (v === '15') return '15m';
+  if (v === '60') return '1h';
+  if (v === '240') return '4h';
+  return '1d';
 }
 
 function CombinedHeader({ asset }: { asset: Asset }) {
@@ -459,6 +672,16 @@ function ContextStrip({ asset }: { asset: Asset }) {
     });
   }
 
+  if (asset.vwap) {
+    const v = asset.vwap;
+    tiles.push({
+      label: 'VWAP (24h)',
+      value: `${v.deviation_pct >= 0 ? '+' : ''}${v.deviation_pct.toFixed(2)}%`,
+      hint: vwapBiasLabel(v.bias),
+      tone: vwapTone(v.bias),
+    });
+  }
+
   if (tiles.length === 0) {
     return (
       <div className="border-b border-border px-5 py-3 text-[11px] text-fg-dim">
@@ -468,12 +691,34 @@ function ContextStrip({ asset }: { asset: Asset }) {
   }
 
   return (
-    <div className="grid grid-cols-2 gap-2 border-b border-border bg-bg/40 px-5 py-3 sm:grid-cols-4">
+    <div className="grid grid-cols-2 gap-2 border-b border-border bg-bg/40 px-5 py-3 sm:grid-cols-3 lg:grid-cols-5">
       {tiles.map((t, i) => (
         <ContextTile key={i} {...t} />
       ))}
     </div>
   );
+}
+
+function vwapBiasLabel(bias: Vwap['bias']): string {
+  switch (bias) {
+    case 'extended_long':
+      return 'aşırı stretched ↑';
+    case 'mild_long':
+      return 'VWAP üstünde';
+    case 'extended_short':
+      return 'aşırı stretched ↓';
+    case 'mild_short':
+      return 'VWAP altında';
+    default:
+      return 'VWAP\'a yakın';
+  }
+}
+
+function vwapTone(bias: Vwap['bias']): 'green' | 'red' | 'amber' | 'gray' {
+  if (bias === 'mild_long') return 'green';
+  if (bias === 'mild_short') return 'red';
+  if (bias === 'extended_long' || bias === 'extended_short') return 'amber';
+  return 'gray';
 }
 
 function ContextTile({
@@ -669,29 +914,56 @@ function FlipsFooter({ flips }: { flips: Flip[] }) {
   if (!flips || flips.length === 0) {
     return (
       <div className="px-5 py-3 text-[11px] text-fg-dim">
-        Son tick'te flip yok — sinyaller stabil.
+        Son flip yok — sinyaller stabil.
       </div>
     );
   }
+  // Pin combined flips to the top — they're the user-facing call.
+  const sorted = [...flips].sort((a, b) => {
+    if (a.tf === 'combined' && b.tf !== 'combined') return -1;
+    if (b.tf === 'combined' && a.tf !== 'combined') return 1;
+    return new Date(b.at).getTime() - new Date(a.at).getTime();
+  });
   return (
     <div className="px-5 py-3">
       <div className="mono-label !text-fg-dim mb-2">Son flipler</div>
-      <div className="flex flex-wrap gap-1.5">
-        {flips.slice(0, 5).map((f, i) => (
-          <span
-            key={i}
-            className={`rounded-full border px-2 py-0.5 text-[10px] font-mono ${
-              f.to === 'long'
-                ? 'border-emerald-400/30 bg-emerald-400/10 text-emerald-200'
-                : f.to === 'short'
-                  ? 'border-rose-400/30 bg-rose-400/10 text-rose-200'
-                  : 'border-amber-400/30 bg-amber-400/10 text-amber-200'
-            }`}
-          >
-            {f.tf}: {f.from}→{f.to} · {ago(f.at)}
-          </span>
-        ))}
-      </div>
+      <ul className="space-y-1.5">
+        {sorted.slice(0, 6).map((f, i) => {
+          const isCombined = f.tf === 'combined';
+          const tone =
+            f.to === 'long'
+              ? 'text-emerald-200'
+              : f.to === 'short'
+                ? 'text-rose-200'
+                : 'text-amber-200';
+          return (
+            <li
+              key={i}
+              className={`flex items-center justify-between gap-2 rounded-lg border px-2.5 py-1.5 text-[11px] font-mono ${
+                isCombined
+                  ? 'border-white/15 bg-white/[0.04]'
+                  : 'border-white/5 bg-white/[0.02]'
+              }`}
+            >
+              <span className="flex items-center gap-2">
+                <span
+                  className={`rounded px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ${
+                    isCombined
+                      ? 'bg-brand/15 text-brand ring-1 ring-brand/30'
+                      : 'bg-white/5 text-fg-dim'
+                  }`}
+                >
+                  {isCombined ? 'KOMBİNE' : f.tf}
+                </span>
+                <span className={tone}>
+                  {f.from} → {f.to}
+                </span>
+              </span>
+              <span className="text-fg-dim">{ago(f.at)} önce</span>
+            </li>
+          );
+        })}
+      </ul>
     </div>
   );
 }
@@ -890,6 +1162,362 @@ function ConfidenceBar({ confidence, dir }: { confidence: number; dir: SignalKin
       <div className={fill} style={{ width: `${pct}%`, height: '100%' }} />
     </div>
   );
+}
+
+// ─────────────────────────────────────────────── flip alert primitives
+
+function FlipBanner({ coin, flip }: { coin: string; flip: Flip }) {
+  const [tick, setTick] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setTick(Date.now()), 30_000);
+    return () => clearInterval(id);
+  }, []);
+  void tick; // re-render to update relative time
+
+  const tone = flipTone(flip.to);
+  return (
+    <div
+      role="alert"
+      className={`flex items-center justify-between gap-3 border-b ${tone.border} ${tone.bg} px-5 py-3`}
+    >
+      <div className="flex items-center gap-3">
+        <span className={`flex h-7 w-7 items-center justify-center rounded-full ring-1 ${tone.iconBg} ${tone.iconRing}`}>
+          <span className={`text-base font-bold ${tone.text}`}>
+            {flip.to === 'long' ? '↑' : flip.to === 'short' ? '↓' : '⏸'}
+          </span>
+        </span>
+        <div>
+          <div className={`text-sm font-extrabold ${tone.text}`}>
+            {coin}: {labelFlip(flip.from)} → {labelFlip(flip.to)}
+          </div>
+          <div className="text-[11px] font-mono text-fg-muted">
+            kombine yön az önce değişti · {ago(flip.at)} önce
+          </div>
+        </div>
+      </div>
+      <span className={`hidden sm:inline-flex text-[10px] font-bold uppercase tracking-wider ${tone.text}`}>
+        FLIP
+      </span>
+    </div>
+  );
+}
+
+function flipTone(to: SignalKind): {
+  text: string;
+  bg: string;
+  border: string;
+  iconBg: string;
+  iconRing: string;
+} {
+  if (to === 'long') {
+    return {
+      text: 'text-emerald-300',
+      bg: 'bg-emerald-400/[0.12] animate-pulse',
+      border: 'border-emerald-400/40',
+      iconBg: 'bg-emerald-400/20',
+      iconRing: 'ring-emerald-400/40',
+    };
+  }
+  if (to === 'short') {
+    return {
+      text: 'text-rose-300',
+      bg: 'bg-rose-400/[0.12] animate-pulse',
+      border: 'border-rose-400/40',
+      iconBg: 'bg-rose-400/20',
+      iconRing: 'ring-rose-400/40',
+    };
+  }
+  return {
+    text: 'text-amber-300',
+    bg: 'bg-amber-400/[0.10]',
+    border: 'border-amber-400/30',
+    iconBg: 'bg-amber-400/15',
+    iconRing: 'ring-amber-400/30',
+  };
+}
+
+function labelFlip(s: SignalKind): string {
+  if (s === 'long') return 'LONG';
+  if (s === 'short') return 'SHORT';
+  return 'BEKLE';
+}
+
+function PushToggle({
+  getIdToken,
+}: {
+  getIdToken: () => Promise<string | null>;
+}) {
+  const [state, setState] = useState<
+    'unsupported' | 'idle' | 'loading' | 'subscribed' | 'denied' | 'unconfigured'
+  >('idle');
+
+  // On mount: check capability + current subscription state.
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      if (
+        typeof window === 'undefined' ||
+        !('serviceWorker' in navigator) ||
+        !('PushManager' in window)
+      ) {
+        if (alive) setState('unsupported');
+        return;
+      }
+      if (Notification.permission === 'denied') {
+        if (alive) setState('denied');
+        return;
+      }
+      try {
+        const reg = await navigator.serviceWorker.getRegistration('/right-now-sw.js');
+        const sub = await reg?.pushManager.getSubscription();
+        if (alive) setState(sub ? 'subscribed' : 'idle');
+      } catch {
+        if (alive) setState('idle');
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  const subscribe = async () => {
+    setState('loading');
+    try {
+      const token = await getIdToken();
+      if (!token) throw new Error('auth required');
+      // Pull VAPID public key + capability from API.
+      const cfgRes = await fetch(`${API_BASE}/me/right-now/push-config`, {
+        headers: { Authorization: `Bearer ${token}` },
+        cache: 'no-store',
+      });
+      if (!cfgRes.ok) throw new Error(`push-config ${cfgRes.status}`);
+      const cfg = (await cfgRes.json()) as {
+        enabled: boolean;
+        public_key: string | null;
+      };
+      if (!cfg.enabled || !cfg.public_key) {
+        setState('unconfigured');
+        return;
+      }
+      const perm = await Notification.requestPermission();
+      if (perm !== 'granted') {
+        setState('denied');
+        return;
+      }
+      const reg = await navigator.serviceWorker.register('/right-now-sw.js');
+      const sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        // Cast through BufferSource — `lib.dom`'s narrowing of
+        // `Uint8Array<ArrayBufferLike>` collides with `ArrayBufferView<ArrayBuffer>`
+        // under recent TS lib bundles even though the runtime is happy.
+        applicationServerKey: urlBase64ToUint8Array(
+          cfg.public_key,
+        ) as unknown as BufferSource,
+      });
+      const subRes = await fetch(`${API_BASE}/me/right-now/subscribe`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(sub.toJSON()),
+      });
+      if (!subRes.ok) throw new Error(`subscribe ${subRes.status}`);
+      setState('subscribed');
+    } catch {
+      setState('idle');
+    }
+  };
+
+  const unsubscribe = async () => {
+    setState('loading');
+    try {
+      const reg = await navigator.serviceWorker.getRegistration('/right-now-sw.js');
+      const sub = await reg?.pushManager.getSubscription();
+      if (sub) {
+        await sub.unsubscribe();
+        const token = await getIdToken();
+        if (token) {
+          await fetch(`${API_BASE}/me/right-now/subscribe`, {
+            method: 'DELETE',
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ endpoint: sub.endpoint }),
+          });
+        }
+      }
+      setState('idle');
+    } catch {
+      setState('idle');
+    }
+  };
+
+  if (state === 'unsupported' || state === 'unconfigured') {
+    // Hide the button entirely when the browser can't do push or the
+    // server isn't configured — we don't want to surface a control
+    // that can never succeed.
+    return null;
+  }
+  const subscribed = state === 'subscribed';
+  const label =
+    state === 'denied'
+      ? 'izin engelli'
+      : state === 'loading'
+        ? '...'
+        : subscribed
+          ? 'bildirimler açık'
+          : 'bildirim al';
+  return (
+    <button
+      type="button"
+      onClick={subscribed ? unsubscribe : subscribe}
+      disabled={state === 'denied' || state === 'loading'}
+      title={
+        state === 'denied'
+          ? 'Tarayıcı bildirim iznini engellemiş — site ayarlarından açabilirsin.'
+          : subscribed
+            ? 'Push bildirimleri açık. Kapatmak için tıkla.'
+            : 'Combined yön değiştiğinde tarayıcı kapalı olsa bile bildirim al.'
+      }
+      className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-mono transition disabled:opacity-50 disabled:cursor-not-allowed ${
+        subscribed
+          ? 'border-emerald-400/40 bg-emerald-400/10 text-emerald-300'
+          : 'border-white/10 bg-bg-card text-fg-muted hover:border-white/25 hover:text-fg'
+      }`}
+    >
+      <span aria-hidden>{subscribed ? '🔔' : '🛎'}</span>
+      <span>{label}</span>
+    </button>
+  );
+}
+
+function urlBase64ToUint8Array(base64String: string): Uint8Array {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const raw = window.atob(base64);
+  const out = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; ++i) out[i] = raw.charCodeAt(i);
+  return out;
+}
+
+function SoundToggle({
+  on,
+  setOn,
+}: {
+  on: boolean;
+  setOn: (v: boolean) => void;
+}) {
+  const toggle = () => {
+    const next = !on;
+    setOn(next);
+    try {
+      window.localStorage.setItem('rightnow.sound', next ? '1' : '0');
+    } catch {
+      // localStorage unavailable in some embedded contexts — ignore.
+    }
+  };
+  return (
+    <button
+      type="button"
+      onClick={toggle}
+      title={on ? 'Sesi kapat' : 'Sesi aç'}
+      aria-label={on ? 'Sesi kapat' : 'Sesi aç'}
+      className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-mono transition ${
+        on
+          ? 'border-brand/40 bg-brand/10 text-brand'
+          : 'border-white/10 bg-bg-card text-fg-muted hover:border-white/25 hover:text-fg'
+      }`}
+    >
+      <span aria-hidden>{on ? '🔔' : '🔕'}</span>
+      <span>{on ? 'sesli' : 'sessiz'}</span>
+    </button>
+  );
+}
+
+/**
+ * On every new payload, compare the combined direction per asset against
+ * the value we saw last tick. If anything flipped:
+ *   1. Flicker the document title for 30s so a backgrounded user sees it.
+ *   2. If sound is enabled, play a short Web-Audio ping (no asset file).
+ * The combined_flip field on the payload drives the persistent banner;
+ * this hook adds the *transient* attention-grabbing effects on top.
+ */
+function useFlipAlerts(
+  data: Payload | null,
+  lastCombinedRef: React.MutableRefObject<Map<string, SignalKind>>,
+  soundOn: boolean,
+): void {
+  const originalTitleRef = useRef<string | null>(null);
+  const titleTimeoutRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (typeof document !== 'undefined' && originalTitleRef.current === null) {
+      originalTitleRef.current = document.title;
+    }
+    return () => {
+      if (titleTimeoutRef.current) {
+        window.clearTimeout(titleTimeoutRef.current);
+        if (originalTitleRef.current) document.title = originalTitleRef.current;
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!data) return;
+    const newFlips: Array<{ coin: string; to: SignalKind }> = [];
+    for (const a of data.assets) {
+      const prev = lastCombinedRef.current.get(a.coin);
+      if (prev !== undefined && prev !== a.combined) {
+        newFlips.push({ coin: a.coin, to: a.combined });
+      }
+      lastCombinedRef.current.set(a.coin, a.combined);
+    }
+    if (newFlips.length === 0) return;
+
+    // Title flicker — pick the first flip to surface in the title.
+    const head = newFlips[0]!;
+    if (typeof document !== 'undefined' && originalTitleRef.current) {
+      const arrow = head.to === 'long' ? '↑' : head.to === 'short' ? '↓' : '⏸';
+      document.title = `(!) ${head.coin} ${arrow} ${labelFlip(head.to)} · BottomUP`;
+      if (titleTimeoutRef.current) window.clearTimeout(titleTimeoutRef.current);
+      titleTimeoutRef.current = window.setTimeout(() => {
+        if (originalTitleRef.current) document.title = originalTitleRef.current;
+      }, 30_000);
+    }
+
+    if (soundOn) playPing();
+  }, [data, soundOn, lastCombinedRef]);
+}
+
+/** Subtle two-note ping via Web Audio — no asset file shipped. */
+function playPing(): void {
+  try {
+    const Ctx =
+      window.AudioContext ||
+      (window as unknown as { webkitAudioContext: typeof AudioContext })
+        .webkitAudioContext;
+    if (!Ctx) return;
+    const ctx = new Ctx();
+    const now = ctx.currentTime;
+    [880, 1320].forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.frequency.value = freq;
+      osc.type = 'sine';
+      gain.gain.setValueAtTime(0, now + i * 0.18);
+      gain.gain.linearRampToValueAtTime(0.12, now + i * 0.18 + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + i * 0.18 + 0.18);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(now + i * 0.18);
+      osc.stop(now + i * 0.18 + 0.2);
+    });
+    // Auto-close after the sound ends so we don't leak audio nodes.
+    setTimeout(() => void ctx.close(), 800);
+  } catch {
+    // Audio policies / no permission — silent fallback.
+  }
 }
 
 function formatPrice(n: number): string {

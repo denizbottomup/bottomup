@@ -11,19 +11,24 @@ import {
 } from './signal-engine.js';
 import {
   approximateLiqClusters,
+  computeVwap,
   fetchBasis,
+  fetchCrossAsset,
   fetchEtfFlow,
   fetchFundingVelocity,
   fetchMacro,
   type BasisRead,
   type CoverageRead,
+  type CrossAssetRead,
   type EtfFlowRead,
   type FundingVelocityRead,
   type LiqClusterRead,
   type MacroRead,
   type SourceName,
+  type VwapRead,
 } from './market-context.js';
 import { FoxyService, type FoxyPositioning } from '../foxy/foxy.service.js';
+import { PushService } from './push.service.js';
 
 /**
  * Right Now V2 — anlık AI yön sinyali.
@@ -50,7 +55,10 @@ import { FoxyService, type FoxyPositioning } from '../foxy/foxy.service.js';
  *     ve confidence saniye düzeyinde fresh kalır.
  */
 
-const COINS = ['BTC', 'ETH'] as const;
+const COINS = ['BTC', 'ETH', 'SOL', 'BNB', 'XRP'] as const;
+/** ETF flow only published for the two US-listed spot ETF assets;
+ *  other coins skip Farside fetch and return null on `.etf`. */
+const ETF_COINS = new Set(['BTC', 'ETH']);
 const TFS_DEEP: Tf[] = ['5m', '15m', '1h', '4h', '1d'];
 
 const COMPUTE_INTERVAL_MS = 60_000; // 1 dk
@@ -78,7 +86,11 @@ export interface RightNowTfBlock extends TfSignal {
 }
 
 export interface SignalFlip {
-  tf: Tf;
+  /** Per-TF flips use the TF tag (5m/15m/1h/4h/1d). The combined-direction
+   *  flip uses the literal 'combined' so the UI can highlight it specially
+   *  (flash banner, tab title flicker, audio ping) — far more important
+   *  to the trader than a single-TF blip. */
+  tf: Tf | 'combined';
   from: SignalKind;
   to: SignalKind;
   /** ISO of when the flip was detected. */
@@ -115,8 +127,17 @@ export interface RightNowAsset {
   funding_velocity: FundingVelocityRead | null;
   liq_clusters: LiqClusterRead;
   etf: EtfFlowRead | null;
+  /** Volume-weighted average price (1h × 24 lookback) — institutional anchor. */
+  vwap: VwapRead | null;
   /** Recent direction flips per TF (newest first). */
   flips: SignalFlip[];
+  /**
+   * Most recent *combined-direction* flip across all TFs, populated only
+   * if it happened within the last 10 minutes. The UI uses this to drive
+   * a flash banner + tab title flicker + audio ping. `null` outside that
+   * window so the banner self-dismisses instead of staying pinned.
+   */
+  combined_flip: SignalFlip | null;
   ai: RightNowAi | null;
 }
 
@@ -124,6 +145,8 @@ export interface RightNowPayload {
   assets: RightNowAsset[];
   /** Macro context is shared across assets. */
   macro: MacroRead | null;
+  /** Cross-asset rotation read — also shared across all coin cards. */
+  cross_asset: CrossAssetRead | null;
   /** Per-source coverage so the UI can show which feeds are live. */
   coverage: CoverageRead[];
   computed_at: string;
@@ -134,6 +157,7 @@ interface CacheEntry {
   raw: Map<string, Omit<RightNowAsset, 'ai'>>;
   ai: Map<string, RightNowAi>;
   macro: MacroRead | null;
+  crossAsset: CrossAssetRead | null;
   /** Per-source last-success timestamps (ms). 0 means never. */
   lastOk: Map<SourceName, number>;
   lastFail: Map<SourceName, number>;
@@ -155,6 +179,7 @@ export class RightNowService implements OnModuleInit, OnModuleDestroy {
     raw: new Map(),
     ai: new Map(),
     macro: null,
+    crossAsset: null,
     lastOk: new Map(),
     lastFail: new Map(),
     flipHistory: new Map(),
@@ -175,7 +200,10 @@ export class RightNowService implements OnModuleInit, OnModuleDestroy {
   // Slow-cadence cached values reused across compute ticks.
   private cachedEtf: Map<string, EtfFlowRead | null> = new Map();
 
-  constructor(private readonly foxy: FoxyService) {
+  constructor(
+    private readonly foxy: FoxyService,
+    private readonly push: PushService,
+  ) {
     const key = process.env.ANTHROPIC_API_KEY;
     this.client = key ? new Anthropic({ apiKey: key }) : null;
     if (!this.client) {
@@ -187,8 +215,13 @@ export class RightNowService implements OnModuleInit, OnModuleDestroy {
     // Slow-cadence sources first so the first compute has them populated.
     void this.refreshMacro();
     void this.refreshEtf();
+    void this.refreshCrossAsset();
     this.macroTimer = setInterval(() => void this.refreshMacro(), MACRO_REFRESH_MS);
     this.etfTimer = setInterval(() => void this.refreshEtf(), ETF_REFRESH_MS);
+    // CoinGecko global is rate-limited (50/min free tier) — 5dk cadence
+    // is well under the cap and BTC.D doesn't move fast enough to need
+    // anything tighter.
+    setInterval(() => void this.refreshCrossAsset(), MACRO_REFRESH_MS);
 
     void this.runCompute();
     this.computeTimer = setInterval(() => void this.runCompute(), COMPUTE_INTERVAL_MS);
@@ -220,6 +253,19 @@ export class RightNowService implements OnModuleInit, OnModuleDestroy {
 
   // ─────────────────────────────────────────────────────── public read
 
+  /**
+   * Translate the auth-guard viewer into a `user.id` UUID. Delegates
+   * to FoxyService which already has the lookup wired against the
+   * `user` table — keeps the resolution in one place.
+   */
+  resolveViewerId(viewer: import('../common/decorators/current-user.decorator.js').AuthedUser): Promise<string> {
+    return (
+      this.foxy as unknown as {
+        resolveViewerId(v: typeof viewer): Promise<string>;
+      }
+    ).resolveViewerId(viewer);
+  }
+
   snapshot(): RightNowPayload {
     const assets: RightNowAsset[] = COINS.map((coin) => {
       const raw = this.cache.raw.get(coin);
@@ -230,6 +276,7 @@ export class RightNowService implements OnModuleInit, OnModuleDestroy {
     return {
       assets,
       macro: this.cache.macro,
+      cross_asset: this.cache.crossAsset,
       coverage: this.coverageReport(),
       computed_at: new Date(this.cache.computed_at || Date.now()).toISOString(),
       ai_at: this.cache.ai_at ? new Date(this.cache.ai_at).toISOString() : null,
@@ -248,9 +295,23 @@ export class RightNowService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
+  private async refreshCrossAsset(): Promise<void> {
+    const c = await fetchCrossAsset();
+    if (c) {
+      this.cache.crossAsset = c;
+      this.markOk('cross_asset');
+    } else {
+      this.markFail('cross_asset');
+    }
+  }
+
   private async refreshEtf(): Promise<void> {
     for (const coin of COINS) {
-      const v = await fetchEtfFlow(coin);
+      if (!ETF_COINS.has(coin)) {
+        this.cachedEtf.set(coin, null);
+        continue;
+      }
+      const v = await fetchEtfFlow(coin as 'BTC' | 'ETH');
       this.cachedEtf.set(coin, v);
       if (v) this.markOk('etf');
       else this.markFail('etf');
@@ -319,6 +380,7 @@ export class RightNowService implements OnModuleInit, OnModuleDestroy {
 
     const last1h = k1h.at(-1)?.c ?? 0;
     const liq_clusters = approximateLiqClusters(k1h, last1h);
+    const vwap = computeVwap(k1h, 24);
 
     const tf5 = this.buildBlock(k5, '5m', derivatives, whales, positioning, regime);
     const tf15 = this.buildBlock(k15, '15m', derivatives, whales, positioning, regime);
@@ -338,14 +400,44 @@ export class RightNowService implements OnModuleInit, OnModuleDestroy {
       score > 0.15 ? 'long' : score < -0.15 ? 'short' : 'wait';
     const combined_confidence = Math.min(1, Math.abs(score));
 
-    // Flip detection — compare each TF's new signal with the previous tick.
+    // Flip detection — compare each TF's new signal with the previous
+    // tick, plus the combined direction (which is the user-facing call
+    // and therefore the most important flip to surface visibly).
     const flips = this.recordFlips(coin, {
       '5m': tf5?.signal ?? 'wait',
       '15m': tf15?.signal ?? 'wait',
       '1h': tf1h?.signal ?? 'wait',
       '4h': tf4h?.signal ?? 'wait',
       '1d': tf1d?.signal ?? 'wait',
+      combined,
     });
+
+    // Surface the most-recent combined flip if it landed in the past 10
+    // minutes — long enough that a viewer who came back to the tab
+    // doesn't miss it, short enough that the banner self-dismisses
+    // instead of staying pinned all session.
+    const recentCombined = flips.find((f) => f.tf === 'combined');
+    const combined_flip =
+      recentCombined && Date.now() - new Date(recentCombined.at).getTime() < 10 * 60_000
+        ? recentCombined
+        : null;
+
+    // If a combined flip just landed *this* tick (≤90s old), broadcast
+    // it to all Web Push subscribers for the coin. The 90s threshold
+    // is wider than the 60s compute interval so we don't miss a slow
+    // tick, but tight enough that we won't double-broadcast on reboot
+    // (where flipHistory would be empty anyway).
+    if (
+      recentCombined &&
+      Date.now() - new Date(recentCombined.at).getTime() < 90_000
+    ) {
+      void this.push.broadcastFlip(coin, {
+        from: recentCombined.from,
+        to: recentCombined.to,
+        at: recentCombined.at,
+        confidence: round(combined_confidence, 2),
+      });
+    }
 
     return {
       coin,
@@ -365,7 +457,9 @@ export class RightNowService implements OnModuleInit, OnModuleDestroy {
       funding_velocity: fundingVel ?? null,
       liq_clusters,
       etf: this.cachedEtf.get(coin) ?? null,
+      vwap,
       flips,
+      combined_flip,
     };
   }
 
@@ -396,11 +490,11 @@ export class RightNowService implements OnModuleInit, OnModuleDestroy {
 
   private recordFlips(
     coin: string,
-    current: Record<Tf, SignalKind>,
+    current: Record<Tf, SignalKind> & { combined: SignalKind },
   ): SignalFlip[] {
     const now = new Date().toISOString();
-    const out: SignalFlip[] = [];
-    for (const tf of TFS_DEEP) {
+    const tracked: Array<Tf | 'combined'> = [...TFS_DEEP, 'combined'];
+    for (const tf of tracked) {
       const key = `${coin}:${tf}`;
       const prev = this.cache.prevSignals.get(key);
       const curr = current[tf];
@@ -412,8 +506,7 @@ export class RightNowService implements OnModuleInit, OnModuleDestroy {
       }
       this.cache.prevSignals.set(key, curr);
     }
-    out.push(...(this.cache.flipHistory.get(coin) ?? []));
-    return out;
+    return [...(this.cache.flipHistory.get(coin) ?? [])];
   }
 
   // ───────────────────────────────────────────── coverage bookkeeping
@@ -440,6 +533,7 @@ export class RightNowService implements OnModuleInit, OnModuleDestroy {
       'funding_velocity',
       'etf',
       'macro',
+      'cross_asset',
     ];
     return sources.map((source) => {
       const last = this.cache.lastOk.get(source) ?? 0;
@@ -603,6 +697,9 @@ export class RightNowService implements OnModuleInit, OnModuleDestroy {
             : null,
         },
         etf: raw.etf,
+        vwap: raw.vwap
+          ? { deviation_pct: raw.vwap.deviation_pct, bias: raw.vwap.bias }
+          : null,
         macro: this.cache.macro
           ? {
               dxy_pct: this.cache.macro.dxy?.change_pct ?? null,
@@ -610,6 +707,7 @@ export class RightNowService implements OnModuleInit, OnModuleDestroy {
               risk_regime: this.cache.macro.risk_regime,
             }
           : null,
+        cross_asset: this.cache.crossAsset,
         flips: raw.flips.slice(0, 3).map((f) => `${f.tf}: ${f.from}→${f.to} @${f.at}`),
         tfs: {
           '5m': raw.tf_5m ? digestForAi(raw.tf_5m) : null,
@@ -648,7 +746,9 @@ function emptyAsset(coin: string, ai: RightNowAi | null): RightNowAsset {
       short_notional_5pct: 0,
     },
     etf: null,
+    vwap: null,
     flips: [],
+    combined_flip: null,
     ai,
   };
 }

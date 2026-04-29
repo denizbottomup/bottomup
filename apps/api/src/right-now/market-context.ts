@@ -276,6 +276,109 @@ function safeParseFarside(
   }
 }
 
+// ─────────────────────────────────────────────────────── VWAP
+
+export interface VwapRead {
+  /** Volume-weighted average price across the lookback window. */
+  vwap: number;
+  /** Latest close minus VWAP, in % of VWAP. */
+  deviation_pct: number;
+  /** Bucketed: how stretched the price is vs the institutional anchor. */
+  bias: 'extended_long' | 'mild_long' | 'neutral' | 'mild_short' | 'extended_short';
+}
+
+/**
+ * Session VWAP from 1h klines over the most recent ~24h. Useful as an
+ * institutional anchor — price stretched above VWAP signals momentum
+ * extension (or mean-reversion candidate); below signals weakness.
+ */
+export function computeVwap(
+  klines: Array<{ h: number; l: number; c: number; v: number }>,
+  lookback = 24,
+): VwapRead | null {
+  if (klines.length < Math.min(8, lookback)) return null;
+  const window = klines.slice(-lookback);
+  let pvSum = 0;
+  let vSum = 0;
+  for (const k of window) {
+    const typical = (k.h + k.l + k.c) / 3;
+    pvSum += typical * k.v;
+    vSum += k.v;
+  }
+  if (vSum <= 0) return null;
+  const vwap = pvSum / vSum;
+  const last = window.at(-1)?.c ?? 0;
+  const deviationPct = ((last - vwap) / vwap) * 100;
+  return {
+    vwap: round(vwap, 2),
+    deviation_pct: round(deviationPct, 2),
+    bias: classifyVwapBias(deviationPct),
+  };
+}
+
+function classifyVwapBias(pct: number): VwapRead['bias'] {
+  if (pct > 2) return 'extended_long';
+  if (pct > 0.5) return 'mild_long';
+  if (pct < -2) return 'extended_short';
+  if (pct < -0.5) return 'mild_short';
+  return 'neutral';
+}
+
+// ─────────────────────────────────────────── BTC dominance + ETH/BTC
+
+export interface CrossAssetRead {
+  /** BTC market cap dominance % across all crypto. */
+  btc_dominance_pct: number;
+  /** ETH market cap dominance %. */
+  eth_dominance_pct: number;
+  /** Spot ETH/BTC price ratio — alt-season strength indicator. */
+  eth_btc_ratio: number;
+  /** Bias snapshot — finer trend would need history. */
+  rotation: 'btc_lead' | 'alt_lead' | 'mixed';
+}
+
+/**
+ * BTC dominance + ETH/BTC in one shot.
+ *   • dominance from CoinGecko `/global` (free, key-less)
+ *   • ETH/BTC from Binance spot ticker
+ * Together they answer: "is money rotating into BTC or out?"
+ */
+export async function fetchCrossAsset(): Promise<CrossAssetRead | null> {
+  try {
+    const [domRes, ratioRes] = await Promise.all([
+      fetch('https://api.coingecko.com/api/v3/global', {
+        signal: AbortSignal.timeout(SHORT_TIMEOUT),
+        headers: { accept: 'application/json' },
+      }),
+      fetch('https://api.binance.com/api/v3/ticker/price?symbol=ETHBTC', {
+        signal: AbortSignal.timeout(SHORT_TIMEOUT),
+      }),
+    ]);
+    if (!domRes.ok || !ratioRes.ok) return null;
+    const dom = (await domRes.json()) as {
+      data?: { market_cap_percentage?: Record<string, number> };
+    };
+    const ratioJson = (await ratioRes.json()) as { price?: string };
+    const btcDom = Number(dom?.data?.market_cap_percentage?.btc ?? NaN);
+    const ethDom = Number(dom?.data?.market_cap_percentage?.eth ?? NaN);
+    const ratio = Number(ratioJson?.price ?? NaN);
+    if (!Number.isFinite(btcDom) || !Number.isFinite(ratio)) return null;
+    return {
+      btc_dominance_pct: round(btcDom, 2),
+      eth_dominance_pct: Number.isFinite(ethDom) ? round(ethDom, 2) : 0,
+      eth_btc_ratio: round(ratio, 5),
+      rotation:
+        btcDom > 60 && ratio < 0.04
+          ? 'btc_lead'
+          : btcDom < 50 && ratio > 0.05
+            ? 'alt_lead'
+            : 'mixed',
+    };
+  } catch {
+    return null;
+  }
+}
+
 // ─────────────────────────────────────────────────────────── macro
 
 export interface MacroRead {
@@ -363,7 +466,8 @@ export type SourceName =
   | 'basis'
   | 'funding_velocity'
   | 'etf'
-  | 'macro';
+  | 'macro'
+  | 'cross_asset';
 
 export interface CoverageRead {
   source: SourceName;
