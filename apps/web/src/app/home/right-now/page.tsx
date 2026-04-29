@@ -400,7 +400,7 @@ function CrossAssetBar({ cross }: { cross: CrossAsset }) {
   return (
     <div className={`flex flex-wrap items-center justify-between gap-3 rounded-xl border px-4 py-2.5 ${tone}`}>
       <div className="flex items-center gap-2">
-        <Tooltip content="BTC dominansı yükselirken ETH/BTC oranı düşüyorsa para BTC'ye dönüyor (alt'lar dipte); tersi alt sezon. 'Karışık' belirgin yön yok demek.">
+        <Tooltip content="Kaynak: CoinMarketCap global mcap (TradingView CRYPTOCAP göstergesiyle uyumlu) + Binance spot ETHBTC. BTC.D yükselirken ETH/BTC düşüyorsa para BTC'ye dönüyor; tersi alt sezon. 'Karışık' belirgin yön yok.">
           <span className="mono-label !text-fg-dim cursor-help">Rotasyon ⓘ</span>
         </Tooltip>
         <span className="rounded-full bg-bg/50 px-2 py-0.5 text-[10px] font-bold uppercase ring-1 ring-white/10">

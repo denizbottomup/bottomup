@@ -339,41 +339,92 @@ export interface CrossAssetRead {
 
 /**
  * BTC dominance + ETH/BTC in one shot.
- *   • dominance from CoinGecko `/global` (free, key-less)
- *   • ETH/BTC from Binance spot ticker
+ *   • dominance from CoinMarketCap's public `data-api/v3/global-metrics`
+ *     endpoint — same number traders see on TradingView (CRYPTOCAP)
+ *     and on coinmarketcap.com itself (~60% as of Apr 2026, vs
+ *     CoinGecko's ~58% which uses a wider 17k-coin universe). Falls
+ *     back to CoinGecko if CMC is unreachable so the tile is never
+ *     blank.
+ *   • ETH/BTC from Binance spot ticker (matches TV ETHBTC).
  * Together they answer: "is money rotating into BTC or out?"
  */
 export async function fetchCrossAsset(): Promise<CrossAssetRead | null> {
   try {
-    const [domRes, ratioRes] = await Promise.all([
-      fetch('https://api.coingecko.com/api/v3/global', {
-        signal: AbortSignal.timeout(SHORT_TIMEOUT),
-        headers: { accept: 'application/json' },
-      }),
+    const [dom, ratioRes] = await Promise.all([
+      fetchDominance(),
       fetch('https://api.binance.com/api/v3/ticker/price?symbol=ETHBTC', {
         signal: AbortSignal.timeout(SHORT_TIMEOUT),
       }),
     ]);
-    if (!domRes.ok || !ratioRes.ok) return null;
-    const dom = (await domRes.json()) as {
-      data?: { market_cap_percentage?: Record<string, number> };
-    };
+    if (!dom || !ratioRes.ok) return null;
     const ratioJson = (await ratioRes.json()) as { price?: string };
-    const btcDom = Number(dom?.data?.market_cap_percentage?.btc ?? NaN);
-    const ethDom = Number(dom?.data?.market_cap_percentage?.eth ?? NaN);
     const ratio = Number(ratioJson?.price ?? NaN);
-    if (!Number.isFinite(btcDom) || !Number.isFinite(ratio)) return null;
+    if (!Number.isFinite(ratio)) return null;
     return {
-      btc_dominance_pct: round(btcDom, 2),
-      eth_dominance_pct: Number.isFinite(ethDom) ? round(ethDom, 2) : 0,
+      btc_dominance_pct: round(dom.btc, 2),
+      eth_dominance_pct: round(dom.eth, 2),
       eth_btc_ratio: round(ratio, 5),
       rotation:
-        btcDom > 60 && ratio < 0.04
+        dom.btc > 60 && ratio < 0.04
           ? 'btc_lead'
-          : btcDom < 50 && ratio > 0.05
+          : dom.btc < 50 && ratio > 0.05
             ? 'alt_lead'
             : 'mixed',
     };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Try CMC's public global-metrics endpoint first (auth-free, used by
+ * coinmarketcap.com itself — agrees with TradingView CRYPTOCAP within
+ * ~0.5pp). On failure (rate limit, format change), fall back to
+ * CoinGecko so the tile keeps producing a number, even if the number
+ * is from a slightly different universe.
+ */
+async function fetchDominance(): Promise<{ btc: number; eth: number } | null> {
+  try {
+    const cmc = await fetch(
+      'https://api.coinmarketcap.com/data-api/v3/global-metrics/quotes/latest',
+      {
+        signal: AbortSignal.timeout(SHORT_TIMEOUT),
+        headers: {
+          accept: 'application/json',
+          // CMC returns 403 to default fetch UAs.
+          'user-agent':
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 BottomUP/1.0',
+        },
+      },
+    );
+    if (cmc.ok) {
+      const j = (await cmc.json()) as {
+        data?: { btcDominance?: number; ethDominance?: number };
+      };
+      const btc = Number(j?.data?.btcDominance ?? NaN);
+      const eth = Number(j?.data?.ethDominance ?? NaN);
+      if (Number.isFinite(btc) && Number.isFinite(eth)) {
+        return { btc, eth };
+      }
+    }
+  } catch {
+    // fall through to CG
+  }
+  // CoinGecko fallback — different universe, ~2pp lower BTC.D, but
+  // beats showing nothing.
+  try {
+    const cg = await fetch('https://api.coingecko.com/api/v3/global', {
+      signal: AbortSignal.timeout(SHORT_TIMEOUT),
+      headers: { accept: 'application/json' },
+    });
+    if (!cg.ok) return null;
+    const j = (await cg.json()) as {
+      data?: { market_cap_percentage?: Record<string, number> };
+    };
+    const btc = Number(j?.data?.market_cap_percentage?.btc ?? NaN);
+    const eth = Number(j?.data?.market_cap_percentage?.eth ?? NaN);
+    if (!Number.isFinite(btc)) return null;
+    return { btc, eth: Number.isFinite(eth) ? eth : 0 };
   } catch {
     return null;
   }
