@@ -8,25 +8,36 @@ const API_BASE =
   'https://bottomupapi-production.up.railway.app';
 
 /**
- * Live Macro V1.5 — YouTube canlı embed + isteğe bağlı kendi
- * Whisper-Claude transcript pipeline'ımız.
+ * Live Macro — finansla ilgili kim canlıdaysa, kullanıcı arar, izler,
+ * kendi dilinde çeviri görür.
  *
- * V1 katmanı: YouTube canlı yayın iframe + native CC auto-translate.
- * V1.5 katmanı: kullanıcı "Çevirili transcript başlat" derse:
- *   1. getDisplayMedia({ audio: true }) ile bu sekmenin sesini paylaşır.
- *   2. MediaRecorder 8sn'lik audio/webm chunk'lar üretir.
- *   3. Her chunk POST /me/livecast/audio'ya base64 olarak gider.
- *   4. Server: Whisper transcribe → Claude (finansal-ton) çeviri.
- *   5. Dual-language transcript paneli her chunk'ı ekler, scroll bottom.
- *
- * V2 (sonra): server-side yt-dlp/ffmpeg ile single-source capture +
- * SSE broadcast (single-cost across viewers), key-phrase highlight,
- * konuşma sonrası Foxy AI özet.
+ *   1. Kullanıcı arama kutusuna sorgu yazar (powell, fomc, lagarde,
+ *      bitcoin trading live, fed kashkari, ...).
+ *   2. Backend YouTube Data API v3'te `eventType=live` aramasını yapar.
+ *      YT_API_KEY yoksa curated finans kanalı listesinde fuzzy match.
+ *   3. Sonuçlar canlı yayın kartları olarak listelenir; tıklayınca
+ *      seçilen kanal embed olur ve "çevirili transcript başlat"
+ *      butonuyla Whisper + Claude pipeline devreye girer.
  */
 
-const DEFAULT_URL =
-  process.env.NEXT_PUBLIC_LIVE_MACRO_URL ||
-  'https://www.youtube.com/embed/live_stream?channel=UCKc0c5DwIKjxN-AjYQwM6QQ';
+interface SearchHit {
+  video_id: string;
+  embed_url: string;
+  title: string;
+  channel: string;
+  channel_url: string | null;
+  thumbnail: string | null;
+  is_live: boolean;
+  viewers: number | null;
+  started_at: string | null;
+}
+
+interface TranscriptLine {
+  id: string;
+  original: string;
+  translated: string;
+  ts: string;
+}
 
 const SUPPORTED_TARGETS = [
   { code: 'tr', label: 'Türkçe' },
@@ -42,47 +53,45 @@ const SUPPORTED_TARGETS = [
   { code: 'id', label: 'Bahasa Indonesia' },
 ];
 
-const CHUNK_MS = 8000;
+const QUICK_QUERIES = [
+  'powell',
+  'fomc',
+  'ecb lagarde',
+  'bloomberg',
+  'cnbc',
+  'bitcoin live',
+  'reuters',
+];
 
-interface TranscriptLine {
-  id: string;
-  original: string;
-  translated: string;
-  ts: string;
-}
+const CHUNK_MS = 8000;
 
 export default function LiveMacroPage() {
   const { user, getIdToken } = useAuth();
-  const [url, setUrl] = useState<string>(DEFAULT_URL);
   const [targetLang, setTargetLang] = useState<string>('tr');
-  const [transcribeEnabled, setTranscribeEnabled] = useState<boolean>(false);
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState<SearchHit[] | null>(null);
+  const [searching, setSearching] = useState(false);
+  const [searchEnabled, setSearchEnabled] = useState(true);
+  const [transcribeEnabled, setTranscribeEnabled] = useState(false);
+  const [selected, setSelected] = useState<SearchHit | null>(null);
+
+  // Recorder state for the in-tab audio capture pipeline.
   const [recState, setRecState] = useState<
     'idle' | 'starting' | 'recording' | 'denied' | 'unsupported' | 'error'
   >('idle');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [lines, setLines] = useState<TranscriptLine[]>([]);
-
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const transcriptEndRef = useRef<HTMLDivElement | null>(null);
 
-  // URL + lang bootstrap.
+  // Bootstrap: pull config + remember language.
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    const fromQuery = new URLSearchParams(window.location.search).get('url');
-    const fromStorage = window.localStorage.getItem('liveMacro.url');
     const fromUserLang = window.localStorage.getItem('liveMacro.lang');
-    if (fromQuery) {
-      setUrl(fromQuery);
-      window.localStorage.setItem('liveMacro.url', fromQuery);
-    } else if (fromStorage) {
-      setUrl(fromStorage);
-    }
     if (fromUserLang) setTargetLang(fromUserLang);
   }, []);
 
-  // Probe whether server-side Whisper is configured. Lets us hide the
-  // recorder button entirely when OPENAI_API_KEY isn't set on Railway.
   useEffect(() => {
     let alive = true;
     (async () => {
@@ -94,10 +103,16 @@ export default function LiveMacroPage() {
           cache: 'no-store',
         });
         if (!res.ok) return;
-        const j = (await res.json()) as { transcribe_enabled: boolean };
-        if (alive) setTranscribeEnabled(!!j.transcribe_enabled);
+        const j = (await res.json()) as {
+          transcribe_enabled?: boolean;
+          search_enabled?: boolean;
+        };
+        if (alive) {
+          setTranscribeEnabled(!!j.transcribe_enabled);
+          setSearchEnabled(j.search_enabled !== false); // default true if absent
+        }
       } catch {
-        // best-effort probe; failure just means no transcript button.
+        // Best-effort probe.
       }
     })();
     return () => {
@@ -105,13 +120,10 @@ export default function LiveMacroPage() {
     };
   }, [getIdToken]);
 
-  // Auto-scroll transcript pane on every new line.
   useEffect(() => {
     transcriptEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [lines.length]);
 
-  // Stop everything on unmount so a backgrounded user doesn't keep
-  // burning Whisper credits forever.
   useEffect(() => {
     return () => {
       stopRecorder();
@@ -124,6 +136,42 @@ export default function LiveMacroPage() {
     if (typeof window !== 'undefined') {
       window.localStorage.setItem('liveMacro.lang', code);
     }
+  };
+
+  const runSearch = async (q: string) => {
+    setSearching(true);
+    setQuery(q);
+    try {
+      const t = await getIdToken();
+      if (!t) {
+        setResults([]);
+        return;
+      }
+      const url = new URL(`${API_BASE}/me/livecast/search`);
+      url.searchParams.set('q', q);
+      const res = await fetch(url.toString(), {
+        headers: { Authorization: `Bearer ${t}` },
+        cache: 'no-store',
+      });
+      if (!res.ok) {
+        setResults([]);
+        return;
+      }
+      const json = (await res.json()) as { items?: SearchHit[] };
+      setResults(json.items ?? []);
+    } catch {
+      setResults([]);
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  const onSelect = (hit: SearchHit) => {
+    // Stop any ongoing recording before switching streams — different
+    // tab audio source means we'd be transcribing the wrong thing.
+    stopRecorder();
+    setLines([]);
+    setSelected(hit);
   };
 
   const stopRecorder = () => {
@@ -147,14 +195,10 @@ export default function LiveMacroPage() {
     }
     setRecState('starting');
     try {
-      // Ask the user to share the YouTube tab WITH AUDIO. The video
-      // surface is irrelevant; we discard it after stream picks up.
       const stream = await navigator.mediaDevices.getDisplayMedia({
         video: true,
         audio: true,
       });
-      // If they didn't tick "share tab audio", `stream.getAudioTracks()`
-      // will be empty — fail explicitly so the user knows what happened.
       if (stream.getAudioTracks().length === 0) {
         stream.getTracks().forEach((t) => t.stop());
         setRecState('error');
@@ -163,9 +207,7 @@ export default function LiveMacroPage() {
         );
         return;
       }
-      // Drop the video track to save CPU — only audio matters.
       stream.getVideoTracks().forEach((t) => t.stop());
-
       const audioOnly = new MediaStream(stream.getAudioTracks());
       mediaStreamRef.current = audioOnly;
 
@@ -201,7 +243,7 @@ export default function LiveMacroPage() {
             translated: string;
             ts: string;
           };
-          if (!data.original) return; // silence / non-speech
+          if (!data.original) return;
           setLines((prev) => [
             ...prev,
             {
@@ -212,7 +254,7 @@ export default function LiveMacroPage() {
             },
           ]);
         } catch {
-          // Single chunk failure is non-fatal; next chunk will retry.
+          /* single chunk failure — next chunk will try again */
         }
       };
 
@@ -222,7 +264,6 @@ export default function LiveMacroPage() {
         stopRecorder();
       };
 
-      // The user closes the share — clean up.
       audioOnly.getAudioTracks()[0]?.addEventListener('ended', () => {
         stopRecorder();
       });
@@ -237,84 +278,62 @@ export default function LiveMacroPage() {
     }
   };
 
-  const embedSrc = (() => {
-    try {
-      const u = new URL(url);
-      u.searchParams.set('cc_load_policy', '1');
-      u.searchParams.set('cc_lang_pref', targetLang);
-      u.searchParams.set('hl', targetLang);
-      u.searchParams.set('autoplay', '1');
-      u.searchParams.set('modestbranding', '1');
-      return u.toString();
-    } catch {
-      return url;
-    }
-  })();
-
   return (
     <div className="flex min-h-screen flex-col">
       <header className="border-b border-border px-4 py-4 md:px-8 md:py-5">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <div className="mono-label !text-brand">Live Macro · canlı yayın</div>
+            <div className="mono-label !text-brand">Live Macro · canlı yayın araması</div>
             <h1 className="mt-1 text-2xl font-extrabold tracking-tight md:text-3xl">
-              Powell konuşuyor.{' '}
-              <span className="logo-gradient">Sen okuyorsun.</span>
+              Powell, Lagarde, Bloomberg.{' '}
+              <span className="logo-gradient">Sen ara, sen oku.</span>
             </h1>
           </div>
           <LangPicker value={targetLang} onChange={updateLang} />
         </div>
         <p className="mt-1 max-w-3xl text-sm text-fg-muted">
-          FOMC, ECB, BoE konuşmaları gibi piyasayı anlık hareket ettiren
-          olayları aşağıdaki canlı yayın penceresinden takip et.{' '}
-          <span className="text-fg">
-            "Çevirili transcript başlat" butonuyla yayının audio'sunu paylaş
-          </span>{' '}
-          — Whisper transcribe edip Claude finans terimlerine duyarlı
-          şekilde {labelOfLang(targetLang)} diline anlık çevirir.
+          Kim şu an konuşuyor? Ara, izle, kendi dilinde transcript al.
+          Whisper + Claude finansal-ton çeviri 8 saniyelik bloklarla
+          panelde belirir.
         </p>
       </header>
 
       <div className="flex-1 overflow-y-auto px-4 py-6 md:px-8">
-        <div className="mx-auto max-w-6xl space-y-4">
-          <div className="overflow-hidden rounded-2xl border border-border bg-bg-card">
-            <div className="aspect-video w-full bg-black">
-              <iframe
-                key={`${embedSrc}-${targetLang}`}
-                src={embedSrc}
-                title="Live macro broadcast"
-                allow="autoplay; encrypted-media; picture-in-picture; clipboard-write"
-                allowFullScreen
-                className="h-full w-full"
-              />
-            </div>
-            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-5 py-3 text-[11px] text-fg-dim">
-              <div className="flex items-center gap-2">
-                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-rose-400" />
-                <span>canlı kaynak · {hostnameOf(url)}</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <span>
-                  hedef dil:{' '}
-                  <span className="text-fg">{labelOfLang(targetLang)}</span>
-                </span>
-              </div>
-            </div>
-          </div>
+        <div className="mx-auto max-w-6xl space-y-5">
+          <SearchBar
+            value={query}
+            onSubmit={(q) => runSearch(q.trim())}
+            searching={searching}
+            searchEnabled={searchEnabled}
+          />
 
-          {transcribeEnabled ? (
-            <TranscriptPanel
+          {results !== null ? (
+            <ResultsGrid
+              hits={results}
+              selectedId={selected?.video_id ?? null}
+              onSelect={onSelect}
+            />
+          ) : (
+            <EmptyState
+              searchEnabled={searchEnabled}
+              quickQueries={QUICK_QUERIES}
+              onPick={(q) => runSearch(q)}
+            />
+          )}
+
+          {selected ? (
+            <PlayerSection
+              hit={selected}
+              targetLang={targetLang}
+              transcribeEnabled={transcribeEnabled}
               recState={recState}
               errorMsg={errorMsg}
               lines={lines}
               onStart={startRecorder}
               onStop={stopRecorder}
-              targetLang={targetLang}
               transcriptEndRef={transcriptEndRef}
             />
-          ) : (
-            <FallbackInstructions />
-          )}
+          ) : null}
 
           {user ? null : (
             <div className="rounded-xl border border-rose-400/30 bg-rose-500/[0.06] p-4 text-sm text-rose-200">
@@ -327,8 +346,273 @@ export default function LiveMacroPage() {
   );
 }
 
-function TranscriptPanel({
+function SearchBar({
+  value,
+  onSubmit,
+  searching,
+  searchEnabled,
+}: {
+  value: string;
+  onSubmit: (q: string) => void;
+  searching: boolean;
+  searchEnabled: boolean;
+}) {
+  const [local, setLocal] = useState(value);
+  useEffect(() => setLocal(value), [value]);
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (local.trim()) onSubmit(local.trim());
+      }}
+      className="rounded-2xl border border-border bg-bg-card p-4"
+    >
+      <div className="flex items-center gap-2">
+        <span className="text-fg-dim" aria-hidden>
+          🔎
+        </span>
+        <input
+          autoFocus
+          value={local}
+          onChange={(e) => setLocal(e.target.value)}
+          placeholder="powell · fomc · lagarde · bloomberg · bitcoin live …"
+          className="flex-1 bg-transparent text-fg outline-none placeholder:text-fg-dim"
+        />
+        <button
+          type="submit"
+          disabled={!local.trim() || searching}
+          className="rounded-full bg-brand px-3 py-1.5 text-[11px] font-semibold text-bg disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {searching ? 'arıyor…' : 'ara'}
+        </button>
+      </div>
+      {!searchEnabled ? (
+        <div className="mt-2 text-[11px] text-amber-300">
+          YouTube Data API key sunucuda set edilmemiş — şimdilik küratör
+          finans kanal listesi üzerinde isim eşleşmesi yapılır.
+        </div>
+      ) : null}
+    </form>
+  );
+}
+
+function EmptyState({
+  searchEnabled,
+  quickQueries,
+  onPick,
+}: {
+  searchEnabled: boolean;
+  quickQueries: string[];
+  onPick: (q: string) => void;
+}) {
+  return (
+    <div className="rounded-2xl border border-dashed border-border bg-bg/40 p-8 text-center">
+      <div className="mono-label !text-fg-dim">Bir şey ara</div>
+      <p className="mx-auto mt-2 max-w-xl text-sm text-fg-muted">
+        Bir merkez bankacısı, bir Bloomberg yayını, bir trader — kim canlıysa
+        onu bul, izle, kendi dilinde oku.
+      </p>
+      <div className="mt-4 flex flex-wrap justify-center gap-1.5">
+        {quickQueries.map((q) => (
+          <button
+            key={q}
+            onClick={() => onPick(q)}
+            className="rounded-full border border-white/10 bg-bg-card px-3 py-1 text-[11px] text-fg-muted hover:border-white/30 hover:text-fg transition"
+          >
+            {q}
+          </button>
+        ))}
+      </div>
+      {!searchEnabled ? (
+        <div className="mt-4 text-[10px] text-fg-dim">
+          (YouTube key'i Railway env'e eklenince gerçek canlı arama aktif olur.)
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function ResultsGrid({
+  hits,
+  selectedId,
+  onSelect,
+}: {
+  hits: SearchHit[];
+  selectedId: string | null;
+  onSelect: (h: SearchHit) => void;
+}) {
+  if (hits.length === 0) {
+    return (
+      <div className="rounded-2xl border border-border bg-bg-card p-6 text-center text-sm text-fg-muted">
+        Eşleşen canlı yayın bulunamadı. Sorguyu değiştirip tekrar dene.
+      </div>
+    );
+  }
+  return (
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      {hits.map((h) => (
+        <ResultCard
+          key={h.video_id || h.channel}
+          hit={h}
+          active={h.video_id === selectedId}
+          onClick={() => onSelect(h)}
+        />
+      ))}
+    </div>
+  );
+}
+
+function ResultCard({
+  hit,
+  active,
+  onClick,
+}: {
+  hit: SearchHit;
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`group relative overflow-hidden rounded-2xl border bg-bg-card text-left transition ${
+        active
+          ? 'border-brand/60 shadow-[0_0_18px_-8px_rgba(255,140,32,0.5)]'
+          : 'border-border hover:border-white/25'
+      }`}
+    >
+      <div className="aspect-video w-full bg-black">
+        {hit.thumbnail ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={hit.thumbnail}
+            alt=""
+            className="h-full w-full object-cover"
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center text-[11px] text-fg-dim">
+            önizleme yok
+          </div>
+        )}
+        {hit.is_live ? (
+          <span className="absolute left-2 top-2 flex items-center gap-1 rounded-full bg-rose-500 px-2 py-0.5 text-[10px] font-bold uppercase text-white">
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" />
+            CANLI
+          </span>
+        ) : (
+          <span className="absolute left-2 top-2 rounded-full bg-bg/70 px-2 py-0.5 text-[10px] uppercase text-fg-dim ring-1 ring-white/10">
+            şu an canlı değil
+          </span>
+        )}
+      </div>
+      <div className="p-3">
+        <div className="line-clamp-2 text-sm font-semibold text-fg">
+          {hit.title || hit.channel}
+        </div>
+        <div className="mt-1 text-[11px] text-fg-dim">{hit.channel}</div>
+      </div>
+    </button>
+  );
+}
+
+function PlayerSection({
+  hit,
+  targetLang,
+  transcribeEnabled,
   recState,
+  errorMsg,
+  lines,
+  onStart,
+  onStop,
+  transcriptEndRef,
+}: {
+  hit: SearchHit;
+  targetLang: string;
+  transcribeEnabled: boolean;
+  recState: string;
+  errorMsg: string | null;
+  lines: TranscriptLine[];
+  onStart: () => void;
+  onStop: () => void;
+  transcriptEndRef: React.RefObject<HTMLDivElement | null>;
+}) {
+  const recording = recState === 'recording';
+  const starting = recState === 'starting';
+  const embedSrc = (() => {
+    try {
+      const u = new URL(hit.embed_url);
+      u.searchParams.set('autoplay', '1');
+      u.searchParams.set('cc_load_policy', '1');
+      u.searchParams.set('cc_lang_pref', targetLang);
+      u.searchParams.set('hl', targetLang);
+      u.searchParams.set('modestbranding', '1');
+      return u.toString();
+    } catch {
+      return hit.embed_url;
+    }
+  })();
+
+  return (
+    <section className="space-y-4">
+      <div className="overflow-hidden rounded-2xl border border-border bg-bg-card">
+        <div className="aspect-video w-full bg-black">
+          <iframe
+            key={`${hit.video_id}-${targetLang}`}
+            src={embedSrc}
+            title={hit.title || hit.channel}
+            allow="autoplay; encrypted-media; picture-in-picture; clipboard-write"
+            allowFullScreen
+            className="h-full w-full"
+          />
+        </div>
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-5 py-3 text-[11px] text-fg-dim">
+          <div className="flex items-center gap-2">
+            {hit.is_live ? (
+              <>
+                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-rose-400" />
+                <span>canlı</span>
+              </>
+            ) : (
+              <span className="text-amber-300">canlı değil — son yayın</span>
+            )}
+            <span className="text-fg-dim">·</span>
+            <span>{hit.channel}</span>
+          </div>
+          <div>
+            hedef dil:{' '}
+            <span className="text-fg">
+              {labelOfLang(targetLang)}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {transcribeEnabled ? (
+        <TranscriptPanel
+          recState={recState}
+          recording={recording}
+          starting={starting}
+          errorMsg={errorMsg}
+          lines={lines}
+          onStart={onStart}
+          onStop={onStop}
+          targetLang={targetLang}
+          transcriptEndRef={transcriptEndRef}
+        />
+      ) : (
+        <div className="rounded-2xl border border-amber-400/20 bg-amber-400/[0.04] p-5 text-sm text-fg-muted">
+          Çevirili transcript pasif — sunucuda OPENAI_API_KEY ayarlı değil.
+          YouTube'un kendi auto-translate altyazısını kullan: video sağ
+          alttaki CC → ⚙ → Auto-translate → {labelOfLang(targetLang)}.
+        </div>
+      )}
+    </section>
+  );
+}
+
+function TranscriptPanel({
+  recording,
+  starting,
   errorMsg,
   lines,
   onStart,
@@ -337,6 +621,8 @@ function TranscriptPanel({
   transcriptEndRef,
 }: {
   recState: string;
+  recording: boolean;
+  starting: boolean;
   errorMsg: string | null;
   lines: TranscriptLine[];
   onStart: () => void;
@@ -344,28 +630,24 @@ function TranscriptPanel({
   targetLang: string;
   transcriptEndRef: React.RefObject<HTMLDivElement | null>;
 }) {
-  const recording = recState === 'recording';
-  const starting = recState === 'starting';
-
   return (
-    <section className="rounded-2xl border border-border bg-bg-card overflow-hidden">
+    <div className="rounded-2xl border border-border bg-bg-card overflow-hidden">
       <header className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-3">
         <div>
           <div className="mono-label !text-brand">Çevirili transcript</div>
           <div className="mt-0.5 text-[11px] text-fg-dim">
-            Whisper · Claude · {labelOfLang(targetLang)} ·{' '}
-            8 saniyelik bloklarla
+            Whisper · Claude · {labelOfLang(targetLang)} · 8 saniyelik bloklarla
           </div>
         </div>
         <button
           type="button"
           onClick={recording ? onStop : onStart}
           disabled={starting}
-          className={`flex items-center gap-2 rounded-full border px-3 py-1.5 text-[11px] font-mono transition ${
+          className={`flex items-center gap-2 rounded-full border px-3 py-1.5 text-[11px] font-mono transition disabled:opacity-50 disabled:cursor-not-allowed ${
             recording
-              ? 'border-rose-400/40 bg-rose-400/10 text-rose-200 hover:border-rose-400/60'
-              : 'border-brand/40 bg-brand/10 text-brand hover:border-brand/60'
-          } disabled:opacity-50 disabled:cursor-not-allowed`}
+              ? 'border-rose-400/40 bg-rose-400/10 text-rose-200'
+              : 'border-brand/40 bg-brand/10 text-brand'
+          }`}
         >
           <span
             className={`h-1.5 w-1.5 rounded-full ${
@@ -386,14 +668,9 @@ function TranscriptPanel({
           <p>
             Çevirili transcript başlat butonuna tıkla. Tarayıcı{' '}
             <span className="font-semibold text-fg">"Sekme paylaş"</span>{' '}
-            penceresi açacak — bu sekmeyi (Live Macro) seç ve{' '}
+            penceresi açar — bu sekmeyi seç ve{' '}
             <span className="font-semibold text-fg">"Sekme sesini paylaş"</span>{' '}
             kutusunu işaretle.
-          </p>
-          <p className="text-[12px] text-fg-dim">
-            Whisper konuşmayı 8 saniyelik bloklarla yazıya geçirir. Claude
-            Haiku finansal terimlere duyarlı çeviri üretir. Sayfayı kapatınca
-            otomatik durur.
           </p>
         </div>
       ) : null}
@@ -436,22 +713,6 @@ function TranscriptPanel({
           <div ref={transcriptEndRef} />
         </div>
       ) : null}
-    </section>
-  );
-}
-
-function FallbackInstructions() {
-  return (
-    <div className="rounded-2xl border border-amber-400/20 bg-amber-400/[0.04] p-5">
-      <div className="mono-label !text-amber-300">
-        Çevirili transcript pasif
-      </div>
-      <p className="mt-2 text-sm text-fg-muted">
-        Sunucuda OPENAI_API_KEY ayarlı olduğunda kendi Whisper + Claude
-        transcript pipeline'ımız aktif olur. Şu an YouTube'un kendi
-        auto-translate altyazısını kullanabilirsin (CC butonu → ⚙ →
-        Auto-translate → dil seç).
-      </p>
     </div>
   );
 }
@@ -491,14 +752,6 @@ function bufferToBase64(buffer: ArrayBuffer): string {
     binary += String.fromCharCode(...slice);
   }
   return btoa(binary);
-}
-
-function hostnameOf(url: string): string {
-  try {
-    return new URL(url).hostname.replace(/^www\./, '');
-  } catch {
-    return 'youtube.com';
-  }
 }
 
 function labelOfLang(code: string): string {

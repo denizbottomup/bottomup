@@ -4,11 +4,12 @@ import {
   Controller,
   Get,
   Post,
+  Query,
   ServiceUnavailableException,
   UseGuards,
 } from '@nestjs/common';
 import { FirebaseAuthGuard } from '../common/guards/firebase-auth.guard.js';
-import { LivecastService } from './livecast.service.js';
+import { LivecastService, type LiveSearchHit } from './livecast.service.js';
 
 interface AudioChunkPayload {
   audio_b64?: string;
@@ -24,11 +25,29 @@ export class LivecastController {
   /**
    * `/me/livecast/config` — UI bootstrap. Tells the frontend whether
    * server-side transcription is available so the "Çevirili
-   * transcript başlat" button can render in the right state.
+   * transcript başlat" button can render in the right state, and
+   * whether YouTube search is wired up (separate env var).
    */
   @Get('/me/livecast/config')
-  config(): { transcribe_enabled: boolean } {
-    return { transcribe_enabled: this.livecast.isReady() };
+  config(): { transcribe_enabled: boolean; search_enabled: boolean } {
+    return {
+      transcribe_enabled: this.livecast.isReady(),
+      search_enabled: !!process.env.YOUTUBE_API_KEY,
+    };
+  }
+
+  /**
+   * `/me/livecast/search?q=...` — finance-aware live search across
+   * YouTube. Powell, FOMC, ECB, Lagarde, Bloomberg TV, "btc trader
+   * live", whatever. Falls back to a curated channel set when
+   * YOUTUBE_API_KEY isn't set yet.
+   */
+  @Get('/me/livecast/search')
+  async search(
+    @Query('q') q?: string,
+  ): Promise<{ items: LiveSearchHit[] }> {
+    const items = await this.livecast.searchLive(q ?? '', 12);
+    return { items };
   }
 
   /**
