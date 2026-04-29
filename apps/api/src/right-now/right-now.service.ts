@@ -55,9 +55,13 @@ import { PushService } from './push.service.js';
  *     ve confidence saniye düzeyinde fresh kalır.
  */
 
-const COINS = ['BTC', 'ETH', 'SOL', 'BNB', 'XRP'] as const;
-/** ETF flow only published for the two US-listed spot ETF assets;
- *  other coins skip Farside fetch and return null on `.etf`. */
+// Phase-1 Right Now ships with BTC + ETH only. SOL/BNB/XRP were
+// briefly enabled in V2.5 but rolled back in V2.6 — the cognitive
+// load on a 5-coin landing page outweighed the value while UX still
+// being tuned. Add back as `RIGHT_NOW_COINS` once the per-asset
+// surface is compact enough to scale.
+const COINS = ['BTC', 'ETH'] as const;
+/** ETF flow only published for the two US-listed spot ETF assets. */
 const ETF_COINS = new Set(['BTC', 'ETH']);
 const TFS_DEEP: Tf[] = ['5m', '15m', '1h', '4h', '1d'];
 
@@ -889,11 +893,15 @@ const TACTICAL_PROMPT = [
   'GÖREV: tactical_now + invalidation üret.',
   '',
   '  tactical_now (1-2 cümle, max 32 kelime toplam):',
-  '    Anlık aksiyon görüşü. Yön + neden + spesifik seviye.',
-  '    İYİ: "BTC 4h\'de range içinde ama 1h CHOCH↑ + funding velocity',
-  '    rising; spot/perp +0.04% leveraged long olduğu için 64,200 üzeri',
-  '    momentum scalp\'i mantıklı, swing daha geç teyit ister."',
+  '    Anlık aksiyon görüşü. CÜMLEDE ŞU ÜÇ SAYI BULUNMAK ZORUNDA:',
+  '      • giriş tetik seviyesi (örn "64,200 üzeri")',
+  '      • hedef seviyesi  (örn "65,800 zone")',
+  '      • risk/reward ya da TF (örn "scalp" / "swing")',
+  '    İYİ: "BTC 4h range içinde, 1h CHOCH↑ + funding rising; spot/perp',
+  '    +0.04% leveraged long, 64,200 üzeri scalp long → 65,800 hedef,',
+  '    swing daha geç teyit ister."',
   '    KÖTÜ: "BTC long olabilir." (boş)',
+  '    KÖTÜ: "84 altında scalp uygun." (giriş var, hedef yok)',
   '',
   '  invalidation (1 cümle, fiyat seviyesi şart):',
   '    "X seviyesi altında 1h kapanış tezi siler" formatı.',

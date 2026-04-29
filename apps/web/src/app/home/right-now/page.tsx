@@ -261,11 +261,12 @@ export default function RightNowPage() {
           </div>
         </div>
         <p className="mt-1 max-w-2xl text-sm text-fg-muted">
-          BTC, ETH, SOL, BNB, XRP için 5dk → 1g zaman dilimlerinde
-          price-action, türev verileri, balina akışı, smart vs retail
-          pozisyon, OI/Price rejimi, spot/perp basis, funding velocity,
-          ETF (BTC + ETH) ve makro bağlam — tek ekranda. Her 60 saniyede
-          güncellenir, kombine yön değiştiğinde bildirim alırsın.
+          BTC ve ETH için 5dk → 1g zaman dilimlerinde price-action, türev
+          verileri, balina akışı, smart vs retail pozisyon, OI/Price
+          rejimi, spot/perp basis, funding velocity, ETF flow, VWAP ve
+          makro bağlam — tek ekranda. Her 60 saniyede güncellenir;
+          kombine yön değiştiğinde flash banner + ses + bildirim ile
+          haberin olur.
         </p>
       </header>
 
@@ -290,11 +291,7 @@ export default function RightNowPage() {
                   ) : null}
                 </div>
               ) : null}
-              <div className="grid grid-cols-1 gap-5 lg:grid-cols-2 xl:grid-cols-2">
-                {data.assets.map((a) => (
-                  <AssetCard key={a.coin} asset={a} />
-                ))}
-              </div>
+              <AssetGrid assets={data.assets} />
               {data.coverage ? <CoverageStrip coverage={data.coverage} /> : null}
             </>
           ) : null}
@@ -349,7 +346,9 @@ function MacroBar({ macro }: { macro: Macro }) {
   return (
     <div className={`flex flex-wrap items-center justify-between gap-3 rounded-xl border px-4 py-2.5 ${tone}`}>
       <div className="flex items-center gap-2">
-        <span className="mono-label !text-fg-dim">Makro</span>
+        <Tooltip content="DXY (USD endeksi) düşerken ES futures yükseliyorsa risk-on; tersi risk-off. Kripto risk-on'da daha çok prim yapar.">
+          <span className="mono-label !text-fg-dim cursor-help">Makro ⓘ</span>
+        </Tooltip>
         <span className="rounded-full bg-bg/50 px-2 py-0.5 text-[10px] font-bold uppercase ring-1 ring-white/10">
           {label}
         </span>
@@ -394,7 +393,9 @@ function CrossAssetBar({ cross }: { cross: CrossAsset }) {
   return (
     <div className={`flex flex-wrap items-center justify-between gap-3 rounded-xl border px-4 py-2.5 ${tone}`}>
       <div className="flex items-center gap-2">
-        <span className="mono-label !text-fg-dim">Rotasyon</span>
+        <Tooltip content="BTC dominansı yükselirken ETH/BTC oranı düşüyorsa para BTC'ye dönüyor (alt'lar dipte); tersi alt sezon. 'Karışık' belirgin yön yok demek.">
+          <span className="mono-label !text-fg-dim cursor-help">Rotasyon ⓘ</span>
+        </Tooltip>
         <span className="rounded-full bg-bg/50 px-2 py-0.5 text-[10px] font-bold uppercase ring-1 ring-white/10">
           {label}
         </span>
@@ -414,21 +415,212 @@ function CrossAssetBar({ cross }: { cross: CrossAsset }) {
   );
 }
 
-function AssetCard({ asset }: { asset: Asset }) {
+/**
+ * Asset grid — desktop renders all cards side-by-side; mobile (≤md)
+ * renders only the selected coin with a tab strip on top so the page
+ * doesn't become a 3000px scroll on small screens. Tab persists across
+ * polls; if a flip lands on a non-active coin we surface a small dot
+ * on its tab so the user knows to check it.
+ */
+function AssetGrid({ assets }: { assets: Asset[] }) {
+  const [activeCoin, setActiveCoin] = useState<string>(
+    assets[0]?.coin ?? 'BTC',
+  );
+  // Track which coins have an unread flip while user is on a different tab.
+  const seenFlipRef = useRef<Map<string, string>>(new Map());
+  const unreadFlips = new Set<string>();
+  for (const a of assets) {
+    if (!a.combined_flip) continue;
+    const seen = seenFlipRef.current.get(a.coin);
+    if (a.coin === activeCoin) {
+      seenFlipRef.current.set(a.coin, a.combined_flip.at);
+    } else if (a.combined_flip.at !== seen) {
+      unreadFlips.add(a.coin);
+    }
+  }
+
   return (
-    <section className="rounded-2xl border border-border bg-bg-card overflow-hidden">
+    <div className="space-y-4">
+      {/* Mobile-only tab strip. md:hidden so desktop keeps the side-by-side grid. */}
+      <div className="flex gap-1.5 md:hidden">
+        {assets.map((a) => {
+          const active = a.coin === activeCoin;
+          const tone = directionTone(a.combined);
+          return (
+            <button
+              key={a.coin}
+              type="button"
+              onClick={() => setActiveCoin(a.coin)}
+              className={`relative flex-1 rounded-xl border px-3 py-2.5 text-left transition ${
+                active
+                  ? `${tone.border} ${tone.bg}`
+                  : 'border-border bg-bg-card hover:border-white/15'
+              }`}
+            >
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[11px] font-bold tracking-wider text-fg-dim">
+                  {a.coin}
+                </span>
+                <span className={`text-[11px] font-extrabold ${tone.text}`}>
+                  {directionLabel(a.combined)}
+                </span>
+              </div>
+              <div className="mt-1 text-[10px] font-mono text-fg-muted">
+                güven {Math.round(a.combined_confidence * 100)}%
+              </div>
+              {unreadFlips.has(a.coin) ? (
+                <span className="absolute right-1.5 top-1.5 h-2 w-2 animate-pulse rounded-full bg-brand" />
+              ) : null}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Mobile: single card based on activeCoin. Desktop (md+): grid. */}
+      <div className="md:hidden">
+        {assets
+          .filter((a) => a.coin === activeCoin)
+          .map((a) => (
+            <AssetCard key={a.coin} asset={a} />
+          ))}
+      </div>
+      <div className="hidden md:grid md:grid-cols-1 md:gap-5 lg:grid-cols-2">
+        {assets.map((a) => (
+          <AssetCard key={a.coin} asset={a} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function AssetCard({
+  asset,
+  defaultOpen = true,
+}: {
+  asset: Asset;
+  defaultOpen?: boolean;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+
+  // Confidence-based dampening: signals weaker than 0.2 fade the whole
+  // card so the eye doesn't waste attention. Above 0.6 we lift it with
+  // a brand glow ring.
+  const conf = asset.combined_confidence;
+  const lowSignal = conf < 0.2 && asset.combined === 'wait';
+  const highSignal = conf >= 0.6 && asset.combined !== 'wait';
+
+  return (
+    <section
+      className={`rounded-2xl border bg-bg-card overflow-hidden transition ${
+        highSignal
+          ? 'border-brand/40 shadow-[0_0_24px_-12px_rgba(255,140,32,0.4)]'
+          : 'border-border'
+      } ${lowSignal ? 'opacity-60' : ''}`}
+    >
       {asset.combined_flip ? (
         <FlipBanner coin={asset.coin} flip={asset.combined_flip} />
       ) : null}
-      <CombinedHeader asset={asset} />
-      <AiBlock ai={asset.ai} />
-      <ContextStrip asset={asset} />
-      <TfStack asset={asset} />
-      <ChartSection asset={asset} />
-      <PositioningStrip positioning={asset.positioning} />
-      <LiqMapStrip clusters={asset.liq_clusters} last={asset.tf_1h?.last ?? null} />
-      <FlipsFooter flips={asset.flips} />
+
+      {/* QUICK VERDICT — the only thing a user has to read.
+          Big direction, confidence, AI tactical sentence + invalidation. */}
+      <QuickVerdict asset={asset} lowSignal={lowSignal} />
+
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center justify-between border-b border-border bg-bg/40 px-5 py-2 text-[11px] text-fg-muted hover:text-fg transition"
+      >
+        <span className="flex items-center gap-2">
+          <span aria-hidden>{open ? '▾' : '▸'}</span>
+          <span>{open ? 'Detayı gizle' : 'Detayları gör'}</span>
+        </span>
+        <span className="text-fg-dim">
+          context · {`5 TF`} · pozisyon · likidite · flipler
+        </span>
+      </button>
+
+      {open ? (
+        <>
+          <AiBlock ai={asset.ai} />
+          <ContextStrip asset={asset} />
+          <TfStack asset={asset} />
+          <ChartSection asset={asset} />
+          <PositioningStrip positioning={asset.positioning} />
+          <LiqMapStrip clusters={asset.liq_clusters} last={asset.tf_1h?.last ?? null} />
+          <FlipsFooter flips={asset.flips} />
+        </>
+      ) : null}
     </section>
+  );
+}
+
+/**
+ * The 4-line "what should I do right now" header. This is what the user
+ * absolutely must see; everything else is justification.
+ */
+function QuickVerdict({ asset, lowSignal }: { asset: Asset; lowSignal: boolean }) {
+  const tone = directionTone(asset.combined);
+  const last = asset.tf_1h?.last ?? asset.tf_15m?.last ?? asset.tf_5m?.last ?? null;
+  const tactical = asset.ai?.tactical_now;
+  const invalidation = asset.ai?.invalidation;
+
+  return (
+    <div className={`border-b ${tone.border} ${tone.bg} px-5 py-4 md:px-6 md:py-5`}>
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-bg/60 text-lg font-bold text-fg ring-1 ring-white/10">
+            {asset.coin[0]}
+          </div>
+          <div>
+            <div className="mono-label !text-fg-dim">{asset.coin}/USDT</div>
+            <div className={`mt-1 flex items-center gap-2 text-3xl font-extrabold tracking-tight ${tone.text}`}>
+              <DirectionGlyph dir={asset.combined} />
+              <span>{directionLabel(asset.combined)}</span>
+            </div>
+            <Tooltip
+              content="Beş TF'lik confluence skorunun mutlak değeri. %20 altı 'belirsiz', %60 üstü 'güçlü teyit' anlamına gelir."
+            >
+              <div className="mt-1 inline-flex items-center gap-1 text-[11px] font-mono text-fg-dim">
+                kombine güven {Math.round(asset.combined_confidence * 100)}%
+                {lowSignal ? (
+                  <span className="ml-1 rounded bg-white/5 px-1 py-0.5 text-[9px] uppercase tracking-wider text-fg-dim">
+                    low signal
+                  </span>
+                ) : null}
+                <span className="text-fg-dim/60" aria-hidden>ⓘ</span>
+              </div>
+            </Tooltip>
+          </div>
+        </div>
+        <div className="text-right">
+          <div className="text-[10px] uppercase tracking-wider text-fg-dim">spot</div>
+          <div className="text-xl font-bold text-fg font-mono md:text-2xl">
+            {last != null ? `$${formatPrice(last)}` : '—'}
+          </div>
+          <ConfidenceBar confidence={asset.combined_confidence} dir={asset.combined} />
+        </div>
+      </div>
+
+      {/* TACTICAL — the actionable sentence. Brand-leftborder visually
+          distinguishes it from the structural sentence further down
+          (which is paler and supplementary). */}
+      {tactical ? (
+        <div className="mt-4 rounded-lg border-l-2 border-brand bg-brand/[0.05] px-3 py-2.5">
+          <div className="mono-label !text-brand">Şu an</div>
+          <div className="mt-1 text-sm leading-relaxed text-fg">{tactical}</div>
+          {invalidation ? (
+            <div className="mt-1.5 text-[12px] text-fg-muted">
+              <span className="font-semibold text-rose-300">İnvalidasyon:</span>{' '}
+              {invalidation}
+            </div>
+          ) : null}
+        </div>
+      ) : (
+        <div className="mt-4 rounded-lg border border-dashed border-border bg-bg/40 px-3 py-2.5 text-xs text-fg-dim">
+          Foxy taktik yorumu hazırlanıyor — ilk overlay 30s sonra düşer.
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -562,64 +754,29 @@ function tfLabel(v: '15' | '60' | '240' | 'D'): string {
   return '1d';
 }
 
-function CombinedHeader({ asset }: { asset: Asset }) {
-  const tone = directionTone(asset.combined);
-  const last = asset.tf_1h?.last ?? asset.tf_15m?.last ?? asset.tf_5m?.last ?? null;
-  return (
-    <div className={`flex items-center justify-between gap-3 border-b ${tone.border} ${tone.bg} px-5 py-4`}>
-      <div className="flex items-center gap-3">
-        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-bg/60 text-lg font-bold text-fg ring-1 ring-white/10">
-          {asset.coin[0]}
-        </div>
-        <div>
-          <div className="mono-label !text-fg-dim">{asset.coin}/USDT</div>
-          <div className={`mt-1 flex items-center gap-2 text-2xl font-extrabold tracking-tight ${tone.text}`}>
-            <DirectionGlyph dir={asset.combined} />
-            <span>{directionLabel(asset.combined)}</span>
-          </div>
-          <div className="mt-1 text-[11px] font-mono text-fg-dim">
-            kombine güven {Math.round(asset.combined_confidence * 100)}%
-          </div>
-        </div>
-      </div>
-      <div className="text-right">
-        <div className="text-[10px] uppercase tracking-wider text-fg-dim">spot</div>
-        <div className="text-lg font-bold text-fg font-mono">
-          {last != null ? `$${formatPrice(last)}` : '—'}
-        </div>
-        <ConfidenceBar confidence={asset.combined_confidence} dir={asset.combined} />
-      </div>
-    </div>
-  );
-}
+// `CombinedHeader` was inlined into `QuickVerdict` in V2.6 — the verdict
+// block now owns the headline call so the user sees direction + confidence
+// + tactical sentence in one read instead of jumping between sections.
 
+/**
+ * Structural sentence — visually subdued because the actionable copy
+ * (tactical_now + invalidation) lives in the QuickVerdict block above.
+ * This is the "what's the regime / why" justification, not the call.
+ */
 function AiBlock({ ai }: { ai: Asset['ai'] }) {
-  if (!ai || (!ai.big_picture && !ai.tactical_now)) {
+  if (!ai || !ai.big_picture) {
     return (
-      <div className="border-b border-border bg-brand/[0.03] px-5 py-3 text-xs text-fg-dim">
-        Foxy yorumu hazırlanıyor… yapısal yorum 45s sonra, taktik yorum 30s sonra düşer.
+      <div className="border-b border-border bg-bg/30 px-5 py-3 text-[11px] text-fg-dim">
+        Yapısal yorum hazırlanıyor — 45 saniye içinde düşer.
       </div>
     );
   }
   return (
-    <div className="border-b border-border bg-brand/[0.04] px-5 py-3 space-y-2">
-      {ai.big_picture ? (
-        <div>
-          <div className="mono-label !text-brand">Yapısal</div>
-          <div className="mt-1 text-sm text-fg leading-relaxed">{ai.big_picture}</div>
-        </div>
-      ) : null}
-      {ai.tactical_now ? (
-        <div className="border-t border-brand/15 pt-2">
-          <div className="mono-label !text-brand">Şu an</div>
-          <div className="mt-1 text-sm text-fg leading-relaxed">{ai.tactical_now}</div>
-          {ai.invalidation ? (
-            <div className="mt-1 text-[12px] text-fg-muted">
-              <span className="text-rose-300">İnvalidasyon:</span> {ai.invalidation}
-            </div>
-          ) : null}
-        </div>
-      ) : null}
+    <div className="border-b border-border bg-bg/30 px-5 py-3">
+      <div className="mono-label !text-fg-dim">Yapısal</div>
+      <div className="mt-1 text-[13px] leading-relaxed text-fg-muted">
+        {ai.big_picture}
+      </div>
     </div>
   );
 }
@@ -636,6 +793,7 @@ function ContextStrip({ asset }: { asset: Asset }) {
     value: string;
     hint?: string;
     tone: 'green' | 'red' | 'amber' | 'sky' | 'gray';
+    info?: string;
   }> = [];
 
   tiles.push({
@@ -643,6 +801,7 @@ function ContextStrip({ asset }: { asset: Asset }) {
     value: regime.label,
     hint: `OI ${asset.oi_change_24h_pct == null ? '—' : (asset.oi_change_24h_pct >= 0 ? '+' : '') + asset.oi_change_24h_pct.toFixed(1) + '%'} · Px ${asset.price_change_24h_pct == null ? '—' : (asset.price_change_24h_pct >= 0 ? '+' : '') + asset.price_change_24h_pct.toFixed(1) + '%'}`,
     tone: regime.tone,
+    info: 'Open Interest ile fiyatın 24h yönü. OI↑Px↑ taze para; OI↓Px↑ short squeeze (zayıf rally); OI↑Px↓ taze short; OI↓Px↓ long capitulation.',
   });
 
   if (asset.basis && basis) {
@@ -651,6 +810,7 @@ function ContextStrip({ asset }: { asset: Asset }) {
       value: `${asset.basis.premium_pct >= 0 ? '+' : ''}${asset.basis.premium_pct.toFixed(3)}%`,
       hint: basis.label,
       tone: basis.tone,
+      info: 'Spot ile perp arasındaki fark. Pozitif premium = perpler daha pahalı (leverage long); negatif = panik / spot front-run.',
     });
   }
 
@@ -660,6 +820,7 @@ function ContextStrip({ asset }: { asset: Asset }) {
       value: `${fv.current_pct >= 0 ? '+' : ''}${fv.current_pct.toFixed(4)}%`,
       hint: fvCopy.label,
       tone: fvCopy.tone,
+      info: 'Funding rate trendi (3 günlük slope). Hızlanan pozitif funding = long-bias şişiyor (squeeze fitili); hızlanan negatif = shortlar agresifleşiyor.',
     });
   }
 
@@ -669,6 +830,7 @@ function ContextStrip({ asset }: { asset: Asset }) {
       value: `${etf.net_usd_m >= 0 ? '+' : ''}$${etf.net_usd_m.toFixed(1)}M`,
       hint: etf.net_usd_m > 0 ? 'kurumsal giriş' : etf.net_usd_m < 0 ? 'kurumsal çıkış' : 'flat',
       tone: etf.net_usd_m > 50 ? 'green' : etf.net_usd_m < -50 ? 'red' : 'gray',
+      info: 'ABD spot ETF\'lerinin önceki gün net flow\'u (Farside). $200M+ giriş kurumsal momentum sinyali.',
     });
   }
 
@@ -679,6 +841,7 @@ function ContextStrip({ asset }: { asset: Asset }) {
       value: `${v.deviation_pct >= 0 ? '+' : ''}${v.deviation_pct.toFixed(2)}%`,
       hint: vwapBiasLabel(v.bias),
       tone: vwapTone(v.bias),
+      info: 'Hacim ağırlıklı ortalama fiyat (institutional anchor). Aşırı stretched ise mean reversion adayı; VWAP\'a yakınsa karar yeri.',
     });
   }
 
@@ -726,11 +889,13 @@ function ContextTile({
   value,
   hint,
   tone,
+  info,
 }: {
   label: string;
-  value: string;
-  hint?: string;
+  value: React.ReactNode;
+  hint?: React.ReactNode;
   tone: 'green' | 'red' | 'amber' | 'sky' | 'gray';
+  info?: string;
 }) {
   const cls = {
     green: 'text-emerald-300',
@@ -739,9 +904,18 @@ function ContextTile({
     sky: 'text-sky-300',
     gray: 'text-fg',
   }[tone];
+  const labelEl = info ? (
+    <Tooltip content={info}>
+      <span className="cursor-help">{label} ⓘ</span>
+    </Tooltip>
+  ) : (
+    label
+  );
   return (
     <div className="rounded-lg border border-white/5 bg-bg/40 px-3 py-2">
-      <div className="text-[10px] uppercase tracking-wider text-fg-dim">{label}</div>
+      <div className="text-[10px] uppercase tracking-wider text-fg-dim">
+        {labelEl}
+      </div>
       <div className={`mt-1 text-sm font-bold ${cls}`}>{value}</div>
       {hint ? <div className="text-[10px] text-fg-dim font-mono">{hint}</div> : null}
     </div>
@@ -1154,13 +1328,52 @@ function DirectionGlyph({ dir }: { dir: SignalKind }) {
   );
 }
 
-function ConfidenceBar({ confidence, dir }: { confidence: number; dir: SignalKind }) {
+function ConfidenceBar({
+  confidence,
+  dir,
+}: {
+  confidence: number;
+  dir: SignalKind;
+}) {
   const pct = Math.round(confidence * 100);
-  const fill = dir === 'long' ? 'bg-emerald-400' : dir === 'short' ? 'bg-rose-400' : 'bg-amber-400';
+  const fill =
+    dir === 'long'
+      ? 'bg-emerald-400 shadow-[0_0_12px_rgba(52,211,153,0.5)]'
+      : dir === 'short'
+        ? 'bg-rose-400 shadow-[0_0_12px_rgba(251,113,133,0.5)]'
+        : 'bg-amber-400';
   return (
-    <div className="mt-2 h-1.5 w-32 overflow-hidden rounded-full bg-white/5">
+    <div className="mt-2 ml-auto h-2.5 w-36 overflow-hidden rounded-full bg-white/[0.08] ring-1 ring-white/5">
       <div className={fill} style={{ width: `${pct}%`, height: '100%' }} />
     </div>
+  );
+}
+
+// ─────────────────────────────────────────────────── tooltip primitive
+
+/**
+ * Minimal tooltip — pure CSS, no JS lib. Wraps an arbitrary trigger
+ * (icon, label, badge) and reveals a small dark caption on hover/focus.
+ * The caption sits absolutely below the trigger and clips to viewport.
+ */
+function Tooltip({
+  content,
+  children,
+}: {
+  content: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <span className="group relative inline-flex">
+      {children}
+      <span
+        role="tooltip"
+        className="pointer-events-none absolute left-1/2 top-full z-30 mt-1.5 hidden -translate-x-1/2 whitespace-normal rounded-lg border border-white/10 bg-bg-card px-2.5 py-1.5 text-[10px] font-normal leading-snug text-fg shadow-xl group-hover:block group-focus-within:block"
+        style={{ width: 'max-content', maxWidth: '260px' }}
+      >
+        {content}
+      </span>
+    </span>
   );
 }
 
