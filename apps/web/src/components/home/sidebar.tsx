@@ -27,6 +27,7 @@ export function HomeSidebar() {
   const items: NavItem[] = [
     { href: '/home/foxy', label: 'Foxy', icon: <FoxyIcon /> },
     { href: '/home/right-now', label: 'Right Now', icon: <RightNowIcon /> },
+    { href: '/home/live-macro', label: 'Live Macro', icon: <LiveMacroIcon /> },
     { href: '/home/overview', label: 'Overview', icon: <OverviewIcon /> },
     { href: '/home/live', label: 'Live trades', icon: <LiveIcon /> },
     { href: '/home/traders', label: 'Traders', icon: <TradersIcon />, comingSoon: true },
@@ -95,6 +96,17 @@ function FoxyIcon() {
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
       <path d="M14 2c0 4-3 5-3 9s3 6 3 6-7-1-7-7c0-4 4-5 4-8 0 0 3 0 3 0z" />
       <circle cx="12" cy="17" r="3" />
+    </svg>
+  );
+}
+
+function LiveMacroIcon() {
+  // Microphone — anchors the "live broadcast / spoken event" feeling.
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+      <rect x="9" y="3" width="6" height="11" rx="3" />
+      <path d="M19 11a7 7 0 0 1-14 0" />
+      <path d="M12 18v3" />
     </svg>
   );
 }
