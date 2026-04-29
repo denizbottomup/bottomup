@@ -1,4 +1,4 @@
-import { Controller, Get, GoneException, Query } from '@nestjs/common';
+import { Controller, Get, NotFoundException, Param, Query } from '@nestjs/common';
 import { PublicService } from './public.service.js';
 
 const SUPPORTED_LOCALES = new Set([
@@ -48,18 +48,22 @@ export class PublicController {
   }
 
   /**
-   * The previous `/public/trader/:name` returned a full trader detail
-   * payload to anyone — it powered the unauthenticated landing modal.
-   * That endpoint has been retired: the same data now lives behind
-   * the auth wall at `/me/trader/:name`, and free-tier viewers see
-   * 80% of the trades locked. Returning 410 (and not 404) so any
-   * stale clients log a clear "endpoint moved" rather than thinking
-   * the trader simply doesn't exist.
+   * Trader detail for the unauthenticated landing modal. Earlier this
+   * endpoint was 410'd in the same Phase-1 sweep that gated
+   * `latest_setups` — but the modal payload only exposes aggregated
+   * 30-day / all-time performance + a closed-trade history (close_date,
+   * pnl, r). No live entry/stop/TP, no per-setup pricing, nothing a
+   * free-tier viewer wouldn't already see in the leaderboard card.
+   * The /me/trader/:name path stays the canonical authenticated read
+   * (with the 20% trade lockdown for free-tier); this public mirror
+   * is for the landing showcase modal only.
    */
   @Get('/trader/:name')
-  trader(): never {
-    throw new GoneException(
-      'GET /public/trader/:name has moved. Authenticated callers should use GET /me/trader/:name.',
-    );
+  async trader(
+    @Param('name') name: string,
+  ): ReturnType<PublicService['traderDetail']> {
+    const out = await this.pub.traderDetail(name);
+    if (!out) throw new NotFoundException(`Trader "${name}" not found`);
+    return out;
   }
 }
