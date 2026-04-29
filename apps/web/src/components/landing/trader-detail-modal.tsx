@@ -77,7 +77,18 @@ export function TraderDetailModal({
 
   useEffect(() => {
     let alive = true;
-    fetch(`${API_BASE}/public/trader/${encodeURIComponent(analyst)}`)
+    // `cache: 'no-store'` is critical here. The endpoint briefly
+    // returned HTTP 410 during the Phase-1 lockdown window, and
+    // browsers happily cached those 410s on disk under heuristic
+    // rules (no Cache-Control header was set on the API at the
+    // time). After the endpoint came back 200, returning visitors
+    // were still served the stale 410 by their own browser cache,
+    // surfacing as "Couldn't load trader: HTTP 410" — bypassing
+    // the cache makes the modal recover on the next click without
+    // needing the user to clear browsing data.
+    fetch(`${API_BASE}/public/trader/${encodeURIComponent(analyst)}`, {
+      cache: 'no-store',
+    })
       .then((r) => {
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
         return r.json();
