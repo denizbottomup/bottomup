@@ -1471,7 +1471,10 @@ function PushToggle({
     'unsupported' | 'idle' | 'loading' | 'subscribed' | 'denied' | 'unconfigured'
   >('idle');
 
-  // On mount: check capability + current subscription state.
+  // On mount: check capability + server VAPID config + current sub.
+  // Pulling push-config up-front means the button reflects "server has
+  // no VAPID keys" *before* the user clicks, instead of disappearing
+  // mid-interaction.
   useEffect(() => {
     let alive = true;
     (async () => {
@@ -1488,6 +1491,23 @@ function PushToggle({
         return;
       }
       try {
+        const token = await getIdToken();
+        if (token) {
+          const cfgRes = await fetch(`${API_BASE}/me/right-now/push-config`, {
+            headers: { Authorization: `Bearer ${token}` },
+            cache: 'no-store',
+          });
+          if (cfgRes.ok) {
+            const cfg = (await cfgRes.json()) as {
+              enabled: boolean;
+              public_key: string | null;
+            };
+            if (!cfg.enabled || !cfg.public_key) {
+              if (alive) setState('unconfigured');
+              return;
+            }
+          }
+        }
         const reg = await navigator.serviceWorker.getRegistration('/right-now-sw.js');
         const sub = await reg?.pushManager.getSubscription();
         if (alive) setState(sub ? 'subscribed' : 'idle');
@@ -1574,37 +1594,47 @@ function PushToggle({
     }
   };
 
-  if (state === 'unsupported' || state === 'unconfigured') {
-    // Hide the button entirely when the browser can't do push or the
-    // server isn't configured — we don't want to surface a control
-    // that can never succeed.
+  if (state === 'unsupported') {
+    // Browser literally can't do push (Safari macOS old, Firefox in
+    // private mode, etc.). Hiding is the right call — there's no
+    // server config you can change to fix it.
     return null;
   }
   const subscribed = state === 'subscribed';
   const label =
     state === 'denied'
       ? 'izin engelli'
-      : state === 'loading'
-        ? '...'
-        : subscribed
-          ? 'bildirimler açık'
-          : 'bildirim al';
+      : state === 'unconfigured'
+        ? 'pasif'
+        : state === 'loading'
+          ? '...'
+          : subscribed
+            ? 'bildirimler açık'
+            : 'bildirim al';
   return (
     <button
       type="button"
       onClick={subscribed ? unsubscribe : subscribe}
-      disabled={state === 'denied' || state === 'loading'}
+      disabled={
+        state === 'denied' ||
+        state === 'loading' ||
+        state === 'unconfigured'
+      }
       title={
         state === 'denied'
           ? 'Tarayıcı bildirim iznini engellemiş — site ayarlarından açabilirsin.'
-          : subscribed
-            ? 'Push bildirimleri açık. Kapatmak için tıkla.'
-            : 'Combined yön değiştiğinde tarayıcı kapalı olsa bile bildirim al.'
+          : state === 'unconfigured'
+            ? 'Push servisi henüz aktif değil. Sunucu tarafında VAPID anahtarları ayarlandığında otomatik açılacak.'
+            : subscribed
+              ? 'Push bildirimleri açık. Kapatmak için tıkla.'
+              : 'Combined yön değiştiğinde tarayıcı kapalı olsa bile bildirim al.'
       }
       className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-mono transition disabled:opacity-50 disabled:cursor-not-allowed ${
         subscribed
           ? 'border-emerald-400/40 bg-emerald-400/10 text-emerald-300'
-          : 'border-white/10 bg-bg-card text-fg-muted hover:border-white/25 hover:text-fg'
+          : state === 'unconfigured'
+            ? 'border-amber-400/30 bg-amber-400/5 text-amber-300'
+            : 'border-white/10 bg-bg-card text-fg-muted hover:border-white/25 hover:text-fg'
       }`}
     >
       <span aria-hidden>{subscribed ? '🔔' : '🛎'}</span>
