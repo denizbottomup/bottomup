@@ -52,34 +52,49 @@ export function PartnersSection() {
 }
 
 /**
- * Tries /partners/{slug}.svg first; if the asset 404s, falls back to a
- * styled wordmark. Drop a monochrome SVG (white fill, transparent bg)
- * at /apps/web/public/partners/{slug}.svg and it's live on next build.
+ * Wordmark-first brand renderer. The previous implementation relied
+ * on `onError` to swap a broken `<img>` for a styled wordmark — which
+ * worked in dev but failed on the production build: 404s arrived as
+ * native broken-image icons before React could rehydrate and fire the
+ * error handler, leaving "[broken icon] Bybit" stripes visible above
+ * the fold. We now render the wordmark first and only reveal an `<img>`
+ * if it actually loads (onLoad). If `/partners/{slug}.svg` lands on
+ * disk later, the next build picks it up and the wordmark steps aside
+ * automatically — no component change needed.
  */
 function BrandMark({ brand }: { brand: Brand }) {
-  const [errored, setErrored] = useState(false);
-  if (!errored) {
-    return (
-      <div className="flex h-10 items-center justify-center">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={`/partners/${brand.slug}.svg`}
-          alt={brand.name}
-          className="h-8 w-auto max-w-[150px] object-contain opacity-70 transition hover:opacity-100"
-          onError={() => setErrored(true)}
-        />
-      </div>
-    );
-  }
+  const [imageLoaded, setImageLoaded] = useState(false);
   return (
-    <div
-      className="flex h-10 select-none items-center justify-center text-center font-extrabold uppercase tracking-[0.08em] text-fg-muted transition hover:text-fg"
-      style={{
-        fontSize: clampSize(brand.name),
-        letterSpacing: brand.name.length > 14 ? '0.06em' : '0.1em',
-      }}
-    >
-      {brand.name}
+    <div className="relative flex h-10 items-center justify-center">
+      <span
+        className={`select-none text-center font-extrabold uppercase tracking-[0.08em] text-fg-muted transition hover:text-fg ${
+          imageLoaded ? 'invisible' : ''
+        }`}
+        style={{
+          fontSize: clampSize(brand.name),
+          letterSpacing: brand.name.length > 14 ? '0.06em' : '0.1em',
+        }}
+      >
+        {brand.name}
+      </span>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={`/partners/${brand.slug}.svg`}
+        alt=""
+        aria-hidden="true"
+        loading="lazy"
+        onLoad={(e) => {
+          // naturalWidth === 0 catches the case where a placeholder
+          // (e.g. an HTML 404 page served as text/html) "loaded" but
+          // contains no image data — keep the wordmark visible.
+          if ((e.target as HTMLImageElement).naturalWidth > 0) {
+            setImageLoaded(true);
+          }
+        }}
+        className={`absolute inset-0 m-auto h-8 w-auto max-w-[150px] object-contain opacity-70 transition hover:opacity-100 ${
+          imageLoaded ? '' : 'opacity-0 pointer-events-none'
+        }`}
+      />
     </div>
   );
 }
