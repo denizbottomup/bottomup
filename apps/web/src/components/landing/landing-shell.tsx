@@ -34,7 +34,7 @@ export async function LandingShell({ locale }: { locale: LocaleCode }) {
     <div className="min-h-screen">
       <StructuredData locale={locale} />
       <LandingNav />
-      {data ? <TickerStrip pulse={data.pulse} /> : null}
+      {data?.pulse ? <TickerStrip pulse={data.pulse} /> : null}
 
       <Hero data={data} />
       <PartnersSection />
@@ -44,13 +44,15 @@ export async function LandingShell({ locale }: { locale: LocaleCode }) {
       <FoxyFirewallSection />
       <MarketplaceSection />
 
-      {data ? <LeaderboardSection traders={data.top_traders} /> : null}
+      {data?.top_traders && data.top_traders.length > 0 ? (
+        <LeaderboardSection traders={data.top_traders} />
+      ) : null}
 
       <McpSuiteSection />
 
-      {data ? <PulseSection pulse={data.pulse} /> : null}
+      {data?.pulse ? <PulseSection pulse={data.pulse} /> : null}
 
-      {data && data.news.length > 0 ? <NewsSection news={data.news} /> : null}
+      {data?.news && data.news.length > 0 ? <NewsSection news={data.news} /> : null}
 
       <PricingSection />
       <FaqSection />

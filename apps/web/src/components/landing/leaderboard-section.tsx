@@ -8,10 +8,16 @@ import { useT } from '@/lib/i18n';
 export function LeaderboardSection({
   traders,
 }: {
-  traders: LandingPayload['top_traders'];
+  traders: LandingPayload['top_traders'] | undefined;
 }) {
   const { t } = useT();
-  const shown = traders.filter((tr) => tr.monthly_trades > 0).slice(0, 6);
+  // After the Phase 1 signup wall the public /landing endpoint stopped
+  // returning `top_traders` (it moved behind /me/* auth). When that
+  // happens the field is `undefined` on the wire — guard so an absent
+  // value doesn't blow up the whole landing page render.
+  const shown = (traders ?? [])
+    .filter((tr) => tr.monthly_trades > 0)
+    .slice(0, 6);
   const [active, setActive] = useState<
     | { analyst: string; displayName: string }
     | null
