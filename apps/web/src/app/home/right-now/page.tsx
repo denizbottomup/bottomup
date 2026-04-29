@@ -291,7 +291,14 @@ export default function RightNowPage() {
                   ) : null}
                 </div>
               ) : null}
-              <AssetGrid assets={data.assets} />
+              {/* Defensive filter: even if a stale API build keeps
+                  returning the V2.5 5-coin payload, the UI only shows
+                  BTC + ETH until the SOL/BNB/XRP layout proves out. */}
+              <AssetGrid
+                assets={data.assets.filter(
+                  (a) => a.coin === 'BTC' || a.coin === 'ETH',
+                )}
+              />
               {data.coverage ? <CoverageStrip coverage={data.coverage} /> : null}
             </>
           ) : null}
