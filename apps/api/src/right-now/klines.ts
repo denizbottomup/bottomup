@@ -18,7 +18,7 @@ export interface Kline {
   v: number;
 }
 
-export type Tf = '5m' | '15m' | '1h';
+export type Tf = '5m' | '15m' | '1h' | '4h' | '1d';
 
 const BINANCE_FUTURES = 'https://fapi.binance.com/fapi/v1/klines';
 

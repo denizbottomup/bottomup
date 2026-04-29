@@ -9,30 +9,61 @@ import {
   type SignalKind,
   type TfSignal,
 } from './signal-engine.js';
+import {
+  approximateLiqClusters,
+  fetchBasis,
+  fetchEtfFlow,
+  fetchFundingVelocity,
+  fetchMacro,
+  type BasisRead,
+  type CoverageRead,
+  type EtfFlowRead,
+  type FundingVelocityRead,
+  type LiqClusterRead,
+  type MacroRead,
+  type SourceName,
+} from './market-context.js';
 import { FoxyService, type FoxyPositioning } from '../foxy/foxy.service.js';
 
 /**
- * Right Now — anlık AI yön sinyali. BTC + ETH için 5m / 15m / 1h
- * timeframe'lerinde deterministic bir confluence engine + AI prose
- * overlay üretir.
+ * Right Now V2 — anlık AI yön sinyali.
  *
- * Mimari:
- *   - `setInterval` her 60 saniyede bir tüm coin × TF kombosu için
- *     fresh kline çeker, derivatives + whale snapshot'ını da
- *     paralel olarak alır, signal-engine deterministic skoru üretir.
- *   - AI overlay (Claude Sonnet) her 5 dakikada bir aynı snapshot'tan
- *     Türkçe headline + invalidation cümlesi üretir. Bu sıklık,
- *     maliyeti ~$100/ay'da tutar.
- *   - Sonuç tek bir module-level cache'de tutulur ve `GET /me/right-now`
- *     bunu okur — yani kullanıcı kaç kez basarsa bassın upstream
- *     trafiği yok.
+ * Kapsam:
+ *   - 5 TF: 5m / 15m / 1h / 4h / 1d (scalp + swing aynı ekranda)
+ *   - Price action: BOS/CHOCH, OB, FVG, EMA stack, RSI, ATR
+ *   - Derivatives: OI, funding, L/S, liquidations
+ *   - Whale flow (Arkham CEX in/out)
+ *   - Smart vs retail positioning (top trader vs global account ratio)
+ *   - OI ↔ Price 4-quadrant regime (24h)
+ *   - Spot/perp basis (leverage-driven mu, spot-driven mi)
+ *   - Funding velocity (3 günlük slope)
+ *   - Liquidation cluster levels (kline range proxy)
+ *   - ETF günlük net flow (Farside)
+ *   - Macro: DXY + ES futures + risk regime
+ *   - Sinyal flip tracker (5m short→long X dk önce)
+ *   - Source coverage indicator (hangi besleme canlı / down)
+ *
+ * AI mimarisi iki katmanlı:
+ *   - big_picture (15 dk'da bir): yapısal + makro yorum, 2 cümle
+ *   - tactical_now (5 dk'da bir):  anlık aksiyon + invalidation, 2 cümle
+ *   - 60 saniyede deterministic compute, AI dokunmuyor — direction
+ *     ve confidence saniye düzeyinde fresh kalır.
  */
 
 const COINS = ['BTC', 'ETH'] as const;
-const TFS: Tf[] = ['5m', '15m', '1h'];
+const TFS_DEEP: Tf[] = ['5m', '15m', '1h', '4h', '1d'];
 
 const COMPUTE_INTERVAL_MS = 60_000; // 1 dk
-const AI_OVERLAY_INTERVAL_MS = 5 * 60_000; // 5 dk
+const TACTICAL_AI_INTERVAL_MS = 5 * 60_000; // 5 dk
+const BIG_PICTURE_AI_INTERVAL_MS = 15 * 60_000; // 15 dk
+
+// Slow context fetchers don't need 60s polling — refresh on a slower
+// cadence and reuse the cached snapshot in between to stay under
+// upstream rate limits.
+const ETF_REFRESH_MS = 30 * 60_000; // 30 dk
+const MACRO_REFRESH_MS = 5 * 60_000; // 5 dk
+
+const FLIP_HISTORY_DEPTH = 8; // last N flips kept per asset+TF
 
 export interface RightNowTfBlock extends TfSignal {
   /** Last close used in this read. */
@@ -46,12 +77,22 @@ export interface RightNowTfBlock extends TfSignal {
   };
 }
 
+export interface SignalFlip {
+  tf: Tf;
+  from: SignalKind;
+  to: SignalKind;
+  /** ISO of when the flip was detected. */
+  at: string;
+}
+
 export interface RightNowAi {
-  /** Tek cümle: BTC overall yön + tactical hint. */
-  headline: string;
-  /** "X seviyesi kırılırsa tez bozulur" tarzı tek cümle. */
+  /** 1-2 cümle yapısal + makro yorum. 15 dk'da bir refresh. */
+  big_picture: string;
+  /** Anlık aksiyon cümlesi. 5 dk'da bir refresh. */
+  tactical_now: string;
+  /** Spesifik fiyat seviyesi + koşul. 5 dk'da bir refresh. */
   invalidation: string;
-  /** Hangi snapshot timestamp'inden üretildi (ISO). */
+  /** Üretildi (ISO). */
   generated_at: string;
 }
 
@@ -60,40 +101,47 @@ export interface RightNowAsset {
   tf_5m: RightNowTfBlock | null;
   tf_15m: RightNowTfBlock | null;
   tf_1h: RightNowTfBlock | null;
-  /** Combined direction across the three TFs. Used as the headline call. */
+  tf_4h: RightNowTfBlock | null;
+  tf_1d: RightNowTfBlock | null;
+  /** Combined direction across all 5 TFs, weighted: 5m 8% / 15m 17% /
+   *  1h 25% / 4h 30% / 1d 20%. */
   combined: SignalKind;
-  /** Combined confidence 0..1. */
   combined_confidence: number;
-  /** Smart-money vs retail kıyası — same shape across TFs since it's a
-   *  cross-source structural read; UI shows it as a "balinalar / küçükler"
-   *  strip on the asset card. */
   positioning: FoxyPositioning | null;
-  /**
-   * OI ↔ Price 24h 4-quadrant okuyuşu. Asset-level (TF-blind) çünkü
-   * 24h penceresinde değerlendiriliyor. UI'da kombine header'ın
-   * altında dedicated bir rozet olarak gösterilir.
-   */
   regime: OiPriceRegime;
-  /** Raw inputs that drove the regime read — UI tooltip + AI prompt
-   *  context use these directly. */
   oi_change_24h_pct: number | null;
   price_change_24h_pct: number | null;
-  /** AI-generated prose overlay; null until first AI tick lands. */
+  basis: BasisRead | null;
+  funding_velocity: FundingVelocityRead | null;
+  liq_clusters: LiqClusterRead;
+  etf: EtfFlowRead | null;
+  /** Recent direction flips per TF (newest first). */
+  flips: SignalFlip[];
   ai: RightNowAi | null;
 }
 
 export interface RightNowPayload {
   assets: RightNowAsset[];
-  /** ISO of the latest deterministic compute. */
+  /** Macro context is shared across assets. */
+  macro: MacroRead | null;
+  /** Per-source coverage so the UI can show which feeds are live. */
+  coverage: CoverageRead[];
   computed_at: string;
-  /** ISO of the latest AI overlay (or null if AI never ran). */
   ai_at: string | null;
 }
 
 interface CacheEntry {
-  /** Signal-only payload (deterministic), refreshed every 60s. */
   raw: Map<string, Omit<RightNowAsset, 'ai'>>;
   ai: Map<string, RightNowAi>;
+  macro: MacroRead | null;
+  /** Per-source last-success timestamps (ms). 0 means never. */
+  lastOk: Map<SourceName, number>;
+  lastFail: Map<SourceName, number>;
+  /** Per asset+TF rolling flip log. */
+  flipHistory: Map<string, SignalFlip[]>;
+  /** Memo of the previous tick's signal per asset+TF — used for
+   *  flip detection. */
+  prevSignals: Map<string, SignalKind>;
   computed_at: number;
   ai_at: number | null;
 }
@@ -106,75 +154,113 @@ export class RightNowService implements OnModuleInit, OnModuleDestroy {
   private cache: CacheEntry = {
     raw: new Map(),
     ai: new Map(),
+    macro: null,
+    lastOk: new Map(),
+    lastFail: new Map(),
+    flipHistory: new Map(),
+    prevSignals: new Map(),
     computed_at: 0,
     ai_at: null,
   };
 
   private computeTimer: NodeJS.Timeout | null = null;
-  private aiTimer: NodeJS.Timeout | null = null;
+  private tacticalTimer: NodeJS.Timeout | null = null;
+  private bigPictureTimer: NodeJS.Timeout | null = null;
+  private macroTimer: NodeJS.Timeout | null = null;
+  private etfTimer: NodeJS.Timeout | null = null;
   private computing = false;
-  private aiInflight = false;
+  private tacticalInflight = false;
+  private bigPictureInflight = false;
+
+  // Slow-cadence cached values reused across compute ticks.
+  private cachedEtf: Map<string, EtfFlowRead | null> = new Map();
 
   constructor(private readonly foxy: FoxyService) {
     const key = process.env.ANTHROPIC_API_KEY;
     this.client = key ? new Anthropic({ apiKey: key }) : null;
     if (!this.client) {
-      this.log.warn('ANTHROPIC_API_KEY missing — Right Now will skip AI overlay');
+      this.log.warn('ANTHROPIC_API_KEY missing — Right Now will skip AI overlays');
     }
   }
 
   async onModuleInit(): Promise<void> {
-    // Kick off an initial deterministic pass at boot so the first
-    // viewer doesn't have to wait 60s for a cold cache.
+    // Slow-cadence sources first so the first compute has them populated.
+    void this.refreshMacro();
+    void this.refreshEtf();
+    this.macroTimer = setInterval(() => void this.refreshMacro(), MACRO_REFRESH_MS);
+    this.etfTimer = setInterval(() => void this.refreshEtf(), ETF_REFRESH_MS);
+
     void this.runCompute();
     this.computeTimer = setInterval(() => void this.runCompute(), COMPUTE_INTERVAL_MS);
+
     if (this.client) {
-      // First AI overlay 30s after boot so deterministic data exists.
-      setTimeout(() => void this.runAiOverlay(), 30_000);
-      this.aiTimer = setInterval(() => void this.runAiOverlay(), AI_OVERLAY_INTERVAL_MS);
+      // Stagger the two AI overlays so they don't race the first compute.
+      setTimeout(() => void this.runTacticalOverlay(), 30_000);
+      setTimeout(() => void this.runBigPictureOverlay(), 45_000);
+      this.tacticalTimer = setInterval(
+        () => void this.runTacticalOverlay(),
+        TACTICAL_AI_INTERVAL_MS,
+      );
+      this.bigPictureTimer = setInterval(
+        () => void this.runBigPictureOverlay(),
+        BIG_PICTURE_AI_INTERVAL_MS,
+      );
     }
   }
 
   onModuleDestroy(): void {
-    if (this.computeTimer) clearInterval(this.computeTimer);
-    if (this.aiTimer) clearInterval(this.aiTimer);
+    [
+      this.computeTimer,
+      this.tacticalTimer,
+      this.bigPictureTimer,
+      this.macroTimer,
+      this.etfTimer,
+    ].forEach((t) => t && clearInterval(t));
   }
 
-  /**
-   * Public read — what `GET /me/right-now` returns.
-   */
+  // ─────────────────────────────────────────────────────── public read
+
   snapshot(): RightNowPayload {
     const assets: RightNowAsset[] = COINS.map((coin) => {
       const raw = this.cache.raw.get(coin);
       const ai = this.cache.ai.get(coin) ?? null;
-      if (!raw) {
-        return {
-          coin,
-          tf_5m: null,
-          tf_15m: null,
-          tf_1h: null,
-          combined: 'wait' as SignalKind,
-          combined_confidence: 0,
-          positioning: null,
-          regime: 'neutral' as OiPriceRegime,
-          oi_change_24h_pct: null,
-          price_change_24h_pct: null,
-          ai,
-        };
-      }
+      if (!raw) return emptyAsset(coin, ai);
       return { ...raw, ai };
     });
     return {
       assets,
+      macro: this.cache.macro,
+      coverage: this.coverageReport(),
       computed_at: new Date(this.cache.computed_at || Date.now()).toISOString(),
       ai_at: this.cache.ai_at ? new Date(this.cache.ai_at).toISOString() : null,
     };
   }
 
-  // -------------------------------------------------------------- compute
+  // ───────────────────────────────────────────── slow-cadence refreshes
+
+  private async refreshMacro(): Promise<void> {
+    const m = await fetchMacro();
+    if (m) {
+      this.cache.macro = m;
+      this.markOk('macro');
+    } else {
+      this.markFail('macro');
+    }
+  }
+
+  private async refreshEtf(): Promise<void> {
+    for (const coin of COINS) {
+      const v = await fetchEtfFlow(coin);
+      this.cachedEtf.set(coin, v);
+      if (v) this.markOk('etf');
+      else this.markFail('etf');
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────── compute
 
   private async runCompute(): Promise<void> {
-    if (this.computing) return; // guard against overlap on slow ticks
+    if (this.computing) return;
     this.computing = true;
     try {
       const results = await Promise.all(
@@ -200,43 +286,74 @@ export class RightNowService implements OnModuleInit, OnModuleDestroy {
   private async computeAsset(coin: string): Promise<Omit<RightNowAsset, 'ai'>> {
     const symbol = `${coin}USDT`;
 
-    // Klines for 3 TFs in parallel, plus deriv + whales + positioning
-    // for the TF-blind side. positioning is the smart-vs-retail
-    // long/short divergence read off Binance's account ratio endpoints.
-    const [k5, k15, k1h, derivatives, whales, positioning] = await Promise.all([
-      fetchKlines(symbol, '5m', 200),
-      fetchKlines(symbol, '15m', 200),
-      fetchKlines(symbol, '1h', 200),
-      this.foxy.derivativesByCoin(coin).catch(() => null),
-      this.foxy.whalesByCoin(coin, { hours: 4 }).catch(() => null),
-      this.foxy.positioningByCoin(coin, '1h').catch(() => null),
-    ]);
+    // Five TFs of klines + the slower context blocks, all in parallel.
+    // Keep limit=200 across the board — gives EMA200 room and enough
+    // structure on 1d (~6 months of bars).
+    const [k5, k15, k1h, k4h, k1d, derivatives, whales, positioning, basis, fundingVel] =
+      await Promise.all([
+        fetchKlines(symbol, '5m', 200).catch(() => {
+          this.markFail('klines');
+          return [];
+        }),
+        fetchKlines(symbol, '15m', 200).catch(() => []),
+        fetchKlines(symbol, '1h', 200).catch(() => []),
+        fetchKlines(symbol, '4h', 200).catch(() => []),
+        fetchKlines(symbol, '1d', 200).catch(() => []),
+        this.foxy.derivativesByCoin(coin).catch(() => null),
+        this.foxy.whalesByCoin(coin, { hours: 4 }).catch(() => null),
+        this.foxy.positioningByCoin(coin, '1h').catch(() => null),
+        fetchBasis(coin),
+        fetchFundingVelocity(coin),
+      ]);
 
-    // 24h price change from 1h klines (last 24 bars). The OI 24h %
-    // already lives on derivatives.oi.change_24h_pct; together they
-    // feed the OI/Price regime classifier.
+    if (k1h.length > 0) this.markOk('klines');
+    this.trackCoverage(derivatives, 'derivatives');
+    this.trackCoverage(whales, 'whales');
+    this.trackCoverage(positioning, 'positioning');
+    this.trackCoverage(basis, 'basis');
+    this.trackCoverage(fundingVel, 'funding_velocity');
+
     const price_change_24h_pct = priceChangeFromKlines(k1h, 24);
     const oi_change_24h_pct = derivatives?.oi?.change_24h_pct ?? null;
     const regime = classifyOiPriceRegime(oi_change_24h_pct, price_change_24h_pct);
 
+    const last1h = k1h.at(-1)?.c ?? 0;
+    const liq_clusters = approximateLiqClusters(k1h, last1h);
+
     const tf5 = this.buildBlock(k5, '5m', derivatives, whales, positioning, regime);
     const tf15 = this.buildBlock(k15, '15m', derivatives, whales, positioning, regime);
     const tf1h = this.buildBlock(k1h, '1h', derivatives, whales, positioning, regime);
+    const tf4h = this.buildBlock(k4h, '4h', derivatives, whales, positioning, regime);
+    const tf1d = this.buildBlock(k1d, '1d', derivatives, whales, positioning, regime);
 
-    // Combined direction: 1h gets 50% weight, 15m 30%, 5m 20%.
+    // Combined direction: scalp 25%, mid 30%, swing 45%. TFs that
+    // failed to compute (klines too short) contribute 0.
     const score =
-      directionToNum(tf1h.signal) * tf1h.confidence * 0.5 +
-      directionToNum(tf15.signal) * tf15.confidence * 0.3 +
-      directionToNum(tf5.signal) * tf5.confidence * 0.2;
+      tfScore(tf5, 0.08) +
+      tfScore(tf15, 0.17) +
+      tfScore(tf1h, 0.25) +
+      tfScore(tf4h, 0.3) +
+      tfScore(tf1d, 0.2);
     const combined: SignalKind =
       score > 0.15 ? 'long' : score < -0.15 ? 'short' : 'wait';
     const combined_confidence = Math.min(1, Math.abs(score));
+
+    // Flip detection — compare each TF's new signal with the previous tick.
+    const flips = this.recordFlips(coin, {
+      '5m': tf5?.signal ?? 'wait',
+      '15m': tf15?.signal ?? 'wait',
+      '1h': tf1h?.signal ?? 'wait',
+      '4h': tf4h?.signal ?? 'wait',
+      '1d': tf1d?.signal ?? 'wait',
+    });
 
     return {
       coin,
       tf_5m: tf5,
       tf_15m: tf15,
       tf_1h: tf1h,
+      tf_4h: tf4h,
+      tf_1d: tf1d,
       combined,
       combined_confidence: round(combined_confidence, 2),
       positioning,
@@ -244,6 +361,11 @@ export class RightNowService implements OnModuleInit, OnModuleDestroy {
       oi_change_24h_pct: oi_change_24h_pct != null ? round(oi_change_24h_pct, 2) : null,
       price_change_24h_pct:
         price_change_24h_pct != null ? round(price_change_24h_pct, 2) : null,
+      basis: basis ?? null,
+      funding_velocity: fundingVel ?? null,
+      liq_clusters,
+      etf: this.cachedEtf.get(coin) ?? null,
+      flips,
     };
   }
 
@@ -254,7 +376,8 @@ export class RightNowService implements OnModuleInit, OnModuleDestroy {
     whales: Awaited<ReturnType<FoxyService['whalesByCoin']>> | null,
     positioning: FoxyPositioning | null,
     regime: OiPriceRegime,
-  ): RightNowTfBlock {
+  ): RightNowTfBlock | null {
+    if (!klines || klines.length < 30) return null;
     const pa = analyzePriceAction(klines);
     const sig = computeSignal({ pa, derivatives, whales, positioning, regime, tf });
     return {
@@ -269,97 +392,274 @@ export class RightNowService implements OnModuleInit, OnModuleDestroy {
     };
   }
 
-  // -------------------------------------------------------------- AI overlay
+  // ──────────────────────────────────────────────────── flip tracking
 
-  private async runAiOverlay(): Promise<void> {
-    if (!this.client || this.aiInflight) return;
-    if (this.cache.raw.size === 0) return; // nothing to narrate yet
-    this.aiInflight = true;
+  private recordFlips(
+    coin: string,
+    current: Record<Tf, SignalKind>,
+  ): SignalFlip[] {
+    const now = new Date().toISOString();
+    const out: SignalFlip[] = [];
+    for (const tf of TFS_DEEP) {
+      const key = `${coin}:${tf}`;
+      const prev = this.cache.prevSignals.get(key);
+      const curr = current[tf];
+      if (prev && prev !== curr) {
+        const flip: SignalFlip = { tf, from: prev, to: curr, at: now };
+        const list = this.cache.flipHistory.get(coin) ?? [];
+        list.unshift(flip);
+        this.cache.flipHistory.set(coin, list.slice(0, FLIP_HISTORY_DEPTH));
+      }
+      this.cache.prevSignals.set(key, curr);
+    }
+    out.push(...(this.cache.flipHistory.get(coin) ?? []));
+    return out;
+  }
+
+  // ───────────────────────────────────────────── coverage bookkeeping
+
+  private markOk(name: SourceName): void {
+    this.cache.lastOk.set(name, Date.now());
+  }
+  private markFail(name: SourceName): void {
+    this.cache.lastFail.set(name, Date.now());
+  }
+  private trackCoverage(value: unknown, name: SourceName): void {
+    if (value != null) this.markOk(name);
+    else this.markFail(name);
+  }
+
+  private coverageReport(): CoverageRead[] {
+    const now = Date.now();
+    const sources: SourceName[] = [
+      'klines',
+      'derivatives',
+      'whales',
+      'positioning',
+      'basis',
+      'funding_velocity',
+      'etf',
+      'macro',
+    ];
+    return sources.map((source) => {
+      const last = this.cache.lastOk.get(source) ?? 0;
+      const ok = last > 0 && now - last < 15 * 60_000; // 15 dk fresh
+      return { source, ok, age_s: last ? Math.floor((now - last) / 1000) : -1 };
+    });
+  }
+
+  // ────────────────────────────────────────────────── tactical AI tick
+
+  private async runTacticalOverlay(): Promise<void> {
+    if (!this.client || this.tacticalInflight) return;
+    if (this.cache.raw.size === 0) return;
+    this.tacticalInflight = true;
     try {
-      // Build a compact context: only the fields the model needs.
-      const context = COINS.map((coin) => {
-        const raw = this.cache.raw.get(coin);
-        if (!raw) return null;
-        // Skip if any TF still null — partial computes happen mid-boot
-        // and we don't want the model narrating an incomplete read.
-        if (!raw.tf_5m || !raw.tf_15m || !raw.tf_1h) return null;
-        return {
-          coin,
-          combined: raw.combined,
-          combined_confidence: raw.combined_confidence,
-          regime: raw.regime,
-          oi_24h_pct: raw.oi_change_24h_pct,
-          price_24h_pct: raw.price_change_24h_pct,
-          positioning: raw.positioning
-            ? {
-                divergence: raw.positioning.divergence,
-                top_long_pct: raw.positioning.top_traders?.long_pct ?? null,
-                retail_long_pct: raw.positioning.retail?.long_pct ?? null,
-                spread: raw.positioning.spread,
-              }
-            : null,
-          tfs: {
-            '5m': digestForAi(raw.tf_5m),
-            '15m': digestForAi(raw.tf_15m),
-            '1h': digestForAi(raw.tf_1h),
-          },
-        };
-      }).filter((x): x is NonNullable<typeof x> => x != null);
+      const context = this.buildAiContext();
       if (context.length === 0) return;
 
       const res = await this.client.messages.create({
         model: 'claude-sonnet-4-5',
-        max_tokens: 600,
-        system: AI_SYSTEM_PROMPT,
+        max_tokens: 800,
+        system: TACTICAL_PROMPT,
         messages: [
           {
             role: 'user',
             content: [
-              'Aşağıdaki sinyal snapshot\'ını oku ve her coin için tek',
-              'cümlelik headline + tek cümlelik invalidation üret.',
+              'Aşağıdaki ham snapshot\'tan her coin için iki alan üret:',
+              '  • tactical_now : 1-2 cümle anlık aksiyon görüşü',
+              '  • invalidation : 1 cümle, spesifik fiyat seviyesi şart',
               '',
               'Format JSON, başka şey yazma:',
               '{',
-              '  "BTC": { "headline": "...", "invalidation": "..." },',
-              '  "ETH": { "headline": "...", "invalidation": "..." }',
+              '  "BTC": { "tactical_now": "...", "invalidation": "..." },',
+              '  "ETH": { "tactical_now": "...", "invalidation": "..." }',
               '}',
               '',
-              'Snapshot:',
               JSON.stringify(context, null, 2),
             ].join('\n'),
           },
         ],
       });
-
-      const block = res.content.find((c) => c.type === 'text');
-      const text = block && block.type === 'text' ? block.text : '';
-      const parsed = parseAiJson(text);
+      const text = textFromResponse(res);
+      const parsed = parseTacticalJson(text);
       if (!parsed) {
-        this.log.warn('AI overlay parse failed; keeping previous overlay');
+        this.log.warn('tactical AI parse failed; keeping previous overlay');
         return;
       }
       const now = Date.now();
       for (const coin of COINS) {
         const v = parsed[coin];
-        if (v) {
-          this.cache.ai.set(coin, {
-            headline: v.headline,
-            invalidation: v.invalidation,
-            generated_at: new Date(now).toISOString(),
-          });
-        }
+        if (!v) continue;
+        const prev = this.cache.ai.get(coin);
+        this.cache.ai.set(coin, {
+          big_picture: prev?.big_picture ?? '',
+          tactical_now: v.tactical_now,
+          invalidation: v.invalidation,
+          generated_at: new Date(now).toISOString(),
+        });
       }
       this.cache.ai_at = now;
     } catch (e) {
-      this.log.error(`AI overlay failed: ${(e as Error).message}`);
+      this.log.error(`tactical AI failed: ${(e as Error).message}`);
     } finally {
-      this.aiInflight = false;
+      this.tacticalInflight = false;
     }
   }
+
+  // ─────────────────────────────────────────────── big picture AI tick
+
+  private async runBigPictureOverlay(): Promise<void> {
+    if (!this.client || this.bigPictureInflight) return;
+    if (this.cache.raw.size === 0) return;
+    this.bigPictureInflight = true;
+    try {
+      const context = this.buildAiContext();
+      if (context.length === 0) return;
+
+      const res = await this.client.messages.create({
+        model: 'claude-sonnet-4-5',
+        max_tokens: 700,
+        system: BIG_PICTURE_PROMPT,
+        messages: [
+          {
+            role: 'user',
+            content: [
+              'Aşağıdaki snapshot\'tan her coin için 1-2 cümlelik yapısal +',
+              'makro yorum üret. ETF, DXY, regime, positioning hepsini',
+              'birleştir. Tactical seviye verme — bu cümle 15 dakika',
+              'sabit kalacak.',
+              '',
+              'Format JSON:',
+              '{ "BTC": { "big_picture": "..." }, "ETH": { "big_picture": "..." } }',
+              '',
+              JSON.stringify(context, null, 2),
+            ].join('\n'),
+          },
+        ],
+      });
+      const text = textFromResponse(res);
+      const parsed = parseBigPictureJson(text);
+      if (!parsed) {
+        this.log.warn('big picture AI parse failed; keeping previous overlay');
+        return;
+      }
+      const now = Date.now();
+      for (const coin of COINS) {
+        const v = parsed[coin];
+        if (!v) continue;
+        const prev = this.cache.ai.get(coin);
+        this.cache.ai.set(coin, {
+          big_picture: v.big_picture,
+          tactical_now: prev?.tactical_now ?? '',
+          invalidation: prev?.invalidation ?? '',
+          generated_at: new Date(now).toISOString(),
+        });
+      }
+      this.cache.ai_at = now;
+    } catch (e) {
+      this.log.error(`big picture AI failed: ${(e as Error).message}`);
+    } finally {
+      this.bigPictureInflight = false;
+    }
+  }
+
+  // ──────────────────────────────────────────────── AI context builder
+
+  private buildAiContext(): Array<Record<string, unknown>> {
+    return COINS.map((coin) => {
+      const raw = this.cache.raw.get(coin);
+      if (!raw) return null;
+      if (!raw.tf_1h || !raw.tf_4h) return null; // wait for the 1h/4h reads
+      return {
+        coin,
+        combined: raw.combined,
+        combined_confidence: raw.combined_confidence,
+        regime: raw.regime,
+        oi_24h_pct: raw.oi_change_24h_pct,
+        price_24h_pct: raw.price_change_24h_pct,
+        basis: raw.basis
+          ? {
+              premium_pct: raw.basis.premium_pct,
+              bias: raw.basis.bias,
+              spread_usd: raw.basis.spread_usd,
+            }
+          : null,
+        funding_velocity: raw.funding_velocity,
+        positioning: raw.positioning
+          ? {
+              divergence: raw.positioning.divergence,
+              top_long_pct: raw.positioning.top_traders?.long_pct ?? null,
+              retail_long_pct: raw.positioning.retail?.long_pct ?? null,
+              spread: raw.positioning.spread,
+            }
+          : null,
+        liq_clusters: {
+          below: raw.liq_clusters.below
+            ? raw.liq_clusters.below.price
+            : null,
+          above: raw.liq_clusters.above
+            ? raw.liq_clusters.above.price
+            : null,
+        },
+        etf: raw.etf,
+        macro: this.cache.macro
+          ? {
+              dxy_pct: this.cache.macro.dxy?.change_pct ?? null,
+              es_pct: this.cache.macro.es_futures?.change_pct ?? null,
+              risk_regime: this.cache.macro.risk_regime,
+            }
+          : null,
+        flips: raw.flips.slice(0, 3).map((f) => `${f.tf}: ${f.from}→${f.to} @${f.at}`),
+        tfs: {
+          '5m': raw.tf_5m ? digestForAi(raw.tf_5m) : null,
+          '15m': raw.tf_15m ? digestForAi(raw.tf_15m) : null,
+          '1h': raw.tf_1h ? digestForAi(raw.tf_1h) : null,
+          '4h': raw.tf_4h ? digestForAi(raw.tf_4h) : null,
+          '1d': raw.tf_1d ? digestForAi(raw.tf_1d) : null,
+        },
+      };
+    }).filter((x): x is NonNullable<typeof x> => x != null);
+  }
+}
+
+// ──────────────────────────────────────────────────────────────────── helpers
+
+function emptyAsset(coin: string, ai: RightNowAi | null): RightNowAsset {
+  return {
+    coin,
+    tf_5m: null,
+    tf_15m: null,
+    tf_1h: null,
+    tf_4h: null,
+    tf_1d: null,
+    combined: 'wait',
+    combined_confidence: 0,
+    positioning: null,
+    regime: 'neutral',
+    oi_change_24h_pct: null,
+    price_change_24h_pct: null,
+    basis: null,
+    funding_velocity: null,
+    liq_clusters: {
+      below: null,
+      above: null,
+      long_notional_5pct: 0,
+      short_notional_5pct: 0,
+    },
+    etf: null,
+    flips: [],
+    ai,
+  };
 }
 
 function directionToNum(s: SignalKind): number {
   return s === 'long' ? 1 : s === 'short' ? -1 : 0;
+}
+
+function tfScore(tf: RightNowTfBlock | null, weight: number): number {
+  if (!tf) return 0;
+  return directionToNum(tf.signal) * tf.confidence * weight;
 }
 
 function digestForAi(tf: RightNowTfBlock): {
@@ -386,30 +686,54 @@ function digestForAi(tf: RightNowTfBlock): {
   };
 }
 
-function parseAiJson(
+function textFromResponse(res: Anthropic.Messages.Message): string {
+  const block = res.content.find((c) => c.type === 'text');
+  return block && block.type === 'text' ? block.text : '';
+}
+
+function parseTacticalJson(
   text: string,
-): Record<string, { headline: string; invalidation: string }> | null {
-  // Tolerate code-fence wrappers and leading prose.
+): Record<string, { tactical_now: string; invalidation: string }> | null {
+  const obj = parseJsonLoose(text);
+  if (!obj) return null;
+  const out: Record<string, { tactical_now: string; invalidation: string }> = {};
+  for (const [k, v] of Object.entries(obj)) {
+    const o = v as Record<string, unknown>;
+    if (
+      o &&
+      typeof o.tactical_now === 'string' &&
+      typeof o.invalidation === 'string'
+    ) {
+      out[k.toUpperCase()] = {
+        tactical_now: o.tactical_now,
+        invalidation: o.invalidation,
+      };
+    }
+  }
+  return Object.keys(out).length ? out : null;
+}
+
+function parseBigPictureJson(
+  text: string,
+): Record<string, { big_picture: string }> | null {
+  const obj = parseJsonLoose(text);
+  if (!obj) return null;
+  const out: Record<string, { big_picture: string }> = {};
+  for (const [k, v] of Object.entries(obj)) {
+    const o = v as Record<string, unknown>;
+    if (o && typeof o.big_picture === 'string') {
+      out[k.toUpperCase()] = { big_picture: o.big_picture };
+    }
+  }
+  return Object.keys(out).length ? out : null;
+}
+
+function parseJsonLoose(text: string): Record<string, unknown> | null {
   const start = text.indexOf('{');
   const end = text.lastIndexOf('}');
   if (start === -1 || end === -1 || end <= start) return null;
   try {
-    const obj = JSON.parse(text.slice(start, end + 1)) as Record<string, unknown>;
-    const out: Record<string, { headline: string; invalidation: string }> = {};
-    for (const [k, v] of Object.entries(obj)) {
-      if (
-        v &&
-        typeof v === 'object' &&
-        typeof (v as { headline?: unknown }).headline === 'string' &&
-        typeof (v as { invalidation?: unknown }).invalidation === 'string'
-      ) {
-        out[k.toUpperCase()] = {
-          headline: String((v as { headline: string }).headline),
-          invalidation: String((v as { invalidation: string }).invalidation),
-        };
-      }
-    }
-    return out;
+    return JSON.parse(text.slice(start, end + 1)) as Record<string, unknown>;
   } catch {
     return null;
   }
@@ -420,11 +744,6 @@ function round(x: number, dp: number): number {
   return Math.round(x * p) / p;
 }
 
-/**
- * % change from N bars back to the latest close. With 1h klines,
- * `lookback = 24` gives the canonical 24-hour change without an
- * extra HTTP call.
- */
 function priceChangeFromKlines(
   klines: Awaited<ReturnType<typeof fetchKlines>>,
   lookback: number,
@@ -436,35 +755,62 @@ function priceChangeFromKlines(
   return ((end - start) / start) * 100;
 }
 
-const AI_SYSTEM_PROMPT = [
-  'Sen Right Now — bottomUP\'ın anlık yön motoru. Bir desk analistisin.',
-  'Sana 3 TF\'lik (5m/15m/1h) deterministic confluence skoru, kombine',
-  'yön, OI ↔ Price 24h regime\'i, balina vs retail pozisyon kıyası',
-  've fiyat seviyeleri verilir. Senin işin bunu trader\'a tek cümlelik',
-  'aksiyonlanabilir bir görüş + tek cümlelik invalidation\'a çevirmek.',
+// ───────────────────────────────────────────────────────── system prompts
+
+const COMMON_FRAME = [
+  'Sen Right Now — bottomUP\'ın anlık yön motorunda çalışan baş analist.',
+  'Türkçe, profesyonel masa dili, markdown yok, emoji yok.',
   '',
-  'OI ↔ Price regime nasıl okunur:',
-  '  bullish_confirmation = OI↑ + Price↑ → taze long para, sağlıklı trend',
-  '  bearish_confirmation = OI↑ + Price↓ → taze short açılıyor, devam riski',
-  '  short_squeeze        = OI↓ + Price↑ → mekanik unwind, weak rally,',
-  '                                         sürdürülebilir değil',
-  '  long_capitulation    = OI↓ + Price↓ → exhaustion, dip yakınsama',
-  'Bu okumayı headline\'da geçirmeyi tercih et — "kapı arkasındaki yapı"',
-  'çoğunlukla saf yön sinyalinden daha bilgilendiricidir.',
+  'Sana 5 TF\'lik (5m/15m/1h/4h/1d) deterministic confluence skoru,',
+  'OI ↔ Price 24h regime, spot/perp basis, funding velocity, balina vs',
+  'retail pozisyon kıyası, ETF günlük net flow, makro (DXY + ES futures',
+  'risk regime), liq cluster fiyatları ve son sinyal flip\'leri verilir.',
   '',
-  'Pozisyon kıyası nasıl okunur:',
-  '  smart_bulls / capitulation_setup → balinalar long bias, takip',
-  '  top_heavy / smart_bears          → retail euforik, distribution riski',
+  'Veri okuma kuralları:',
+  '  • OI↑ + Px↑ = sağlıklı uptrend; taze long para',
+  '  • OI↑ + Px↓ = bearish confirmation; taze short açılıyor',
+  '  • OI↓ + Px↑ = short squeeze; weak rally, sürdürülemez',
+  '  • OI↓ + Px↓ = long capitulation; exhaustion, dip yakın',
+  '  • basis premium > +0.05% = leveraged long (kırılgan)',
+  '  • basis < -0.05% = panik / spot front-run',
+  '  • funding rising + retail long-heavy = top-heavy distribution',
+  '  • smart_bulls + capitulation_setup = en güçlü long sinyali',
+  '  • DXY↑ + ES↓ = risk off (kripto baskı)',
+  '  • ETF günlük >$200M giriş = kurumsal momentum',
   '',
-  'Kurallar:',
-  '  - Türkçe, profesyonel masa dili. Markdown YOK.',
-  '  - Headline 1 cümle, max 22 kelime. Yön + neden + zaman dilimi.',
-  '    İYİ: "BTC OI↓ + Price↑ short squeeze yapısında, 1h CHOCH yok;',
-  '    62300 üzeri tutsa bile rally weak, scalp uzun riskli."',
-  '    KÖTÜ: "BTC long sinyali var" (boş, neden yok).',
-  '  - Invalidation 1 cümle, spesifik fiyat seviyesi şart. "X altında',
-  '     kapanış tezi siler" formatında.',
-  '  - Sayıları kullan (price, RSI, OI %, price 24h %).',
-  '  - "Şahsen ben olsam", "kesin", "garanti" YASAK.',
-  '  - JSON dışında bir şey yazma — kod-fence bile.',
+  '"Şahsen ben olsam", "kesin", "garanti", "moon", "FOMO" YASAK.',
+  'Olasılıklı dil: "yüksek ihtimal", "fitili kurulu", "absorbe ediyor".',
+  'JSON dışında bir şey yazma — kod-fence bile.',
+].join('\n');
+
+const TACTICAL_PROMPT = [
+  COMMON_FRAME,
+  '',
+  'GÖREV: tactical_now + invalidation üret.',
+  '',
+  '  tactical_now (1-2 cümle, max 32 kelime toplam):',
+  '    Anlık aksiyon görüşü. Yön + neden + spesifik seviye.',
+  '    İYİ: "BTC 4h\'de range içinde ama 1h CHOCH↑ + funding velocity',
+  '    rising; spot/perp +0.04% leveraged long olduğu için 64,200 üzeri',
+  '    momentum scalp\'i mantıklı, swing daha geç teyit ister."',
+  '    KÖTÜ: "BTC long olabilir." (boş)',
+  '',
+  '  invalidation (1 cümle, fiyat seviyesi şart):',
+  '    "X seviyesi altında 1h kapanış tezi siler" formatı.',
+].join('\n');
+
+const BIG_PICTURE_PROMPT = [
+  COMMON_FRAME,
+  '',
+  'GÖREV: big_picture üret (1-2 cümle, max 35 kelime).',
+  '',
+  'Yapısal + makro yorum. Tactical seviye verme — bu cümle 15 dakika',
+  'sabit kalacak. ETF, DXY, regime, positioning, funding velocity,',
+  'basis okumalarını sentezle. Cümlenin amacı: kullanıcı tek bakışta',
+  '"ortam ne, kim baskın, hangi rejimdeyiz" sorusunun cevabını alsın.',
+  '',
+  'İYİ: "BTC orta vadede sağlıklı uptrend; ETF +$340M ile kurumsal',
+  'destek var, ancak top-heavy retail pozisyon ve perp premium kısa',
+  'vadede squeeze riski oluşturuyor."',
+  'KÖTÜ: "BTC yukarı yönlü." (boş, neden yok, makro yok)',
 ].join('\n');

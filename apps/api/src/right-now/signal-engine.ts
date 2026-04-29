@@ -85,28 +85,34 @@ export interface SignalContext {
    *  Asset-level (TF-blind) — same regime applies across all TFs. */
   regime: OiPriceRegime;
   /** Used to prefer whale flow on lower TFs less than higher ones. */
-  tf: '5m' | '15m' | '1h';
+  tf: '5m' | '15m' | '1h' | '4h' | '1d';
 }
 
 const TF_DERIV_WEIGHT: Record<SignalContext['tf'], number> = {
   '5m': 0.4,
   '15m': 0.7,
   '1h': 1.0,
+  '4h': 1.0,
+  '1d': 0.8,
 };
 
 const TF_WHALE_WEIGHT: Record<SignalContext['tf'], number> = {
-  // Whale flow is a slow signal — barely useful on 5m, dominant on 1h.
+  // Whale flow is a slow signal — barely useful on 5m, dominant on 1h+.
   '5m': 0.2,
   '15m': 0.5,
   '1h': 1.0,
+  '4h': 1.0,
+  '1d': 0.7,
 };
 
 const TF_POSITIONING_WEIGHT: Record<SignalContext['tf'], number> = {
-  // Positioning divergence is a structural read — meaningful on 1h,
+  // Positioning divergence is a structural read — meaningful on 1h+,
   // muted on 5m where intra-bar noise dominates.
   '5m': 0.3,
   '15m': 0.6,
   '1h': 1.0,
+  '4h': 1.0,
+  '1d': 0.6,
 };
 
 export function computeSignal(ctx: SignalContext): TfSignal {
