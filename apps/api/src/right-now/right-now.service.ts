@@ -3,7 +3,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { fetchKlines, type Tf } from './klines.js';
 import { analyzePriceAction, type PriceActionRead } from './price-action.js';
 import { computeSignal, type SignalKind, type TfSignal } from './signal-engine.js';
-import { FoxyService } from '../foxy/foxy.service.js';
+import { FoxyService, type FoxyPositioning } from '../foxy/foxy.service.js';
 
 /**
  * Right Now — anlık AI yön sinyali. BTC + ETH için 5m / 15m / 1h
@@ -58,6 +58,10 @@ export interface RightNowAsset {
   combined: SignalKind;
   /** Combined confidence 0..1. */
   combined_confidence: number;
+  /** Smart-money vs retail kıyası — same shape across TFs since it's a
+   *  cross-source structural read; UI shows it as a "balinalar / küçükler"
+   *  strip on the asset card. */
+  positioning: FoxyPositioning | null;
   /** AI-generated prose overlay; null until first AI tick lands. */
   ai: RightNowAi | null;
 }
@@ -135,6 +139,7 @@ export class RightNowService implements OnModuleInit, OnModuleDestroy {
           tf_1h: null,
           combined: 'wait' as SignalKind,
           combined_confidence: 0,
+          positioning: null,
           ai,
         };
       }
@@ -176,18 +181,21 @@ export class RightNowService implements OnModuleInit, OnModuleDestroy {
   private async computeAsset(coin: string): Promise<Omit<RightNowAsset, 'ai'>> {
     const symbol = `${coin}USDT`;
 
-    // Klines for 3 TFs in parallel, plus deriv + whales for the TF-blind side.
-    const [k5, k15, k1h, derivatives, whales] = await Promise.all([
+    // Klines for 3 TFs in parallel, plus deriv + whales + positioning
+    // for the TF-blind side. positioning is the smart-vs-retail
+    // long/short divergence read off Binance's account ratio endpoints.
+    const [k5, k15, k1h, derivatives, whales, positioning] = await Promise.all([
       fetchKlines(symbol, '5m', 200),
       fetchKlines(symbol, '15m', 200),
       fetchKlines(symbol, '1h', 200),
       this.foxy.derivativesByCoin(coin).catch(() => null),
       this.foxy.whalesByCoin(coin, { hours: 4 }).catch(() => null),
+      this.foxy.positioningByCoin(coin, '1h').catch(() => null),
     ]);
 
-    const tf5 = this.buildBlock(k5, '5m', derivatives, whales);
-    const tf15 = this.buildBlock(k15, '15m', derivatives, whales);
-    const tf1h = this.buildBlock(k1h, '1h', derivatives, whales);
+    const tf5 = this.buildBlock(k5, '5m', derivatives, whales, positioning);
+    const tf15 = this.buildBlock(k15, '15m', derivatives, whales, positioning);
+    const tf1h = this.buildBlock(k1h, '1h', derivatives, whales, positioning);
 
     // Combined direction: 1h gets 50% weight, 15m 30%, 5m 20%.
     const score =
@@ -205,6 +213,7 @@ export class RightNowService implements OnModuleInit, OnModuleDestroy {
       tf_1h: tf1h,
       combined,
       combined_confidence: round(combined_confidence, 2),
+      positioning,
     };
   }
 
@@ -213,9 +222,10 @@ export class RightNowService implements OnModuleInit, OnModuleDestroy {
     tf: Tf,
     derivatives: Awaited<ReturnType<FoxyService['derivativesByCoin']>> | null,
     whales: Awaited<ReturnType<FoxyService['whalesByCoin']>> | null,
+    positioning: FoxyPositioning | null,
   ): RightNowTfBlock {
     const pa = analyzePriceAction(klines);
-    const sig = computeSignal({ pa, derivatives, whales, tf });
+    const sig = computeSignal({ pa, derivatives, whales, positioning, tf });
     return {
       ...sig,
       last: pa.last,
@@ -246,6 +256,14 @@ export class RightNowService implements OnModuleInit, OnModuleDestroy {
           coin,
           combined: raw.combined,
           combined_confidence: raw.combined_confidence,
+          positioning: raw.positioning
+            ? {
+                divergence: raw.positioning.divergence,
+                top_long_pct: raw.positioning.top_traders?.long_pct ?? null,
+                retail_long_pct: raw.positioning.retail?.long_pct ?? null,
+                spread: raw.positioning.spread,
+              }
+            : null,
           tfs: {
             '5m': digestForAi(raw.tf_5m),
             '15m': digestForAi(raw.tf_15m),

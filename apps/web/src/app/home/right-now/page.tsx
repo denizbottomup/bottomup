@@ -39,6 +39,23 @@ interface TfBlock {
   };
 }
 
+interface Positioning {
+  coin: string;
+  period: string;
+  ts: number;
+  retail: { long_pct: number; short_pct: number; ratio: number } | null;
+  top_traders: { long_pct: number; short_pct: number; ratio: number } | null;
+  spread: number | null;
+  divergence:
+    | 'smart_bulls'
+    | 'smart_bears'
+    | 'top_heavy'
+    | 'capitulation_setup'
+    | 'aligned_long'
+    | 'aligned_short'
+    | 'neutral';
+}
+
 interface Asset {
   coin: string;
   tf_5m: TfBlock | null;
@@ -46,6 +63,7 @@ interface Asset {
   tf_1h: TfBlock | null;
   combined: SignalKind;
   combined_confidence: number;
+  positioning: Positioning | null;
   ai: {
     headline: string;
     invalidation: string;
@@ -215,6 +233,7 @@ function AssetCard({ asset }: { asset: Asset }) {
           bir tazelenir.)
         </div>
       )}
+      <PositioningStrip positioning={asset.positioning} />
       <div className="grid grid-cols-1 divide-y divide-border md:grid-cols-3 md:divide-x md:divide-y-0">
         <TfPanel label="5m" tf={asset.tf_5m} />
         <TfPanel label="15m" tf={asset.tf_15m} />
@@ -222,6 +241,145 @@ function AssetCard({ asset }: { asset: Asset }) {
       </div>
     </section>
   );
+}
+
+function PositioningStrip({ positioning }: { positioning: Positioning | null }) {
+  if (!positioning || !positioning.top_traders || !positioning.retail) {
+    return (
+      <div className="border-b border-border px-5 py-3 text-[11px] text-fg-dim">
+        Pozisyon kıyası şu an kullanılamıyor.
+      </div>
+    );
+  }
+  const { top_traders, retail, spread, divergence } = positioning;
+  const verdict = divergenceCopy(divergence);
+
+  return (
+    <div className="border-b border-border bg-bg/40 px-5 py-3">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <span className="mono-label !text-fg-dim">Balinalar vs küçükler</span>
+          <span className="text-[10px] font-mono text-fg-dim">
+            (1h, Binance)
+          </span>
+        </div>
+        <span
+          className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ring-1 ${verdict.tone}`}
+        >
+          {verdict.badge}
+        </span>
+      </div>
+
+      <div className="mt-2 grid grid-cols-2 gap-3">
+        <PositioningRow
+          label="Balinalar"
+          subtitle="top %20 trader pozisyonu"
+          longPct={top_traders.long_pct}
+          shortPct={top_traders.short_pct}
+        />
+        <PositioningRow
+          label="Küçükler"
+          subtitle="tüm hesap dağılımı"
+          longPct={retail.long_pct}
+          shortPct={retail.short_pct}
+        />
+      </div>
+
+      <div className="mt-2 flex items-center justify-between gap-3 text-[11px] text-fg-muted">
+        <span>{verdict.message}</span>
+        {spread != null ? (
+          <span
+            className={`font-mono ${
+              spread >= 0 ? 'text-emerald-300' : 'text-rose-300'
+            }`}
+          >
+            spread {spread >= 0 ? '+' : ''}
+            {(spread * 100).toFixed(1)}pp
+          </span>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+function PositioningRow({
+  label,
+  subtitle,
+  longPct,
+  shortPct,
+}: {
+  label: string;
+  subtitle: string;
+  longPct: number;
+  shortPct: number;
+}) {
+  const longWidth = Math.round(longPct * 100);
+  return (
+    <div>
+      <div className="flex items-center justify-between text-[11px]">
+        <span className="text-fg">{label}</span>
+        <span className="font-mono text-fg-dim">{subtitle}</span>
+      </div>
+      <div className="mt-1 flex h-2 overflow-hidden rounded-full bg-rose-400/20">
+        <div className="bg-emerald-400" style={{ width: `${longWidth}%` }} />
+      </div>
+      <div className="mt-1 flex justify-between text-[10px] font-mono">
+        <span className="text-emerald-300">L {(longPct * 100).toFixed(1)}%</span>
+        <span className="text-rose-300">{(shortPct * 100).toFixed(1)}% S</span>
+      </div>
+    </div>
+  );
+}
+
+function divergenceCopy(d: Positioning['divergence']): {
+  badge: string;
+  tone: string;
+  message: string;
+} {
+  switch (d) {
+    case 'smart_bulls':
+      return {
+        badge: 'Smart bulls',
+        tone: 'bg-emerald-400/10 ring-emerald-400/30 text-emerald-300',
+        message: 'Balinalar belirgin long, küçükler temkinli — whale takibi.',
+      };
+    case 'capitulation_setup':
+      return {
+        badge: 'Squeeze fitili',
+        tone: 'bg-emerald-400/10 ring-emerald-400/30 text-emerald-300',
+        message: 'Küçükler shorta yaslandı, balinalar uzun — short squeeze riski.',
+      };
+    case 'top_heavy':
+      return {
+        badge: 'Top-heavy',
+        tone: 'bg-rose-400/10 ring-rose-400/30 text-rose-300',
+        message: 'Küçükler euforik long, balinalar temkinli — distribution baskısı.',
+      };
+    case 'smart_bears':
+      return {
+        badge: 'Smart bears',
+        tone: 'bg-rose-400/10 ring-rose-400/30 text-rose-300',
+        message: 'Balinalar short tarafına yaslı, küçükler henüz uyanmadı.',
+      };
+    case 'aligned_long':
+      return {
+        badge: 'Hep long',
+        tone: 'bg-amber-400/10 ring-amber-400/30 text-amber-300',
+        message: 'Hem balinalar hem küçükler long — kalabalık tek taraflı.',
+      };
+    case 'aligned_short':
+      return {
+        badge: 'Hep short',
+        tone: 'bg-amber-400/10 ring-amber-400/30 text-amber-300',
+        message: 'Hem balinalar hem küçükler short — kalabalık tek taraflı.',
+      };
+    default:
+      return {
+        badge: 'Nötr',
+        tone: 'bg-white/5 ring-white/10 text-fg-muted',
+        message: 'Belirgin bir taraf ayrışması yok.',
+      };
+  }
 }
 
 function CombinedHeader({ asset }: { asset: Asset }) {

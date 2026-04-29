@@ -178,6 +178,51 @@ export interface FoxyDerivatives {
   } | null;
 }
 
+/**
+ * Smart-money vs retail kıyası — Binance'in iki ayrı public
+ * endpoint'inden besleniyor:
+ *
+ *   • topTraders → `topLongShortPositionRatio` — Binance hesaplarının
+ *     pozisyon büyüklüğüne göre top %20 dilimi. Whale proxy'si.
+ *   • retail    → `globalLongShortAccountRatio`  — TÜM hesapların
+ *     long/short oranı. Retail proxy'si.
+ *
+ * Aralarındaki spread (top_long - retail_long) klasik bir distribution
+ * / accumulation göstergesidir:
+ *   spread > +0.1 → balinalar belirgin bullish, retail temkinli (smart bulls)
+ *   spread < -0.1 → balinalar belirgin bearish, retail bullish (top heavy)
+ */
+export interface FoxyPositioning {
+  coin: string;
+  /** "1h" | "5m" | "15m" — hangi pencere üzerinden okundu. */
+  period: string;
+  ts: number;
+  retail: { long_pct: number; short_pct: number; ratio: number } | null;
+  top_traders: { long_pct: number; short_pct: number; ratio: number } | null;
+  /** top_long - retail_long; pozitif → balinalar daha bullish. */
+  spread: number | null;
+  /**
+   * Yorumlanmış divergence durumu. UI bunu rozet ve renkler için
+   * okur, AI prompt'larında da bağlam olarak kullanılır.
+   *
+   *   smart_bulls          : top long-heavy, retail temkinli
+   *   smart_bears          : top short-heavy, retail bullish (en kuvvetli ters sinyal)
+   *   top_heavy            : retail long-heavy, top temkinli/bearish — distribution riski
+   *   capitulation_setup   : retail short-heavy, top long-heavy — squeeze fitili
+   *   aligned_long         : ikisi de long-heavy
+   *   aligned_short        : ikisi de short-heavy
+   *   neutral              : iki taraf da %50'ye yakın
+   */
+  divergence:
+    | 'smart_bulls'
+    | 'smart_bears'
+    | 'top_heavy'
+    | 'capitulation_setup'
+    | 'aligned_long'
+    | 'aligned_short'
+    | 'neutral';
+}
+
 interface SetupRow {
   id: string;
   coin_name: string;
@@ -676,6 +721,95 @@ export class FoxyService implements OnModuleInit {
         between_usd: Math.round(between),
       },
     };
+  }
+
+  /**
+   * Smart-money vs retail positioning — Binance'in iki ayrı public
+   * data endpoint'inden besleniyor. İki tarafın long/short %'ine ek
+   * olarak interpretive bir `divergence` etiketi döndürür; bunu hem
+   * `/me/foxy/positioning/:coin` hem de Right Now signal engine
+   * tüketir.
+   *
+   * Period default 1h çünkü Right Now zaten 5m/15m/1h üzerinden bakıyor
+   * ve bu method TF-blind cross-source bağlam veriyor — daha kısa
+   * pencerede oran daha gürültülü.
+   */
+  async positioningByCoin(
+    coinInput: string,
+    period: '5m' | '15m' | '1h' = '1h',
+  ): Promise<FoxyPositioning> {
+    const symbol = normalizeCoinName(coinInput);
+    const bare = symbol.replace(/USDT$/i, '');
+    const [topRow, retailRow] = await Promise.all([
+      this.fetchPositionRatio('topLongShortPositionRatio', symbol, period).catch(
+        () => null,
+      ),
+      this.fetchPositionRatio('globalLongShortAccountRatio', symbol, period).catch(
+        () => null,
+      ),
+    ]);
+
+    const top = topRow
+      ? {
+          long_pct: topRow.long,
+          short_pct: topRow.short,
+          ratio: topRow.long / Math.max(0.0001, topRow.short),
+        }
+      : null;
+    const retail = retailRow
+      ? {
+          long_pct: retailRow.long,
+          short_pct: retailRow.short,
+          ratio: retailRow.long / Math.max(0.0001, retailRow.short),
+        }
+      : null;
+
+    const spread =
+      top && retail ? round(top.long_pct - retail.long_pct, 4) : null;
+
+    const divergence = classifyDivergence(top, retail, spread);
+
+    return {
+      coin: bare,
+      period,
+      ts: topRow?.ts ?? retailRow?.ts ?? Date.now(),
+      retail,
+      top_traders: top,
+      spread,
+      divergence,
+    };
+  }
+
+  /**
+   * Single-shot fetcher used by both top and retail position ratio.
+   * Both endpoints have the same response shape, so the call site
+   * just picks which path to hit.
+   */
+  private async fetchPositionRatio(
+    path: 'topLongShortPositionRatio' | 'globalLongShortAccountRatio',
+    symbol: string,
+    period: string,
+  ): Promise<{ long: number; short: number; ts: number } | null> {
+    const url = `https://fapi.binance.com/futures/data/${path}?symbol=${encodeURIComponent(symbol)}&period=${period}&limit=1`;
+    const res = await fetch(url, { signal: AbortSignal.timeout(6000) });
+    if (!res.ok) return null;
+    const json = (await res.json()) as Array<{
+      longAccount?: string;
+      shortAccount?: string;
+      longPosition?: string;
+      shortPosition?: string;
+      timestamp?: number;
+    }>;
+    const first = Array.isArray(json) ? json[0] : null;
+    if (!first) return null;
+    // The two endpoints use slightly different field names — the
+    // position-ratio endpoint emits longPosition/shortPosition, the
+    // account-ratio one emits longAccount/shortAccount.
+    const long = Number(first.longAccount ?? first.longPosition ?? 0);
+    const short = Number(first.shortAccount ?? first.shortPosition ?? 0);
+    if (!Number.isFinite(long) || !Number.isFinite(short)) return null;
+    if (long <= 0 && short <= 0) return null;
+    return { long, short, ts: Number(first.timestamp ?? Date.now()) };
   }
 
   /**
@@ -1313,6 +1447,45 @@ function clampPct(n: unknown): number {
   const x = Number(n);
   if (!Number.isFinite(x)) return 50;
   return Math.max(0, Math.min(100, Math.round(x)));
+}
+
+function round(x: number, dp: number): number {
+  if (!Number.isFinite(x)) return 0;
+  const p = Math.pow(10, dp);
+  return Math.round(x * p) / p;
+}
+
+/**
+ * Bucket the smart-vs-retail spread into one of seven interpretive
+ * states. Thresholds are intentionally generous around `neutral` so
+ * we don't flip on every tick — divergence only fires when the gap
+ * is meaningfully wider than 10 percentage points.
+ */
+function classifyDivergence(
+  top: { long_pct: number; short_pct: number } | null,
+  retail: { long_pct: number; short_pct: number } | null,
+  spread: number | null,
+): FoxyPositioning['divergence'] {
+  if (!top || !retail || spread == null) return 'neutral';
+  const topLong = top.long_pct >= 0.55;
+  const topShort = top.long_pct <= 0.45;
+  const retailLong = retail.long_pct >= 0.55;
+  const retailShort = retail.long_pct <= 0.45;
+
+  // Strong divergence: > 10 percentage points spread.
+  if (spread >= 0.1) {
+    if (retailShort) return 'capitulation_setup';
+    return 'smart_bulls';
+  }
+  if (spread <= -0.1) {
+    if (retailLong) return 'top_heavy';
+    return 'smart_bears';
+  }
+
+  // Aligned regimes — both sides leaning the same way, no divergence.
+  if (topLong && retailLong) return 'aligned_long';
+  if (topShort && retailShort) return 'aligned_short';
+  return 'neutral';
 }
 
 /**

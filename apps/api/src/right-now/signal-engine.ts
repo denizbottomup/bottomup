@@ -11,7 +11,11 @@
  * stable even when the LLM call fails or is rate-limited.
  */
 import type { PriceActionRead } from './price-action.js';
-import type { FoxyDerivatives, FoxyWhales } from '../foxy/foxy.service.js';
+import type {
+  FoxyDerivatives,
+  FoxyPositioning,
+  FoxyWhales,
+} from '../foxy/foxy.service.js';
 
 export type SignalKind = 'long' | 'short' | 'wait';
 
@@ -40,6 +44,9 @@ export interface SignalContext {
   pa: PriceActionRead;
   derivatives: FoxyDerivatives | null;
   whales: FoxyWhales | null;
+  /** Top-trader vs retail long/short kıyası. Cross-source divergence
+   *  signal — slow but strong, downweighted on 5m. */
+  positioning: FoxyPositioning | null;
   /** Used to prefer whale flow on lower TFs less than higher ones. */
   tf: '5m' | '15m' | '1h';
 }
@@ -54,6 +61,14 @@ const TF_WHALE_WEIGHT: Record<SignalContext['tf'], number> = {
   // Whale flow is a slow signal — barely useful on 5m, dominant on 1h.
   '5m': 0.2,
   '15m': 0.5,
+  '1h': 1.0,
+};
+
+const TF_POSITIONING_WEIGHT: Record<SignalContext['tf'], number> = {
+  // Positioning divergence is a structural read — meaningful on 1h,
+  // muted on 5m where intra-bar noise dominates.
+  '5m': 0.3,
+  '15m': 0.6,
   '1h': 1.0,
 };
 
@@ -116,7 +131,37 @@ export function computeSignal(ctx: SignalContext): TfSignal {
     }
   }
 
-  // 3) Whale flow (Arkham) -------------------------------------------
+  // 3) Smart-money vs retail (positioning divergence) ----------------
+  const pwt = TF_POSITIONING_WEIGHT[ctx.tf];
+  if (ctx.positioning) {
+    switch (ctx.positioning.divergence) {
+      case 'smart_bulls':
+        // Top traders long-heavy, retail neutral/short → follow whales.
+        push(factors, 'Whales bullish, retail not', 0.25 * pwt);
+        break;
+      case 'capitulation_setup':
+        // Top long, retail capitulating short → squeeze fitili.
+        push(factors, 'Retail capitulation + smart long', 0.3 * pwt);
+        break;
+      case 'top_heavy':
+        // Retail long-heavy, whales temkinli → distribution riski.
+        push(factors, 'Retail euphoria, smart cautious', -0.25 * pwt);
+        break;
+      case 'smart_bears':
+        push(factors, 'Whales short, retail not', -0.25 * pwt);
+        break;
+      case 'aligned_long':
+        push(factors, 'Crowd long-aligned', -0.05 * pwt);
+        break;
+      case 'aligned_short':
+        push(factors, 'Crowd short-aligned', 0.05 * pwt);
+        break;
+      default:
+        break;
+    }
+  }
+
+  // 4) Whale flow (Arkham) -------------------------------------------
   const wwt = TF_WHALE_WEIGHT[ctx.tf];
   if (ctx.whales) {
     const f = ctx.whales.flows;

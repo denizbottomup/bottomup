@@ -6,6 +6,7 @@ import {
   type FoxyChatMessage,
   type FoxyDerivatives,
   type FoxyOverview,
+  type FoxyPositioning,
   type FoxyQueryReply,
   type FoxySetupsByCoin,
   type FoxyVerdict,
@@ -96,6 +97,23 @@ export class FoxyController {
     const prompt = String(body?.prompt ?? '').trim();
     if (!prompt) throw new BadRequestException('prompt required');
     return this.foxy.query(user, prompt, body?.coin ?? null);
+  }
+
+  /**
+   * `/me/foxy/positioning/:coin` — smart-money (top trader) vs
+   * retail (global account) long/short positioning kıyası. Optional
+   * query param `period` (5m | 15m | 1h, default 1h).
+   */
+  @Get('/me/foxy/positioning/:coin')
+  async positioningByCoin(
+    @Param('coin') coin: string,
+    @Query('period') periodRaw?: string,
+  ): Promise<FoxyPositioning> {
+    const period =
+      periodRaw === '5m' || periodRaw === '15m' || periodRaw === '1h'
+        ? periodRaw
+        : '1h';
+    return this.foxy.positioningByCoin(coin, period);
   }
 
   /**
