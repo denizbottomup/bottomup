@@ -51,7 +51,21 @@ export class Replicator {
   }
 
   async start(): Promise<void> {
-    // Bootstrap cursors from target's current max
+    // Bootstrap cursors from target's current max, then back up by 24h.
+    //
+    // Why the rewind: legacy rows whose `updated_at` is earlier than the
+    // target table's MAX(updated_at) get permanently skipped — the cursor
+    // starts ahead of them and the polling query (`WHERE col > cursor`)
+    // never sees them. We hit this in production with a trader who
+    // renamed themselves at 00:21 while another row landed at 14:02 in
+    // the same day; bootstrap then anchored the cursor at 14:02 and the
+    // 00:21 update was orphaned forever.
+    //
+    // Rewinding by 24h on every start re-considers the past day's
+    // changes. Upserts are idempotent (INSERT ON CONFLICT DO UPDATE),
+    // so the only cost is one extra batch's worth of round-trips per
+    // restart — cheap relative to the alternative of stale rows.
+    const REWIND_MS = 24 * 60 * 60 * 1000;
     const dst = await this.dst.connect();
     try {
       for (const spec of REPLICATED_TABLES) {
@@ -59,13 +73,21 @@ export class Replicator {
         const { rows } = await dst.query(
           `SELECT MAX(${q(spec.cursorCol)}) AS v FROM ${q(spec.name)}`,
         );
-        const v = rows[0]?.v ?? null;
-        this.cursors.set(spec.name, v instanceof Date ? v.toISOString() : v);
+        const raw = rows[0]?.v ?? null;
+        if (raw == null) {
+          this.cursors.set(spec.name, null);
+          continue;
+        }
+        const ms = (raw instanceof Date ? raw.getTime() : new Date(String(raw)).getTime()) - REWIND_MS;
+        this.cursors.set(spec.name, new Date(ms).toISOString());
       }
     } finally {
       dst.release();
     }
-    this.log.info({ tables: this.cursors.size }, 'replicator: cursors bootstrapped');
+    this.log.info(
+      { tables: this.cursors.size, rewindMs: REWIND_MS },
+      'replicator: cursors bootstrapped',
+    );
   }
 
   async stop(): Promise<void> {
