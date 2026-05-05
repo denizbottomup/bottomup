@@ -73,6 +73,31 @@ export interface TraderDetailSummary {
   }>;
 }
 
+export interface AnalystStats {
+  win_rate: number | null;
+  monthly_win_rate: number | null;
+  pnl: number | null;
+  pnl_rate: number | null;
+  monthly_pnl: number | null;
+  monthly_pnl_rate: number | null;
+  monthly_r: number | null;
+  monthly_roi: number | null;
+  rate: number | null;
+  risk_score: number | null;
+  stat_at: Date | null;
+}
+
+export interface AnalystListItem {
+  trader_id: string;
+  name: string | null;
+  first_name: string | null;
+  last_name: string | null;
+  image: string | null;
+  referral_code: string | null;
+  followers: number;
+  stats: AnalystStats;
+}
+
 export interface LandingTrader {
   trader_id: string;
   name: string | null;
@@ -502,6 +527,79 @@ export class PublicService {
       long_short: { long, short },
       recent,
     };
+  }
+
+  /**
+   * Public analyst directory: name, image, pre-computed `trader_stats`
+   * aggregates and the trader's `referral_code`. Different from
+   * `topTraders` — that one rebuilds a 30-day window from raw setups
+   * and excludes traders with no recent activity. This list is the
+   * full active-trader roster (with stats columns nullable for traders
+   * the daily aggregator hasn't reached yet). Sort key is whitelisted
+   * to avoid SQL injection on the ORDER BY clause.
+   */
+  async analystList(
+    limit: number,
+    orderBy: string,
+  ): Promise<AnalystListItem[]> {
+    const cap = Math.max(1, Math.min(100, limit));
+    const sortable: Record<string, string> = {
+      monthly_pnl: 'ts.monthly_pnl',
+      monthly_pnl_rate: 'ts.monthly_pnl_rate',
+      monthly_roi: 'ts.monthly_roi',
+      monthly_win_rate: 'ts.monthly_win_rate',
+      pnl: 'ts.pnl',
+      win_rate: 'ts.win_rate',
+      rate: 'ts.rate',
+      followers: 'followers',
+      name: 'u.name',
+    };
+    const sortCol = sortable[orderBy] ?? sortable.monthly_pnl;
+    const sortDir = sortCol === 'u.name' ? 'ASC' : 'DESC';
+
+    const rows = await this.prisma.$queryRawUnsafe<Array<Record<string, unknown>>>(
+      `SELECT u.id::text   AS trader_id,
+              u.name,
+              u.first_name,
+              u.last_name,
+              u.image,
+              u.referral_code,
+              (SELECT COUNT(*)::int FROM follow_notify f
+                WHERE f.trader_id = u.id AND f.follow = TRUE AND f.is_deleted = FALSE) AS followers,
+              ts.win_rate, ts.monthly_win_rate, ts.pnl, ts.pnl_rate,
+              ts.monthly_pnl, ts.monthly_pnl_rate, ts.monthly_r, ts.monthly_roi,
+              ts.rate, ts.risk_score, ts.stat_at
+         FROM "user" u
+         LEFT JOIN trader_stats ts ON ts.trader_id = u.id
+        WHERE u.is_trader = TRUE AND u.is_active = TRUE AND u.is_deleted = FALSE
+        ORDER BY ${sortCol} ${sortDir} NULLS LAST
+        LIMIT ${cap}`,
+    );
+
+    return rows.map((r) => ({
+      trader_id: r.trader_id as string,
+      name: (r.name as string | null) ?? null,
+      first_name: (r.first_name as string | null) ?? null,
+      last_name: (r.last_name as string | null) ?? null,
+      image: (r.image as string | null) ?? null,
+      referral_code: (r.referral_code as string | null) ?? null,
+      followers: Number(r.followers ?? 0),
+      stats: {
+        win_rate: r.win_rate == null ? null : Number(r.win_rate),
+        monthly_win_rate:
+          r.monthly_win_rate == null ? null : Number(r.monthly_win_rate),
+        pnl: r.pnl == null ? null : Number(r.pnl),
+        pnl_rate: r.pnl_rate == null ? null : Number(r.pnl_rate),
+        monthly_pnl: r.monthly_pnl == null ? null : Number(r.monthly_pnl),
+        monthly_pnl_rate:
+          r.monthly_pnl_rate == null ? null : Number(r.monthly_pnl_rate),
+        monthly_r: r.monthly_r == null ? null : Number(r.monthly_r),
+        monthly_roi: r.monthly_roi == null ? null : Number(r.monthly_roi),
+        rate: r.rate == null ? null : Number(r.rate),
+        risk_score: r.risk_score == null ? null : Number(r.risk_score),
+        stat_at: (r.stat_at as Date | null) ?? null,
+      },
+    }));
   }
 
   /**

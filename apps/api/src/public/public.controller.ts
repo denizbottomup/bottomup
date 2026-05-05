@@ -66,4 +66,20 @@ export class PublicController {
     if (!out) throw new NotFoundException(`Trader "${name}" not found`);
     return out;
   }
+
+  /**
+   * Public analyst directory — name, image, pre-aggregated stats and
+   * the trader's referral code. Powers `bottomup.app/analyst` (and
+   * `bupcore.ai/analyst` while the page is in lab). All fields are
+   * already exposed on the authenticated mobile profile; the referral
+   * code is a public promo string that traders share off-platform.
+   */
+  @Get('/analysts')
+  analysts(
+    @Query('limit') limit?: string,
+    @Query('order_by') orderBy?: string,
+  ): ReturnType<PublicService['analystList']> {
+    const cap = Number(limit ?? 20) || 20;
+    return this.pub.analystList(cap, String(orderBy ?? 'monthly_pnl'));
+  }
 }
