@@ -2,6 +2,11 @@
 
 Mobile backend (v2.2.1 kontrat uyumlu) — TypeScript monorepo.
 
+> **Runbook'lar (oku, sorun yaşamadan çalış):**
+> - [`docs/RAILWAY.md`](docs/RAILWAY.md) — servis haritası, branch mapping (`lab` vs `main`), env, deploy quirks
+> - [`docs/LIVE_MACRO.md`](docs/LIVE_MACRO.md) — bupcore.ai/home/live-macro: yt-dlp + ffmpeg + SSE simültane çeviri pipeline'ı
+> - bupcore.ai/analyst sayfası backend'i (public endpoint'ler) → karşı repo dokümanı: [bupcore/docs/ANALYST.md](https://github.com/bottomupapp/bupcore/blob/main/docs/ANALYST.md)
+
 ## Yapı
 
 ```
