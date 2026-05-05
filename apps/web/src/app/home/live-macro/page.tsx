@@ -9,15 +9,17 @@ const API_BASE =
 
 /**
  * Live Macro — finansla ilgili kim canlıdaysa, kullanıcı arar, izler,
- * kendi dilinde çeviri görür.
+ * kendi dilinde simültane çeviri görür.
  *
  *   1. Kullanıcı arama kutusuna sorgu yazar (powell, fomc, lagarde,
  *      bitcoin trading live, fed kashkari, ...).
  *   2. Backend YouTube Data API v3'te `eventType=live` aramasını yapar.
- *      YT_API_KEY yoksa curated finans kanalı listesinde fuzzy match.
- *   3. Sonuçlar canlı yayın kartları olarak listelenir; tıklayınca
- *      seçilen kanal embed olur ve "çevirili transcript başlat"
- *      butonuyla Whisper + Claude pipeline devreye girer.
+ *   3. Kullanıcı bir kanal seçer; sayfa hemen sunucuya bir SSE bağlantısı
+ *      açar (`/me/livecast/stream/:videoId?lang=…`). Sunucu yt-dlp +
+ *      ffmpeg ile yayını yakalar, 8 saniyelik ses bloklarını Whisper'a,
+ *      transkripti Claude'a yollayıp orijinal + çeviriyi event olarak
+ *      döner. Hiçbir tarayıcı sekme paylaşımı, hiçbir izin penceresi
+ *      yok — tüm yakalama sunucuda.
  */
 
 interface SearchHit {
@@ -63,7 +65,12 @@ const QUICK_QUERIES = [
   'reuters',
 ];
 
-const CHUNK_MS = 8000;
+type StreamState =
+  | 'idle'
+  | 'connecting'
+  | 'streaming'
+  | 'error'
+  | 'unavailable';
 
 export default function LiveMacroPage() {
   const { user, getIdToken } = useAuth();
@@ -72,18 +79,14 @@ export default function LiveMacroPage() {
   const [results, setResults] = useState<SearchHit[] | null>(null);
   const [searching, setSearching] = useState(false);
   const [searchEnabled, setSearchEnabled] = useState(true);
-  const [transcribeEnabled, setTranscribeEnabled] = useState(false);
+  const [streamReady, setStreamReady] = useState(false);
   const [selected, setSelected] = useState<SearchHit | null>(null);
 
-  // Recorder state for the in-tab audio capture pipeline.
-  const [recState, setRecState] = useState<
-    'idle' | 'starting' | 'recording' | 'denied' | 'unsupported' | 'error'
-  >('idle');
+  const [streamState, setStreamState] = useState<StreamState>('idle');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [lines, setLines] = useState<TranscriptLine[]>([]);
-  const mediaStreamRef = useRef<MediaStream | null>(null);
-  const recorderRef = useRef<MediaRecorder | null>(null);
   const transcriptEndRef = useRef<HTMLDivElement | null>(null);
+  const esRef = useRef<EventSource | null>(null);
 
   // Bootstrap: pull config + remember language.
   useEffect(() => {
@@ -104,12 +107,12 @@ export default function LiveMacroPage() {
         });
         if (!res.ok) return;
         const j = (await res.json()) as {
-          transcribe_enabled?: boolean;
+          stream_enabled?: boolean;
           search_enabled?: boolean;
         };
         if (alive) {
-          setTranscribeEnabled(!!j.transcribe_enabled);
-          setSearchEnabled(j.search_enabled !== false); // default true if absent
+          setStreamReady(!!j.stream_enabled);
+          setSearchEnabled(j.search_enabled !== false);
         }
       } catch {
         // Best-effort probe.
@@ -124,12 +127,86 @@ export default function LiveMacroPage() {
     transcriptEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [lines.length]);
 
+  // Open / re-open the SSE connection whenever the selected channel or
+  // target language changes. Closing & reopening on lang change is fine —
+  // the server caches per-stream transcripts so a re-subscribe immediately
+  // gets the recent context translated into the new language.
   useEffect(() => {
+    if (!selected) return;
+    if (!streamReady) {
+      setStreamState('unavailable');
+      return;
+    }
+
+    let cancelled = false;
+    setStreamState('connecting');
+    setErrorMsg(null);
+    setLines([]);
+
+    (async () => {
+      const token = await getIdToken();
+      if (cancelled) return;
+      if (!token) {
+        setStreamState('error');
+        setErrorMsg('Oturum bulunamadı, sayfayı yenile.');
+        return;
+      }
+      const url = new URL(
+        `${API_BASE}/me/livecast/stream/${encodeURIComponent(
+          selected.video_id,
+        )}`,
+      );
+      url.searchParams.set('lang', targetLang);
+      url.searchParams.set('token', token);
+
+      const es = new EventSource(url.toString());
+      esRef.current = es;
+
+      es.addEventListener('ready', () => {
+        if (cancelled) return;
+        setStreamState('streaming');
+      });
+      es.addEventListener('chunk', (ev) => {
+        if (cancelled) return;
+        try {
+          const data = JSON.parse((ev as MessageEvent).data) as {
+            ts: string;
+            original: string;
+            translated: string;
+          };
+          if (!data.original) return;
+          setLines((prev) => [
+            ...prev,
+            {
+              id: `${data.ts}-${Math.random().toString(36).slice(2, 8)}`,
+              original: data.original,
+              translated: data.translated,
+              ts: data.ts,
+            },
+          ]);
+        } catch {
+          /* malformed event — skip */
+        }
+      });
+      es.addEventListener('error', () => {
+        if (cancelled) return;
+        // EventSource fires `error` both for transient drops (it'll
+        // reconnect on its own) and final closes. Surface it once.
+        if (es.readyState === EventSource.CLOSED) {
+          setStreamState('error');
+          setErrorMsg(
+            'Yayın akışı kapandı. Yayın sona ermiş olabilir veya sunucuya ulaşılamıyor.',
+          );
+        }
+      });
+    })();
+
     return () => {
-      stopRecorder();
+      cancelled = true;
+      esRef.current?.close();
+      esRef.current = null;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [selected?.video_id, targetLang, streamReady, getIdToken]);
 
   const updateLang = (code: string) => {
     setTargetLang(code);
@@ -167,115 +244,7 @@ export default function LiveMacroPage() {
   };
 
   const onSelect = (hit: SearchHit) => {
-    // Stop any ongoing recording before switching streams — different
-    // tab audio source means we'd be transcribing the wrong thing.
-    stopRecorder();
-    setLines([]);
     setSelected(hit);
-  };
-
-  const stopRecorder = () => {
-    try {
-      recorderRef.current?.state !== 'inactive' && recorderRef.current?.stop();
-    } catch {
-      /* ignore */
-    }
-    mediaStreamRef.current?.getTracks().forEach((t) => t.stop());
-    mediaStreamRef.current = null;
-    recorderRef.current = null;
-    setRecState('idle');
-  };
-
-  const startRecorder = async () => {
-    setErrorMsg(null);
-    if (typeof window === 'undefined' || !navigator.mediaDevices?.getDisplayMedia) {
-      setRecState('unsupported');
-      setErrorMsg('Tarayıcın sekme ses paylaşımını desteklemiyor.');
-      return;
-    }
-    setRecState('starting');
-    try {
-      const stream = await navigator.mediaDevices.getDisplayMedia({
-        video: true,
-        audio: true,
-      });
-      if (stream.getAudioTracks().length === 0) {
-        stream.getTracks().forEach((t) => t.stop());
-        setRecState('error');
-        setErrorMsg(
-          'Sekme sesini paylaşmadın. Tekrar dene ve "Sekme sesini paylaş" kutusunu işaretle.',
-        );
-        return;
-      }
-      stream.getVideoTracks().forEach((t) => t.stop());
-      const audioOnly = new MediaStream(stream.getAudioTracks());
-      mediaStreamRef.current = audioOnly;
-
-      const mime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
-        ? 'audio/webm;codecs=opus'
-        : 'audio/webm';
-      const rec = new MediaRecorder(audioOnly, { mimeType: mime });
-      recorderRef.current = rec;
-
-      rec.ondataavailable = async (ev) => {
-        if (!ev.data || ev.data.size < 1024) return;
-        const blob = ev.data;
-        const buf = await blob.arrayBuffer();
-        const b64 = bufferToBase64(buf);
-        const token = await getIdToken();
-        if (!token) return;
-        try {
-          const res = await fetch(`${API_BASE}/me/livecast/audio`, {
-            method: 'POST',
-            headers: {
-              Authorization: `Bearer ${token}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              audio_b64: b64,
-              mime: blob.type || 'audio/webm',
-              target_lang: targetLang,
-            }),
-          });
-          if (!res.ok) return;
-          const data = (await res.json()) as {
-            original: string;
-            translated: string;
-            ts: string;
-          };
-          if (!data.original) return;
-          setLines((prev) => [
-            ...prev,
-            {
-              id: `${data.ts}-${Math.random().toString(36).slice(2, 8)}`,
-              original: data.original,
-              translated: data.translated,
-              ts: data.ts,
-            },
-          ]);
-        } catch {
-          /* single chunk failure — next chunk will try again */
-        }
-      };
-
-      rec.onerror = () => {
-        setRecState('error');
-        setErrorMsg('Kayıt sırasında hata oluştu.');
-        stopRecorder();
-      };
-
-      audioOnly.getAudioTracks()[0]?.addEventListener('ended', () => {
-        stopRecorder();
-      });
-
-      rec.start(CHUNK_MS);
-      setRecState('recording');
-    } catch (err) {
-      setRecState('denied');
-      setErrorMsg(
-        (err as Error).message || 'İzin verilmedi veya kayıt başlatılamadı.',
-      );
-    }
   };
 
   return (
@@ -283,7 +252,7 @@ export default function LiveMacroPage() {
       <header className="border-b border-border px-4 py-4 md:px-8 md:py-5">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <div className="mono-label !text-brand">Live Macro · canlı yayın araması</div>
+            <div className="mono-label !text-brand">Live Macro · canlı yayın çevirisi</div>
             <h1 className="mt-1 text-2xl font-extrabold tracking-tight md:text-3xl">
               Powell, Lagarde, Bloomberg.{' '}
               <span className="logo-gradient">Sen ara, sen oku.</span>
@@ -292,9 +261,9 @@ export default function LiveMacroPage() {
           <LangPicker value={targetLang} onChange={updateLang} />
         </div>
         <p className="mt-1 max-w-3xl text-sm text-fg-muted">
-          Kim şu an konuşuyor? Ara, izle, kendi dilinde transcript al.
-          Whisper + Claude finansal-ton çeviri 8 saniyelik bloklarla
-          panelde belirir.
+          Kim şu an konuşuyor? Ara, izle, kendi dilinde simültane çeviriyi
+          aşağıdaki panelden oku. Yayını yakalama, transkripsiyon ve çeviri
+          tamamen sunucuda — tarayıcı izin penceresi açılmaz.
         </p>
       </header>
 
@@ -325,12 +294,10 @@ export default function LiveMacroPage() {
             <PlayerSection
               hit={selected}
               targetLang={targetLang}
-              transcribeEnabled={transcribeEnabled}
-              recState={recState}
+              streamReady={streamReady}
+              streamState={streamState}
               errorMsg={errorMsg}
               lines={lines}
-              onStart={startRecorder}
-              onStop={stopRecorder}
               transcriptEndRef={transcriptEndRef}
             />
           ) : null}
@@ -518,26 +485,20 @@ function ResultCard({
 function PlayerSection({
   hit,
   targetLang,
-  transcribeEnabled,
-  recState,
+  streamReady,
+  streamState,
   errorMsg,
   lines,
-  onStart,
-  onStop,
   transcriptEndRef,
 }: {
   hit: SearchHit;
   targetLang: string;
-  transcribeEnabled: boolean;
-  recState: string;
+  streamReady: boolean;
+  streamState: StreamState;
   errorMsg: string | null;
   lines: TranscriptLine[];
-  onStart: () => void;
-  onStop: () => void;
   transcriptEndRef: React.RefObject<HTMLDivElement | null>;
 }) {
-  const recording = recState === 'recording';
-  const starting = recState === 'starting';
   const embedSrc = (() => {
     try {
       const u = new URL(hit.embed_url);
@@ -553,7 +514,8 @@ function PlayerSection({
   })();
 
   return (
-    <section className="space-y-4">
+    <section className="grid gap-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
+      {/* Player */}
       <div className="overflow-hidden rounded-2xl border border-border bg-bg-card">
         <div className="aspect-video w-full bg-black">
           <iframe
@@ -579,99 +541,55 @@ function PlayerSection({
             <span>{hit.channel}</span>
           </div>
           <div>
-            hedef dil:{' '}
-            <span className="text-fg">
-              {labelOfLang(targetLang)}
-            </span>
+            hedef dil: <span className="text-fg">{labelOfLang(targetLang)}</span>
           </div>
         </div>
       </div>
 
-      {transcribeEnabled ? (
-        <TranscriptPanel
-          recState={recState}
-          recording={recording}
-          starting={starting}
-          errorMsg={errorMsg}
-          lines={lines}
-          onStart={onStart}
-          onStop={onStop}
-          targetLang={targetLang}
-          transcriptEndRef={transcriptEndRef}
-        />
-      ) : (
-        <div className="rounded-2xl border border-amber-400/20 bg-amber-400/[0.04] p-5 text-sm text-fg-muted">
-          Çevirili transcript pasif — sunucuda OPENAI_API_KEY ayarlı değil.
-          YouTube'un kendi auto-translate altyazısını kullan: video sağ
-          alttaki CC → ⚙ → Auto-translate → {labelOfLang(targetLang)}.
-        </div>
-      )}
+      {/* Transcript pane (always visible — no permissions, no buttons) */}
+      <TranscriptPanel
+        streamReady={streamReady}
+        streamState={streamState}
+        errorMsg={errorMsg}
+        lines={lines}
+        targetLang={targetLang}
+        transcriptEndRef={transcriptEndRef}
+      />
     </section>
   );
 }
 
 function TranscriptPanel({
-  recording,
-  starting,
+  streamReady,
+  streamState,
   errorMsg,
   lines,
-  onStart,
-  onStop,
   targetLang,
   transcriptEndRef,
 }: {
-  recState: string;
-  recording: boolean;
-  starting: boolean;
+  streamReady: boolean;
+  streamState: StreamState;
   errorMsg: string | null;
   lines: TranscriptLine[];
-  onStart: () => void;
-  onStop: () => void;
   targetLang: string;
   transcriptEndRef: React.RefObject<HTMLDivElement | null>;
 }) {
   return (
-    <div className="rounded-2xl border border-border bg-bg-card overflow-hidden">
-      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-3">
+    <div className="flex h-full max-h-[calc(100vh-12rem)] flex-col rounded-2xl border border-border bg-bg-card overflow-hidden">
+      <header className="flex items-start justify-between gap-3 border-b border-border px-5 py-3">
         <div>
-          <div className="mono-label !text-brand">Çevirili transcript</div>
+          <div className="mono-label !text-brand">Simültane çeviri</div>
           <div className="mt-0.5 text-[11px] text-fg-dim">
             Whisper · Claude · {labelOfLang(targetLang)} · 8 saniyelik bloklarla
           </div>
         </div>
-        <button
-          type="button"
-          onClick={recording ? onStop : onStart}
-          disabled={starting}
-          className={`flex items-center gap-2 rounded-full border px-3 py-1.5 text-[11px] font-mono transition disabled:opacity-50 disabled:cursor-not-allowed ${
-            recording
-              ? 'border-rose-400/40 bg-rose-400/10 text-rose-200'
-              : 'border-brand/40 bg-brand/10 text-brand'
-          }`}
-        >
-          <span
-            className={`h-1.5 w-1.5 rounded-full ${
-              recording ? 'bg-rose-400 animate-pulse' : 'bg-brand'
-            }`}
-            aria-hidden
-          />
-          {starting
-            ? 'başlatılıyor…'
-            : recording
-              ? 'transkripti durdur'
-              : 'çevirili transcript başlat'}
-        </button>
+        <StreamBadge state={streamState} streamReady={streamReady} />
       </header>
 
-      {!recording && lines.length === 0 ? (
-        <div className="space-y-3 px-5 py-6 text-sm text-fg-muted">
-          <p>
-            Çevirili transcript başlat butonuna tıkla. Tarayıcı{' '}
-            <span className="font-semibold text-fg">"Sekme paylaş"</span>{' '}
-            penceresi açar — bu sekmeyi seç ve{' '}
-            <span className="font-semibold text-fg">"Sekme sesini paylaş"</span>{' '}
-            kutusunu işaretle.
-          </p>
+      {!streamReady ? (
+        <div className="px-5 py-6 text-sm text-fg-muted">
+          Çevirili transcript pasif — sunucuda <code className="text-fg">OPENAI_API_KEY</code> ayarlı değil.
+          Yayın altyazısı için: video sağ alttaki CC → ⚙ → Auto-translate → {labelOfLang(targetLang)}.
         </div>
       ) : null}
 
@@ -681,32 +599,37 @@ function TranscriptPanel({
         </div>
       ) : null}
 
+      {streamReady && lines.length === 0 && streamState === 'streaming' ? (
+        <div className="px-5 py-6 text-sm text-fg-muted">
+          Sunucu yayını yakalıyor; ilk blok 8-15 saniye içinde burada
+          görünmeye başlayacak.
+        </div>
+      ) : null}
+
+      {streamReady && lines.length === 0 && streamState === 'connecting' ? (
+        <div className="px-5 py-6 text-sm text-fg-muted">
+          Akış başlatılıyor…
+        </div>
+      ) : null}
+
       {lines.length > 0 ? (
-        <div className="max-h-[480px] overflow-y-auto">
+        <div className="flex-1 overflow-y-auto">
           <ol className="divide-y divide-border">
             {lines.map((l) => (
-              <li
-                key={l.id}
-                className="grid grid-cols-1 gap-3 px-5 py-3 md:grid-cols-2"
-              >
-                <div>
-                  <div className="text-[10px] uppercase tracking-wider text-fg-dim">
-                    Orijinal · {timeOf(l.ts)}
-                  </div>
-                  <div className="mt-1 text-[13px] leading-relaxed text-fg-muted">
-                    {l.original}
-                  </div>
+              <li key={l.id} className="px-5 py-3">
+                <div className="text-[10px] uppercase tracking-wider text-brand/70">
+                  {labelOfLang(targetLang)} · {timeOf(l.ts)}
                 </div>
-                <div>
-                  <div className="text-[10px] uppercase tracking-wider text-brand/70">
-                    {labelOfLang(targetLang)}
-                  </div>
-                  <div className="mt-1 text-[13px] leading-relaxed text-fg">
-                    {l.translated || (
-                      <span className="text-fg-dim italic">çevriliyor…</span>
-                    )}
-                  </div>
+                <div className="mt-1 text-[14px] leading-relaxed text-fg">
+                  {l.translated || (
+                    <span className="text-fg-dim italic">çevriliyor…</span>
+                  )}
                 </div>
+                {l.original ? (
+                  <div className="mt-2 text-[12px] leading-relaxed text-fg-muted">
+                    <span className="text-fg-dim">orijinal:</span> {l.original}
+                  </div>
+                ) : null}
               </li>
             ))}
           </ol>
@@ -717,6 +640,46 @@ function TranscriptPanel({
   );
 }
 
+function StreamBadge({
+  state,
+  streamReady,
+}: {
+  state: StreamState;
+  streamReady: boolean;
+}) {
+  if (!streamReady) {
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-400/30 bg-amber-400/10 px-2 py-0.5 text-[10px] font-mono text-amber-200">
+        pasif
+      </span>
+    );
+  }
+  if (state === 'connecting') {
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-full border border-brand/40 bg-brand/10 px-2 py-0.5 text-[10px] font-mono text-brand">
+        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-brand" />
+        bağlanıyor
+      </span>
+    );
+  }
+  if (state === 'streaming') {
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/30 bg-emerald-400/10 px-2 py-0.5 text-[10px] font-mono text-emerald-200">
+        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />
+        canlı çeviri
+      </span>
+    );
+  }
+  if (state === 'error') {
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-full border border-rose-400/30 bg-rose-400/10 px-2 py-0.5 text-[10px] font-mono text-rose-200">
+        durdu
+      </span>
+    );
+  }
+  return null;
+}
+
 function LangPicker({
   value,
   onChange,
@@ -725,33 +688,21 @@ function LangPicker({
   onChange: (code: string) => void;
 }) {
   return (
-    <label className="flex items-center gap-2 rounded-full border border-white/10 bg-bg-card px-3 py-1.5 text-[11px] font-mono text-fg-muted">
+    <label className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-bg-card px-3 py-1.5 text-[12px]">
       <span aria-hidden>🌐</span>
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="bg-transparent text-fg outline-none"
+        className="bg-transparent outline-none"
       >
         {SUPPORTED_TARGETS.map((s) => (
-          <option key={s.code} value={s.code}>
+          <option key={s.code} value={s.code} className="bg-bg-card text-fg">
             {s.label}
           </option>
         ))}
       </select>
     </label>
   );
-}
-
-function bufferToBase64(buffer: ArrayBuffer): string {
-  let binary = '';
-  const bytes = new Uint8Array(buffer);
-  const len = bytes.byteLength;
-  const chunkSize = 0x8000;
-  for (let i = 0; i < len; i += chunkSize) {
-    const slice = bytes.subarray(i, i + chunkSize);
-    binary += String.fromCharCode(...slice);
-  }
-  return btoa(binary);
 }
 
 function labelOfLang(code: string): string {
