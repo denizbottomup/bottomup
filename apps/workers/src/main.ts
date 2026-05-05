@@ -19,7 +19,8 @@ import {
  * registry and lifecycle, real handlers plug in one queue at a time.
  */
 const workersEnvSchema = workersSchema.extend({
-  // Legacy prod Postgres we replicate FROM (umay.bottomup.app).
+  // Legacy prod Postgres we replicate FROM (`85.105.161.240:5432/app`,
+  // formerly reached via the `umay.bottomup.app` DNS name).
   LEGACY_DATABASE_URL: z.string().url().optional(),
   REPLICATOR_INTERVAL_MS: z.coerce.number().int().positive().default(10_000),
   // News translator runs on Google Translate's free widget endpoint.
@@ -123,9 +124,10 @@ async function main(): Promise<void> {
   }
 
   // ─── Legacy DB replicator ──────────────────────────────────────────
-  // Pulls fresh rows from umay.bottomup.app every N ms into Railway
-  // Postgres. Skipped if LEGACY_DATABASE_URL is unset (useful in local
-  // dev where only the target is reachable).
+  // Pulls fresh rows from the legacy prod Postgres (85.105.161.240,
+  // formerly umay.bottomup.app) every N ms into Railway Postgres.
+  // Skipped if LEGACY_DATABASE_URL is unset (useful in local dev where
+  // only the target is reachable).
   let replicator: Replicator | null = null;
   let replicatorInterval: NodeJS.Timeout | null = null;
   let realtime: RealtimeBus | null = null;

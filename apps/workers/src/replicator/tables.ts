@@ -1,5 +1,6 @@
 /**
- * Tables we actively replicate from the legacy `umay.bottomup.app` Postgres
+ * Tables we actively replicate from the legacy production Postgres
+ * (`85.105.161.240:5432/app`, formerly DNS'd as `umay.bottomup.app`)
  * to the Railway Postgres. Ordered by business-importance.
  *
  * `cursorCol` must be a monotonic timestamptz column that exists on BOTH
