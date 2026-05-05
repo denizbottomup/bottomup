@@ -248,6 +248,10 @@ export class PublicService {
     const nameClean = String(name ?? '').trim();
     if (!nameClean) return null;
 
+    // Case-insensitive name lookup so shareable URLs (`/analyst/awerte`)
+    // resolve regardless of capitalization. Trader display names are
+    // effectively unique in practice; LIMIT 1 keeps us safe in the
+    // pathological collision case.
     const user = await this.prisma.$queryRawUnsafe<Array<Record<string, unknown>>>(
       `SELECT u.id::text AS id, u.name, u.first_name, u.last_name, u.image,
               u.referral_code,
@@ -256,7 +260,7 @@ export class PublicService {
                 WHERE f.trader_id = u.id AND f.follow = TRUE AND f.is_deleted = FALSE) AS followers
          FROM "user" u
          LEFT JOIN trader_profile tp ON tp.trader_id = u.id AND tp.is_deleted = FALSE
-        WHERE u.is_trader = TRUE AND u.is_deleted = FALSE AND u.name = $1
+        WHERE u.is_trader = TRUE AND u.is_deleted = FALSE AND LOWER(u.name) = LOWER($1)
         LIMIT 1`,
       nameClean,
     );
