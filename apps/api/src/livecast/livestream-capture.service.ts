@@ -173,6 +173,18 @@ export class LivestreamCaptureService implements OnModuleDestroy {
       // yt-dlp: bestaudio of the live stream → stdout (raw bytes,
       // container varies — webm/opus typically). --no-warnings to keep
       // the log clean; --quiet still leaves errors on stderr.
+      //
+      // YouTube aggressively flags datacenter IPs (Railway, AWS, GCP)
+      // as bots and demands `--cookies` from the default `web` player.
+      // Switching the extractor's player_client to the mobile/iOS/Safari
+      // bouquet sidesteps the bot check on most live streams without
+      // any cookie file. If a stream still gates this we'll need to
+      // mount a cookies.txt; until then the multi-client fallback is
+      // the cheapest fix.
+      //
+      // Dropped --live-from-start: replaying from the broadcast start
+      // is gated by the same auth flow we're trying to avoid; the live
+      // edge is what we actually want anyway.
       const ytdlp = spawn(
         'yt-dlp',
         [
@@ -180,8 +192,9 @@ export class LivestreamCaptureService implements OnModuleDestroy {
           'bestaudio',
           '--no-warnings',
           '--quiet',
-          '--live-from-start',
           '--no-part',
+          '--extractor-args',
+          'youtube:player_client=android,ios,web_safari,mweb',
           '-o',
           '-',
           `https://www.youtube.com/watch?v=${videoId}`,
