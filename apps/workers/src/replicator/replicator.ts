@@ -227,6 +227,28 @@ export class Replicator {
             });
           }
         }
+
+        // Analyst-page invalidation: when a setup transitions to a
+        // closed status, the trader's detail page (PerfMatrix, equity
+        // curve, monthly bars, recent trades) needs to refetch. We
+        // publish a lightweight notification on `analyst:<trader_id>`
+        // so the detail-page client component can call router.refresh().
+        // RealtimeBus dedups on payload hash, so a re-upsert of the
+        // same closed setup (cursor slack overlap) won't re-notify.
+        if (spec.name === 'setup') {
+          const status = String(row.status ?? '');
+          const traderId = row.trader_id as string | null | undefined;
+          if (
+            traderId &&
+            (status === 'success' || status === 'stopped' || status === 'closed')
+          ) {
+            this.realtime.publish('analyst', String(traderId), {
+              kind: 'trades-changed',
+              setupId: row.id,
+              status,
+            });
+          }
+        }
       }
     }
 
