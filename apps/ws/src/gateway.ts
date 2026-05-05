@@ -205,7 +205,8 @@ function isChannelPermitted(channel: WsChannel, user: WsAuthedUser | null): bool
     channel === 'futures' ||
     channel === 'crypto-analytics' ||
     channel === 'system' ||
-    channel === 'setup'
+    channel === 'setup' ||
+    channel === 'analyst'
   );
 }
 

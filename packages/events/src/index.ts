@@ -7,7 +7,7 @@ import { z } from 'zod';
  *
  * DO NOT rename these strings — mobile 2.2.1 has them literally embedded.
  */
-export const WS_CHANNELS = ['system', 'crypto-analytics', 'spot', 'futures', 'setup', 'trader'] as const;
+export const WS_CHANNELS = ['system', 'crypto-analytics', 'spot', 'futures', 'setup', 'trader', 'analyst'] as const;
 export type WsChannel = (typeof WS_CHANNELS)[number];
 
 export const WS_ACTIONS = ['bind', 'unbind', 'values'] as const;

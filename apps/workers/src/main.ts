@@ -7,6 +7,7 @@ import { QUEUE_NAMES, makeWorker } from './queues/index.js';
 import { Replicator } from './replicator/replicator.js';
 import { RealtimeBus } from './realtime-bus.js';
 import { BinanceTicker } from './ticker/binance-ticker.js';
+import { TraderWatcher } from './trader-watcher.js';
 import {
   enqueueMissingTranslations,
   makeNewsTranslateProcessor,
@@ -35,6 +36,16 @@ const workersEnvSchema = workersSchema.extend({
     .positive()
     .default(60_000),
   NEWS_TRANSLATOR_PER_TICK: z.coerce.number().int().positive().default(40),
+  TRADER_WATCHER_ENABLED: z
+    .string()
+    .default('true')
+    .transform((v) => v.toLowerCase() !== 'false'),
+  TRADER_WATCHER_INTERVAL_MS: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(15_000),
+  TRADER_WATCHER_LIMIT: z.coerce.number().int().positive().default(100),
 });
 
 async function main(): Promise<void> {
@@ -161,7 +172,35 @@ async function main(): Promise<void> {
     log.info('replicator: disabled (set LEGACY_DATABASE_URL to enable)');
   }
 
-  log.info({ count: workers.length, replicator: !!replicator }, 'workers: started');
+  // ─── Trader watcher ────────────────────────────────────────────────
+  // Polls trader_stats every N ms and publishes per-trader deltas to
+  // ws channel `analyst:<name>` + wildcard `analyst:*`. Powers the
+  // bottomup.app/analyst directory & detail "live" headline numbers
+  // without each browser polling the API.
+  let traderWatcher: TraderWatcher | null = null;
+  if (env.TRADER_WATCHER_ENABLED) {
+    // Reuse the realtime bus the replicator opened, or open one if
+    // replicator was disabled.
+    if (!realtime) {
+      realtime = new RealtimeBus(env.REDIS_URL, log.child({ component: 'realtime' }));
+      await realtime.start();
+    }
+    traderWatcher = new TraderWatcher(
+      env.DATABASE_URL,
+      realtime,
+      log.child({ component: 'trader-watcher' }),
+      env.TRADER_WATCHER_INTERVAL_MS,
+      env.TRADER_WATCHER_LIMIT,
+    );
+    await traderWatcher.start();
+  } else {
+    log.info('trader-watcher: disabled (TRADER_WATCHER_ENABLED=false)');
+  }
+
+  log.info(
+    { count: workers.length, replicator: !!replicator, traderWatcher: !!traderWatcher },
+    'workers: started',
+  );
 
   const shutdown = async (signal: string): Promise<void> => {
     log.info({ signal }, 'workers: shutting down');
@@ -171,6 +210,7 @@ async function main(): Promise<void> {
     await Promise.all([
       ...workers.map((w) => w.close()),
       replicator?.stop() ?? Promise.resolve(),
+      traderWatcher?.stop() ?? Promise.resolve(),
       realtime?.stop() ?? Promise.resolve(),
       newsTranslatorPool?.end() ?? Promise.resolve(),
     ]);
