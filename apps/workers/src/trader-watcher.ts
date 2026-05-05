@@ -77,13 +77,15 @@ export class TraderWatcher {
       const rows = await this.fetchRows();
       for (const r of rows) {
         const key = (r.name ?? r.trader_id).toLowerCase();
-        // RealtimeBus hash-dedups so unchanged rows don't hit the wire.
-        // Two topics so detail (analyst:<name>) and directory
-        // (analyst:*) clients both get the same frame. No tick-level
-        // timestamp in the payload — that would defeat dedup; the
-        // client stamps arrival time on its end.
+        // Single per-id publish. The ws gateway fans this same frame
+        // out to both `analyst:<name>` topic subscribers (detail page)
+        // and `analyst:*` topic subscribers (directory page), so a
+        // second publish here would (a) duplicate every frame for
+        // wildcard clients and (b) thrash the dedup cache because
+        // every row would overwrite the same `analyst:*` slot. No
+        // tick-level timestamp in the payload — that would defeat
+        // dedup; the client stamps arrival time on its end.
         this.bus.publish('analyst', key, r);
-        this.bus.publish('analyst', '*', r);
       }
     } catch (err) {
       this.log.warn({ err: (err as Error).message }, 'trader-watcher: tick failed');
