@@ -82,10 +82,15 @@ export class TraderWatcher {
         // and `analyst:*` topic subscribers (directory page), so a
         // second publish here would (a) duplicate every frame for
         // wildcard clients and (b) thrash the dedup cache because
-        // every row would overwrite the same `analyst:*` slot. No
-        // tick-level timestamp in the payload — that would defeat
-        // dedup; the client stamps arrival time on its end.
-        this.bus.publish('analyst', key, r);
+        // every row would overwrite the same `analyst:*` slot.
+        //
+        // publishAlways (not the deduped publish) because the LIVE
+        // badge on the page needs a proof-of-life frame on every
+        // tick, not only on data change. trader_stats is recomputed
+        // by a daily cron, so deduped publishes would leave new
+        // visitors stuck on "WAITING FOR FIRST FRAME" between cron
+        // runs. Wire cost is ~100 rows / 15s = ~6.7 RPS — trivial.
+        this.bus.publishAlways('analyst', key, r);
       }
     } catch (err) {
       this.log.warn({ err: (err as Error).message }, 'trader-watcher: tick failed');

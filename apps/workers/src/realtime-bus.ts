@@ -53,4 +53,17 @@ export class RealtimeBus {
       this.log.warn({ err: (err as Error).message, channel, id }, 'realtime-bus: publish failed');
     });
   }
+
+  /**
+   * Bypass-dedup variant. Use for channels where the receiver needs a
+   * proof-of-life frame on every tick (e.g. the analyst directory's
+   * LIVE badge), not just on data change. Skips the hash cache so an
+   * unchanged payload still hits the wire.
+   */
+  publishAlways(channel: WsChannel, id: string, payload: unknown): void {
+    const body = JSON.stringify(payload);
+    void this.pub.publish(redisKey.wsPub(channel, id), body).catch((err) => {
+      this.log.warn({ err: (err as Error).message, channel, id }, 'realtime-bus: publish failed');
+    });
+  }
 }
