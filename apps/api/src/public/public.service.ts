@@ -12,6 +12,7 @@ export interface TraderDetailSummary {
     image: string | null;
     bio: string | null;
     followers: number;
+    referral_code: string | null;
   };
   stats: {
     trades: number;
@@ -249,6 +250,7 @@ export class PublicService {
 
     const user = await this.prisma.$queryRawUnsafe<Array<Record<string, unknown>>>(
       `SELECT u.id::text AS id, u.name, u.first_name, u.last_name, u.image,
+              u.referral_code,
               tp.content AS bio,
               (SELECT COUNT(*)::int FROM follow_notify f
                 WHERE f.trader_id = u.id AND f.follow = TRUE AND f.is_deleted = FALSE) AS followers
@@ -496,6 +498,7 @@ export class PublicService {
         image: (u.image as string | null) ?? null,
         bio: (u.bio as string | null) ?? null,
         followers: Number(u.followers ?? 0),
+        referral_code: (u.referral_code as string | null) ?? null,
       },
       stats: {
         trades: mTrades,
