@@ -46,7 +46,13 @@ export const REPLICATED_TABLES: TableReplicationSpec[] = [
   { name: 'trader_setup_pnl_performance', pkCols: ['setup_id'], cursorCol: 'updated_at' },
   // Aggregated per-trader stats (win rate, monthly ROI/PnL, risk score).
   // trader_id is UNIQUE; upsert by that column.
-  { name: 'trader_stats', pkCols: ['trader_id'], cursorCol: 'stat_at' },
+  //
+  // cursorCol=null (snapshot mode): legacy populates `stat_at` as NULL
+  // for every row, so a `WHERE stat_at > cursor` query never selects
+  // anything. Each tick re-snapshots the whole table — ~130 rows
+  // total, idempotent UPSERT, trivial cost. Without this the public
+  // analyst page sees stale `monthly_pnl` / `win_rate` indefinitely.
+  { name: 'trader_stats', pkCols: ['trader_id'], cursorCol: null },
 
   // ─── Market / watchlist ───────────────────────────────────────────
   { name: 'coin', pkCols: ['id'], cursorCol: 'updated_at' },
