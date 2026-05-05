@@ -185,14 +185,24 @@ export class LivestreamCaptureService implements OnModuleDestroy {
       // Dropped --live-from-start: replaying from the broadcast start
       // is gated by the same auth flow we're trying to avoid; the live
       // edge is what we actually want anyway.
+      // -f bestaudio/best: live YouTube only exposes muxed mp4/m3u8
+      //   (no separate audio track), so bestaudio alone fails with
+      //   "Requested format is not available". Fall through to `best`
+      //   and let ffmpeg drop the video track with -vn below.
+      // --js-runtimes: yt-dlp needs a JS engine for YouTube's cipher
+      //   decode + new bot-bypass surface. The image bundles Node 22
+      //   (corepack stage) — point yt-dlp at it explicitly so it
+      //   doesn't hunt for `deno` and silently drop formats.
       const ytdlp = spawn(
         'yt-dlp',
         [
           '-f',
-          'bestaudio',
+          'bestaudio/best',
           '--no-warnings',
           '--quiet',
           '--no-part',
+          '--js-runtimes',
+          'node:/usr/local/bin/node',
           '--extractor-args',
           'youtube:player_client=android,ios,web_safari,mweb',
           '-o',
