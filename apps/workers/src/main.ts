@@ -20,10 +20,11 @@ import {
  * registry and lifecycle, real handlers plug in one queue at a time.
  */
 const workersEnvSchema = workersSchema.extend({
-  // Legacy prod Postgres we replicate FROM (`85.105.161.240:5432/app`,
-  // formerly reached via the `umay.bottomup.app` DNS name).
-  LEGACY_DATABASE_URL: z.string().url().optional(),
-  REPLICATOR_INTERVAL_MS: z.coerce.number().int().positive().default(10_000),
+  // Source production Postgres (`85.105.161.240:5432/app`) we mirror
+  // FROM into the Railway Postgres every MIRROR_INTERVAL_MS. Read-only
+  // user is sufficient — replicator only SELECTs from the source.
+  SOURCE_DATABASE_URL: z.string().url().optional(),
+  MIRROR_INTERVAL_MS: z.coerce.number().int().positive().default(10_000),
   // News translator runs on Google Translate's free widget endpoint.
   // No API key required. Set to 'false' to disable in CI / local dev.
   NEWS_TRANSLATOR_ENABLED: z
@@ -134,22 +135,26 @@ async function main(): Promise<void> {
     log.info('news-translator: disabled (NEWS_TRANSLATOR_ENABLED=false)');
   }
 
-  // ─── Legacy DB replicator ──────────────────────────────────────────
-  // Pulls fresh rows from the legacy prod Postgres (85.105.161.240,
-  // formerly umay.bottomup.app) every N ms into Railway Postgres.
-  // Skipped if LEGACY_DATABASE_URL is unset (useful in local dev where
-  // only the target is reachable).
+  // ─── Realtime bus + Binance ticker ─────────────────────────────────
+  // Shared Redis pub/sub bus used by trader-watcher, replicator and any
+  // other component that fans out frames to ws clients. Binance ticker
+  // pushes price updates onto it.
+  const realtime = new RealtimeBus(env.REDIS_URL, log.child({ component: 'realtime' }));
+  await realtime.start();
+  const ticker = new BinanceTicker(realtime, log.child({ component: 'ticker' }));
+  ticker.start();
+
+  // ─── Source → Railway Postgres mirror ──────────────────────────────
+  // Pulls fresh rows from the source production Postgres
+  // (`85.105.161.240:5432/app`) every MIRROR_INTERVAL_MS into the
+  // Railway Postgres that API/web services read from. Skipped when
+  // SOURCE_DATABASE_URL is unset (useful in local dev where only the
+  // target is reachable).
   let replicator: Replicator | null = null;
   let replicatorInterval: NodeJS.Timeout | null = null;
-  let realtime: RealtimeBus | null = null;
-  let ticker: BinanceTicker | null = null;
-  if (env.LEGACY_DATABASE_URL) {
-    realtime = new RealtimeBus(env.REDIS_URL, log.child({ component: 'realtime' }));
-    await realtime.start();
-    ticker = new BinanceTicker(realtime, log.child({ component: 'ticker' }));
-    ticker.start();
+  if (env.SOURCE_DATABASE_URL) {
     replicator = new Replicator({
-      sourceUrl: env.LEGACY_DATABASE_URL,
+      sourceUrl: env.SOURCE_DATABASE_URL,
       targetUrl: env.DATABASE_URL,
       log: log.child({ component: 'replicator' }),
       realtime,
@@ -166,10 +171,10 @@ async function main(): Promise<void> {
       }
     };
     void tick();
-    replicatorInterval = setInterval(tick, env.REPLICATOR_INTERVAL_MS);
-    log.info({ intervalMs: env.REPLICATOR_INTERVAL_MS }, 'replicator: enabled');
+    replicatorInterval = setInterval(tick, env.MIRROR_INTERVAL_MS);
+    log.info({ intervalMs: env.MIRROR_INTERVAL_MS }, 'replicator: enabled');
   } else {
-    log.info('replicator: disabled (set LEGACY_DATABASE_URL to enable)');
+    log.info('replicator: disabled (set SOURCE_DATABASE_URL to enable)');
   }
 
   // ─── Trader watcher ────────────────────────────────────────────────
@@ -179,12 +184,6 @@ async function main(): Promise<void> {
   // without each browser polling the API.
   let traderWatcher: TraderWatcher | null = null;
   if (env.TRADER_WATCHER_ENABLED) {
-    // Reuse the realtime bus the replicator opened, or open one if
-    // replicator was disabled.
-    if (!realtime) {
-      realtime = new RealtimeBus(env.REDIS_URL, log.child({ component: 'realtime' }));
-      await realtime.start();
-    }
     traderWatcher = new TraderWatcher(
       env.DATABASE_URL,
       realtime,
@@ -206,12 +205,12 @@ async function main(): Promise<void> {
     log.info({ signal }, 'workers: shutting down');
     if (replicatorInterval) clearInterval(replicatorInterval);
     if (newsTranslatorTimer) clearInterval(newsTranslatorTimer);
-    ticker?.stop();
+    ticker.stop();
     await Promise.all([
       ...workers.map((w) => w.close()),
       replicator?.stop() ?? Promise.resolve(),
       traderWatcher?.stop() ?? Promise.resolve(),
-      realtime?.stop() ?? Promise.resolve(),
+      realtime.stop(),
       newsTranslatorPool?.end() ?? Promise.resolve(),
     ]);
     process.exit(0);

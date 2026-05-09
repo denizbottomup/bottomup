@@ -10,10 +10,10 @@
 |---|---|---|---|---|---|
 | **`@bottomup/api`** | `52029ddd-f14c-4c58-8c67-953e8c097c39` | `bottomupapi-production.up.railway.app` (port 8000) | `main` | `/` | NestJS + Fastify + Prisma. Tek backend — hem mobile (`api.bottomup.app` üzerinden) hem `bottomup-lab`/`bottomup` web servisleri buraya bağlanır. Live Macro endpoint'leri burada. |
 | **`@bottomup/ws`** | — | `bottomupws-production.up.railway.app` (port 8001) | `main` | `/` | uWebSockets.js fan-out gateway. `wss://websocket.bottomup.app` mobile contract. |
-| **`@bottomup/workers`** | — | unexposed | `main` | `/` | BullMQ — feed cron, replicator, news translator, notification sender. |
+| **`@bottomup/workers`** | — | unexposed | `main` | `/` | BullMQ — feed cron, source→Railway Postgres mirror, news translator, notification sender. |
 | **`bottomup`** | — | `trade.bupcore.ai` (CNAME → `tjuo31jj.up.railway.app`) | `main` | `apps/web` | Logged-in product surface. `/signin` çalışır, `/dashboard` vb. henüz boş. |
 | **`bottomup-lab`** | `fdf5fd45-3c13-442a-9e41-fe76f91745aa` | `bupcore.ai` (apex), `www.bupcore.ai` (DNS waiting) | **`lab`** | `/` | apps/web build'i. Live Macro UI'sini servis eden domain. PORT=3000. |
-| **Postgres** | — | private | n/a | n/a | Replicated copy of legacy `85.105.161.240:5432/app` (formerly `umay.bottomup.app`, DNS retired). Workers replicator ile sync. |
+| **Postgres** | — | private | n/a | n/a | Railway-managed Postgres (mirror). API/web buradan okur. Source: `85.105.161.240:5432/app`, workers replicator 10 sn'de bir mirror'lar. |
 | **Redis** | — | `${{Redis.REDIS_URL}}` private | n/a | n/a | BullMQ + WS pub/sub. |
 
 ## Branch mapping — kritik dikkat noktası
@@ -70,12 +70,12 @@ echo "api restarted"
 
 ### Postgres
 
-- Replicated copy. Kaynak: legacy `85.105.161.240:5432/app` (eskiden `umay.bottomup.app`, DNS bırakıldı 2026-05-05). TLS self-signed; lokal'den bağlanırken `?sslmode=require` zorunlu. Read-only `report_user` parolası `.env.example`'da pattern olarak duruyor; gerçek değer `.env` (gitignored) ya da Railway env içinde.
-- Replicator workers servisinde, `LEGACY_DATABASE_URL` env'i set olunca aktif. Detay [`apps/workers/src/main.ts`](../apps/workers/src/main.ts).
+- Railway-managed Postgres `${{Postgres.DATABASE_URL}}` referansıyla okunur. API/web buraya bakar.
+- Source-of-truth: `85.105.161.240:5432/app`. Workers servisindeki replicator `SOURCE_DATABASE_URL` set olduğunda 10 sn'de bir buradan SELECT edip Railway Postgres'e ON CONFLICT DO UPDATE yapar. Source TLS self-signed → `?sslmode=require` zorunlu. Read-only `report_user` source için yeterli (replicator sadece SELECT yapar). Detay [`apps/workers/src/main.ts`](../apps/workers/src/main.ts).
 
 ### Redis
 
-- BullMQ workers + WS gateway. Internal-only (`${{Redis.REDIS_URL}}` reference). Public expose etme — replicator job durumu, FCM push queue, vs. iç data.
+- BullMQ workers + WS gateway. Internal-only (`${{Redis.REDIS_URL}}` reference). Public expose etme — replicator + trader-watcher pub/sub, FCM push queue, vs. iç data.
 
 ## Cloudflare zone'lara not
 
