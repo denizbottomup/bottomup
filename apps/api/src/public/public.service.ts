@@ -548,6 +548,7 @@ export class PublicService {
   async analystList(
     limit: number,
     orderBy: string,
+    activeWithinDays?: number,
   ): Promise<AnalystListItem[]> {
     const cap = Math.max(1, Math.min(100, limit));
     const sortable: Record<string, string> = {
@@ -564,6 +565,20 @@ export class PublicService {
     const sortCol = sortable[orderBy] ?? sortable.monthly_pnl;
     const sortDir = sortCol === 'u.name' ? 'ASC' : 'DESC';
 
+    // Optional activity gate: opt-in via `active_within_days` so the
+    // existing mobile contract (full roster) stays unchanged. The web
+    // analyst page passes 90 to drop traders dormant for 3+ months.
+    const activityClause =
+      activeWithinDays && activeWithinDays > 0
+        ? `AND EXISTS (
+             SELECT 1 FROM setup s
+              WHERE s.trader_id = u.id
+                AND s.is_deleted = FALSE
+                AND COALESCE(s.last_acted_at, s.tp1_date, s.stop_date, s.close_date)
+                    >= NOW() - INTERVAL '${Math.floor(activeWithinDays)} days'
+           )`
+        : '';
+
     const rows = await this.prisma.$queryRawUnsafe<Array<Record<string, unknown>>>(
       `SELECT u.id::text   AS trader_id,
               u.name,
@@ -579,6 +594,7 @@ export class PublicService {
          FROM "user" u
          LEFT JOIN trader_stats ts ON ts.trader_id = u.id
         WHERE u.is_trader = TRUE AND u.is_active = TRUE AND u.is_deleted = FALSE
+          ${activityClause}
         ORDER BY ${sortCol} ${sortDir} NULLS LAST
         LIMIT ${cap}`,
     );

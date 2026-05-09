@@ -78,8 +78,14 @@ export class PublicController {
   analysts(
     @Query('limit') limit?: string,
     @Query('order_by') orderBy?: string,
+    @Query('active_within_days') activeWithinDays?: string,
   ): ReturnType<PublicService['analystList']> {
     const cap = Number(limit ?? 20) || 20;
-    return this.pub.analystList(cap, String(orderBy ?? 'monthly_pnl'));
+    const window = activeWithinDays ? Number(activeWithinDays) : undefined;
+    return this.pub.analystList(
+      cap,
+      String(orderBy ?? 'monthly_pnl'),
+      Number.isFinite(window) && (window as number) > 0 ? window : undefined,
+    );
   }
 }
