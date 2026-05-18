@@ -1673,7 +1673,7 @@ const FOXY_QUERY_SYSTEM_PROMPT = [
   'Verdict seçim kuralı:',
   '  • AL → kısa-orta vade alıcı baskısı baskın; long-bias confluence var',
   '  • SAT → satıcı baskısı baskın; short-bias confluence var (kullanıcı zaten',
-  '    long'da olsa bile bu, "kâr al / short aç" anlamına gelir)',
+  '    long\'da olsa bile bu, "kâr al / short aç" anlamına gelir)',
   '  • BEKLE → veri çelişkili veya yetersiz; net taraf yok',
   '',
   'reasons[] kuralları (en az 3, en fazla 6 bullet):',
