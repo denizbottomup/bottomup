@@ -7,13 +7,13 @@ import { FoxyPromptPanel } from '@/components/foxy/prompt-panel';
 import { FoxyVerdictHero } from '@/components/foxy/verdict-hero';
 import { FoxyTradingViewCard } from '@/components/foxy/tradingview-card';
 import { FoxyDataStrip } from '@/components/foxy/data-strip';
-import type {
-  FoxyAnalysis,
-  FoxyDerivatives,
-  FoxyHistoryEntry,
-  FoxyQueryReply,
-  FoxySetupsByCoin,
-  FoxyWhales,
+import {
+  type FoxyAnalysis,
+  type FoxyDerivatives,
+  type FoxyHistoryEntry,
+  type FoxyQueryReply,
+  type FoxySetupsByCoin,
+  type FoxyWhales,
 } from '@/components/foxy/types';
 
 const API_BASE =
@@ -104,9 +104,30 @@ export default function FoxyPage() {
           );
         }
         if (!r.ok) throw new Error('Foxy şu an cevap veremedi.');
-        return (await r.json()) as FoxyQueryReply;
+        return (await r.json()) as Partial<FoxyQueryReply> & {
+          // Legacy API shape — kept here only so the UI doesn't crash
+          // against a backend that hasn't redeployed yet. Drop once
+          // both api and web are on the new contract.
+          reply?: string;
+        };
       })
-      .then((reply) => reply.analysis);
+      .then((reply): FoxyAnalysis => {
+        if (reply?.analysis && typeof reply.analysis === 'object') {
+          return reply.analysis;
+        }
+        // Legacy `{ reply: "..." }` fallback — show the narrative
+        // as a single bullet so the user gets *something* instead of
+        // a crash, until api redeploys with the structured contract.
+        const legacy = (reply?.reply ?? '').trim();
+        return {
+          verdict: 'BEKLE',
+          headline: legacy
+            ? 'Foxy yorumu (eski format)'
+            : 'Foxy yapılandırılmış cevap döndüremedi.',
+          reasons: legacy ? [legacy] : [],
+          invalidation: '',
+        };
+      });
 
     try {
       const verdict = await queryPromise;
