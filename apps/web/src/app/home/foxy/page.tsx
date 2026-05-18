@@ -6,6 +6,7 @@ import { useAuth } from '@/lib/auth-context';
 import { FoxyPromptPanel } from '@/components/foxy/prompt-panel';
 import { FoxyVerdictHero } from '@/components/foxy/verdict-hero';
 import { FoxyTradingViewCard } from '@/components/foxy/tradingview-card';
+import { FoxyTradesTable } from '@/components/foxy/trades-table';
 import { FoxyDataStrip } from '@/components/foxy/data-strip';
 import {
   type FoxyAnalysis,
@@ -215,6 +216,11 @@ export default function FoxyPage() {
             ) : (
               <VerdictSkeleton />
             )}
+            <FoxyTradesTable
+              coin={coin}
+              setups={setups}
+              loading={cardsLoading}
+            />
             <FoxyTradingViewCard coin={coin} />
             <FoxyDataStrip
               coin={coin}
