@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import { extractCoin, type CoinMatch } from '@/lib/coin-extract';
 import { useAuth } from '@/lib/auth-context';
 import { FoxyPromptPanel } from '@/components/foxy/prompt-panel';
@@ -46,6 +46,52 @@ export default function FoxyPage() {
   const [error, setError] = useState<string | null>(null);
   const [history, setHistory] = useState<FoxyHistoryEntry[]>([]);
   const [activeHistoryId, setActiveHistoryId] = useState<string | null>(null);
+  const [setupsUpdatedAt, setSetupsUpdatedAt] = useState<number | null>(null);
+  const [setupsRefreshing, setSetupsRefreshing] = useState(false);
+
+  // Polls only the setups endpoint while the result panel is open so
+  // new trader signals show up without re-running the (quota-bound)
+  // Claude verdict. 30s matches the cadence at which the replicator
+  // pulls from the source DB twice, so anything fresh arrives quickly.
+  const refreshSetups = useCallback(
+    async (match: CoinMatch) => {
+      if (!user) return;
+      setSetupsRefreshing(true);
+      try {
+        const token = await getIdToken();
+        if (!token) return;
+        const r = await fetch(
+          `${API_BASE}/me/foxy/setups/${encodeURIComponent(match.symbol)}`,
+          { headers: { Authorization: `Bearer ${token}` } },
+        );
+        if (!r.ok) return;
+        const data = (await r.json()) as FoxySetupsByCoin;
+        setSetups(data);
+        setSetupsUpdatedAt(Date.now());
+      } catch {
+        // Swallow — the next tick will retry; the table keeps its
+        // previous snapshot rather than blanking out.
+      } finally {
+        setSetupsRefreshing(false);
+      }
+    },
+    [user, getIdToken],
+  );
+
+  // The interval lives at component scope so a re-submit or coin
+  // change doesn't leak two timers. Cleared in the cleanup phase.
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  useEffect(() => {
+    if (pollRef.current) clearInterval(pollRef.current);
+    if (!coin) return;
+    pollRef.current = setInterval(() => {
+      void refreshSetups(coin);
+    }, 30_000);
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current);
+      pollRef.current = null;
+    };
+  }, [coin, refreshSetups]);
 
   async function runQuery(text: string, match: CoinMatch) {
     if (!user) return;
@@ -86,6 +132,7 @@ export default function FoxyPage() {
       setSetups(s);
       setDerivatives(d);
       setWhales(w);
+      setSetupsUpdatedAt(Date.now());
       setCardsLoading(false);
     });
 
@@ -220,6 +267,9 @@ export default function FoxyPage() {
               coin={coin}
               setups={setups}
               loading={cardsLoading}
+              updatedAt={setupsUpdatedAt}
+              refreshing={setupsRefreshing}
+              onRefresh={() => void refreshSetups(coin)}
             />
             <FoxyTradingViewCard coin={coin} />
             <FoxyDataStrip
