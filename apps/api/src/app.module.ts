@@ -18,6 +18,7 @@ import { OkxModule } from './okx/okx.module.js';
 import { PublicModule } from './public/public.module.js';
 import { EntitlementModule } from './entitlement/entitlement.module.js';
 import { MeModule } from './me/me.module.js';
+import { SignalsModule } from './signals/signals.module.js';
 import { PrismaModule } from './common/prisma.module.js';
 
 @Module({
@@ -42,6 +43,7 @@ import { PrismaModule } from './common/prisma.module.js';
     PublicModule,
     EntitlementModule,
     MeModule,
+    SignalsModule,
   ],
 })
 export class AppModule implements NestModule {
