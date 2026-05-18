@@ -26,6 +26,7 @@ export function HomeSidebar() {
 
   const items: NavItem[] = [
     { href: '/home/foxy', label: 'Foxy', icon: <FoxyIcon /> },
+    { href: '/home/signals', label: 'Sinyaller', icon: <SignalsIcon /> },
     { href: '/home/right-now', label: 'Right Now', icon: <RightNowIcon /> },
     { href: '/home/live-macro', label: 'Live Macro', icon: <LiveMacroIcon /> },
     { href: '/home/overview', label: 'Overview', icon: <OverviewIcon /> },
@@ -148,6 +149,19 @@ function LiveIcon() {
       <circle cx="12" cy="12" r="3" fill="currentColor" />
       <circle cx="12" cy="12" r="7" />
       <circle cx="12" cy="12" r="11" opacity="0.4" />
+    </svg>
+  );
+}
+
+function SignalsIcon() {
+  // Broadcast-style icon — concentric arcs evoking signal/feed.
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+      <circle cx="12" cy="12" r="2" fill="currentColor" />
+      <path d="M16 8a5 5 0 0 1 0 8" />
+      <path d="M19 5a9 9 0 0 1 0 14" />
+      <path d="M8 8a5 5 0 0 0 0 8" />
+      <path d="M5 5a9 9 0 0 0 0 14" />
     </svg>
   );
 }
