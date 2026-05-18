@@ -108,10 +108,35 @@ export interface FoxyQuotaState {
   resets_at: string;
 }
 
+/**
+ * Structured Claude verdict for the `/me/foxy/query` UI. The product
+ * has to give a clear AL/SAT/BEKLE call — not a confluence score the
+ * user has to interpret. We coerce Claude into emitting JSON so the
+ * UI can render the call as a hero badge above the reasoning.
+ */
+export interface FoxyAnalysis {
+  /** AL = buy now, SAT = sell/short, BEKLE = wait — no other values. */
+  verdict: 'AL' | 'SAT' | 'BEKLE';
+  /** One-sentence Turkish headline that fits in a hero card. */
+  headline: string;
+  /**
+   * 3–6 bullet reasons in natural Turkish. Each item must read like a
+   * desk analyst observation, not a raw metric: prefer
+   * "Open interest 4h'de %4.5 düştü → long-capitulation sürüyor"
+   * over "OI: -4.5%".
+   */
+  reasons: string[];
+  /** Single sentence describing the price level/condition that
+   *  invalidates the call. May be empty when no clean invalidation
+   *  exists (e.g. for BEKLE). */
+  invalidation: string;
+}
+
 export interface FoxyQueryReply {
   prompt: string;
   coin: string | null;
-  reply: string;
+  /** Structured AL/SAT/BEKLE verdict + reasons + invalidation. */
+  analysis: FoxyAnalysis;
   quota: FoxyQuotaState;
   /** Echoed for the UI to show the tier badge. */
   entitlement: Entitlement;
@@ -867,9 +892,9 @@ export class FoxyService implements OnModuleInit {
         : Promise.resolve(null),
     ]);
 
-    const reply = this.client
-      ? await this.askClaudeForSummary(prompt, coinNorm, setups, derivatives, whales)
-      : 'Foxy AI anahtarı ayarlı değil. Yöneticiyle iletişime geç.';
+    const analysis = this.client
+      ? await this.askClaudeForVerdict(prompt, coinNorm, setups, derivatives, whales)
+      : foxyOfflineAnalysis();
 
     // Log the query last — only successful, non-rate-limited calls
     // count toward the quota. (Claude failures still count to avoid
@@ -881,7 +906,7 @@ export class FoxyService implements OnModuleInit {
     return {
       prompt,
       coin: coinNorm,
-      reply,
+      analysis,
       quota: {
         ...quota,
         used: quota.used + 1, // reflect the row we just inserted
@@ -1080,14 +1105,20 @@ export class FoxyService implements OnModuleInit {
     );
   }
 
-  private async askClaudeForSummary(
+  /**
+   * Sends the per-coin context bundle to Claude and parses back the
+   * structured verdict. Always returns a `FoxyAnalysis` — on parse
+   * failures we fall back to BEKLE with a generic headline so the UI
+   * never has to special-case null analysis.
+   */
+  private async askClaudeForVerdict(
     prompt: string,
     coin: string | null,
     setups: FoxySetupsByCoin | null,
     derivatives: FoxyDerivatives | null,
     whales: FoxyWhales | null,
-  ): Promise<string> {
-    if (!this.client) return 'Foxy AI offline.';
+  ): Promise<FoxyAnalysis> {
+    if (!this.client) return foxyOfflineAnalysis();
 
     const context = JSON.stringify(
       {
@@ -1129,8 +1160,11 @@ export class FoxyService implements OnModuleInit {
     );
 
     const res = await this.client.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 900,
+      // Sonnet for verdict synthesis — Haiku tends to recite metrics
+      // ("OI: -4.5%") instead of explaining them ("long-capitulation
+      // sürüyor"). Sonnet writes the desk-analyst voice this UI needs.
+      model: 'claude-sonnet-4-5',
+      max_tokens: 1400,
       system: FOXY_QUERY_SYSTEM_PROMPT,
       messages: [
         {
@@ -1141,17 +1175,16 @@ export class FoxyService implements OnModuleInit {
             'Bağlam (BottomUp setupları, türev verileri, balina hareketleri):',
             context,
             '',
-            'Bu bağlamı kullanarak soruyu Türkçe olarak yanıtla.',
+            'Yukarıdaki bağlamı kullanarak istenen JSON formatında yanıt ver.',
           ].join('\n'),
         },
       ],
     });
 
     const block = res.content.find((c) => c.type === 'text');
-    if (!block || block.type !== 'text') {
-      return 'Foxy şu an cevap veremedi, biraz sonra tekrar dener misin?';
-    }
-    return block.text.trim();
+    if (!block || block.type !== 'text') return foxyOfflineAnalysis();
+
+    return parseFoxyAnalysis(block.text);
   }
 
   private async loadSetup(id: string): Promise<SetupRow | null> {
@@ -1618,25 +1651,51 @@ function extractBriefSection(text: string, coin: string): string {
 
 const FOXY_QUERY_SYSTEM_PROMPT = [
   'Sen Foxy AI — bottomUP kripto trading platformunun analist asistanısın.',
-  'Kullanıcılar sana coin / piyasa durumu hakkında soru sorar.',
+  'Kullanıcılar sana bir coin için soru sorar, sen net bir AL / SAT / BEKLE',
+  'çağrısı çıkarırsın.',
   '',
-  'Sana her zaman 4 kaynaktan ham veri verilir:',
-  '  • setups: BottomUp trader topluluğunun o coinde açtığı setup\'lar +',
+  'Sana her zaman 3 kaynaktan ham veri verilir:',
+  '  • setups: BottomUp trader topluluğunun o coinde açtığı aktif setup\'lar +',
   '    son 30 gün performans rollup\'ı (win rate, total R, kapanmış işlem sayısı)',
   '  • derivatives: liquidations 24h, open interest + 24h değişim, long/short ratio,',
   '    funding rate (8h + yıllıklandırılmış)',
   '  • whales: Arkham\'dan son 24 saatteki büyük on-chain transferler ve',
   '    CEX in/out USD akışları',
   '',
-  'Cevap kuralları:',
-  '  1. Türkçe, konuşma diline yakın, profesyonel ama jargon-ağır olma',
-  '  2. 3-5 paragraf max. İlk paragraf bir cümlelik özet/verdict olsun',
-  '  3. Sayıları net ver: "$166M Binance girişi", "%34 win rate, +12.4R", "0.012% funding"',
-  '  4. Kaynaklar arasında bağlantı kur: "Whale\'ler son 24h\'de $400M ETH\'i CEX\'lere',
-  '     yolladı, paralel olarak BottomUp trader\'ları %62 short — alış sinyali zayıf"',
-  '  5. Bağlamda ilgili veri YOKSA "veri yetersiz" de, uydurma',
-  '  6. Yatırım tavsiyesi verme — "şahsen ben olsam" dilini kullanma',
-  '  7. Markdown kullanma — düz paragraflar yeterli, kalın yazıda sadece sayılar olabilir',
+  'ÇIKTI FORMATI — sadece geçerli JSON döndür, başka hiçbir şey yazma:',
+  '{',
+  '  "verdict": "AL" | "SAT" | "BEKLE",',
+  '  "headline": "tek cümle Türkçe başlık, max 100 karakter",',
+  '  "reasons": ["bullet 1", "bullet 2", "bullet 3", ...],',
+  '  "invalidation": "bu çağrıyı iptal eden tek cümlelik koşul"',
+  '}',
+  '',
+  'Verdict seçim kuralı:',
+  '  • AL → kısa-orta vade alıcı baskısı baskın; long-bias confluence var',
+  '  • SAT → satıcı baskısı baskın; short-bias confluence var (kullanıcı zaten',
+  '    long'da olsa bile bu, "kâr al / short aç" anlamına gelir)',
+  '  • BEKLE → veri çelişkili veya yetersiz; net taraf yok',
+  '',
+  'reasons[] kuralları (en az 3, en fazla 6 bullet):',
+  '  1. Her bullet kısa ama açıklayıcı: ham metrik değil, **yorum** + ham sayı.',
+  '     KÖTÜ:  "OI: -4.5%"',
+  '     İYİ:   "Open interest 4h\'de %4.5 düştü → long-capitulation sürüyor"',
+  '  2. Sayıları daima net ver: "$166M CEX girişi", "%73 retail long", "0.012% funding"',
+  '  3. Kaynaklar arası bağlantı kur ("whale\'ler satıyor + retail long-heavy =',
+  '     dağıtım"); izole metrik listeleme.',
+  '  4. Bağlamda ilgili veri YOKSA o sebebi yazma — uydurma, şişirme.',
+  '  5. Jargon-ağır olma ama "spot premium", "basis", "open interest", "CEX inflow"',
+  '     gibi standart terimleri kullanabilirsin.',
+  '  6. Yatırım tavsiyesi cümleleri yasak ("şahsen ben olsam", "tavsiye ederim").',
+  '     Verdict bunu zaten yeterince açık söylüyor.',
+  '',
+  'invalidation kuralı:',
+  '  • AL veya SAT için: çağrıyı geçersiz kılan price action veya veri koşulunu',
+  '    tek cümleyle yaz. Örnek: "$2,156 üstüne 15m kapanış SAT tezini siler".',
+  '  • BEKLE için: hangi koşul taraf seçmeyi sağlar — örn. "OI ve fiyat aynı yönde',
+  '    hareket ederse taraf netleşir". Net bir koşul yoksa boş string ver.',
+  '',
+  'Tek bir kez daha: ÇIKTI SADECE JSON. Markdown, açıklama, çevreleyen metin YOK.',
 ].join('\n');
 
 /**
@@ -1676,3 +1735,67 @@ const ARKHAM_SLUG: Record<string, string> = {
   TRX: 'tron',
   TON: 'the-open-network',
 };
+
+/**
+ * Pulls a `FoxyAnalysis` out of whatever Claude returned. The system
+ * prompt asks for raw JSON, but the model sometimes wraps the object
+ * in ```json fences or prepends/appends a sentence. We extract the
+ * first balanced `{...}` block, validate the verdict enum, and
+ * coerce missing fields rather than throwing — the UI only ever has
+ * to render an analysis object, never an error state.
+ */
+function parseFoxyAnalysis(raw: string): FoxyAnalysis {
+  const text = raw.trim();
+
+  // Find the outermost { ... } slice.
+  const start = text.indexOf('{');
+  const end = text.lastIndexOf('}');
+  if (start === -1 || end === -1 || end <= start) {
+    return {
+      verdict: 'BEKLE',
+      headline: text.slice(0, 100) || 'Foxy şu an net bir çağrı çıkaramadı.',
+      reasons: [],
+      invalidation: '',
+    };
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(text.slice(start, end + 1));
+  } catch {
+    return {
+      verdict: 'BEKLE',
+      headline: 'Foxy cevabı doğru biçimde dönmedi, tekrar dene.',
+      reasons: [],
+      invalidation: '',
+    };
+  }
+
+  const obj = (parsed ?? {}) as Record<string, unknown>;
+  const verdictRaw = String(obj.verdict ?? '').toUpperCase().trim();
+  const verdict: FoxyAnalysis['verdict'] =
+    verdictRaw === 'AL' || verdictRaw === 'SAT' ? verdictRaw : 'BEKLE';
+
+  const headline = String(obj.headline ?? '').trim() || 'Foxy analizi hazır.';
+
+  const reasonsArr = Array.isArray(obj.reasons) ? obj.reasons : [];
+  const reasons = reasonsArr
+    .map((r) => String(r ?? '').trim())
+    .filter((r) => r.length > 0)
+    .slice(0, 6);
+
+  const invalidation = String(obj.invalidation ?? '').trim();
+
+  return { verdict, headline, reasons, invalidation };
+}
+
+/** Shown when ANTHROPIC_API_KEY is not configured. Keeps the UI
+ *  contract identical so the empty path renders the same hero shell. */
+function foxyOfflineAnalysis(): FoxyAnalysis {
+  return {
+    verdict: 'BEKLE',
+    headline: 'Foxy AI anahtarı ayarlı değil — yönetici ile iletişime geç.',
+    reasons: [],
+    invalidation: '',
+  };
+}
