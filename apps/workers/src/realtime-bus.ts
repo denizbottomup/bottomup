@@ -26,13 +26,39 @@ export class RealtimeBus {
     url: string,
     private readonly log: Logger,
   ) {
-    this.pub = new Redis(url, { lazyConnect: true, maxRetriesPerRequest: null });
+    this.pub = new Redis(url, {
+      lazyConnect: true,
+      maxRetriesPerRequest: null,
+      // Railway internal hostnames (`*.railway.internal`) resolve to
+      // IPv6 first. Default Node DNS lookup returns A only, which
+      // succeeds in form (EAI_AGAIN windowed retry) but fails to
+      // connect on the IPv6-only side — the symptom is a thundering
+      // herd of ETIMEDOUT events. `family: 0` lets ioredis use both
+      // IPv4 and IPv6 records, picking whichever the network has.
+      family: 0,
+      // Don't give up on the connection; ioredis applies exponential
+      // backoff and keeps trying so a transient Redis or DNS hiccup
+      // never tears the workers process down.
+      retryStrategy: (times) => Math.min(1000 * Math.pow(2, times), 30_000),
+      reconnectOnError: () => true,
+    });
     this.pub.on('error', (err) => this.log.warn({ err: err.message }, 'realtime-bus: redis error'));
   }
 
   async start(): Promise<void> {
-    await this.pub.connect();
-    this.log.info('realtime-bus: connected');
+    // Fire-and-forget connect: ioredis retries forever on its own
+    // (the `error` handler already absorbs transient ETIMEDOUTs), so
+    // awaiting here would crash the entire workers process whenever
+    // Redis is briefly slow at boot. Publishes are buffered until the
+    // client reaches `ready`, so callers don't observe the lag.
+    this.pub.connect().then(
+      () => this.log.info('realtime-bus: connected'),
+      (err) =>
+        this.log.warn(
+          { err: (err as Error).message },
+          'realtime-bus: initial connect failed; ioredis will retry',
+        ),
+    );
   }
 
   async stop(): Promise<void> {

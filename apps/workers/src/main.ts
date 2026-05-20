@@ -52,7 +52,15 @@ const workersEnvSchema = workersSchema.extend({
 async function main(): Promise<void> {
   const env = loadEnv(workersEnvSchema);
   const log = pino({ level: env.LOG_LEVEL });
-  const connection: ConnectionOptions = { url: env.REDIS_URL };
+  // `family: 0` makes Node DNS return both A and AAAA records, which
+  // is what Railway's `*.railway.internal` hostnames need (they
+  // resolve to IPv6 by default and a stock IPv4-only lookup gets the
+  // dreaded ETIMEDOUT loop). BullMQ propagates this to its internal
+  // ioredis client.
+  const connection: ConnectionOptions = {
+    url: env.REDIS_URL,
+    family: 0,
+  };
 
   const workers: Worker[] = [];
 
@@ -219,4 +227,16 @@ async function main(): Promise<void> {
   process.on('SIGINT', () => void shutdown('SIGINT'));
 }
 
-void main();
+// Surface any startup failure as a clean exit instead of a Node v22
+// unhandled-rejection crash. Without this catch a transient Redis or
+// Postgres hiccup at boot tears the whole workers process down with
+// no actionable log — exactly the pattern that left the service in
+// a 2-week crash loop on May 2026.
+main().catch((err) => {
+  // eslint-disable-next-line no-console
+  console.error(
+    'workers: fatal startup error',
+    err instanceof Error ? err.stack ?? err.message : err,
+  );
+  process.exit(1);
+});
