@@ -22,6 +22,8 @@ const LANDING_HOSTS = new Set([
   'www.bupcore.ai',
 ]);
 const TRADE_HOST = 'trade.bupcore.ai';
+/** Legacy subdomain — DNS often missing after Cloudflare migration. */
+const WEBAPP_HOST = 'webapp.bottomup.app';
 
 /** Locales that get their own URL prefix. Default `en` lives at "/". */
 const LOCALE_PREFIXES = new Set([
@@ -80,6 +82,10 @@ const MARKETING_PREFIXES = [
   // host so the lab branch's new code answers, instead of being
   // 308'd to the legacy bottomup web service.
   '/home',
+  // App-download / campaign smart link (QR, email, social). Without this
+  // entry `bottomup.app/go` 308s to trade.bupcore.ai where `[locale]=go`
+  // 404'd; with it the dedicated `app/go/page.tsx` route answers.
+  '/go',
 ];
 
 function isLandingPath(pathname: string): boolean {
@@ -106,10 +112,16 @@ export function middleware(req: NextRequest): NextResponse {
     return NextResponse.redirect(to, 308);
   }
 
-  if (host === TRADE_HOST) {
+  if (host === TRADE_HOST || host === WEBAPP_HOST) {
     if (pathname === '/' || pathname === '') {
       const to = new URL('/signin', `https://${TRADE_HOST}`);
       return NextResponse.redirect(to, 307);
+    }
+    // webapp.bottomup.app used to point at the trader web shell; keep the
+    // hostname alive by sending product traffic to trade once DNS exists.
+    if (host === WEBAPP_HOST && !isLandingPath(pathname)) {
+      const to = new URL(pathname + search, `https://${TRADE_HOST}`);
+      return NextResponse.redirect(to, 308);
     }
     return NextResponse.next();
   }
