@@ -90,8 +90,8 @@ export function Hero({ data }: { data: LandingPayload | null }) {
             <div className="mt-10 flex flex-wrap items-center justify-center gap-2 lg:justify-start">
               <AssetChip label="Crypto" live />
               <AssetChip label="Stocks" />
-              <AssetChip label="Forex" />
               <AssetChip label="Commodities" />
+              <AssetChip label="Forex" soon />
             </div>
           </div>
 
@@ -268,7 +268,7 @@ function PhoneFrame({
   );
 }
 
-function AssetChip({ label, live }: { label: string; live?: boolean }) {
+function AssetChip({ label, live, soon }: { label: string; live?: boolean; soon?: boolean }) {
   return (
     <span
       className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 font-mono text-[10px] uppercase tracking-wider ${
@@ -283,7 +283,7 @@ function AssetChip({ label, live }: { label: string; live?: boolean }) {
         <span className="h-1.5 w-1.5 rounded-full bg-zinc-400" />
       )}
       {label}
-      {!live ? (
+      {soon ? (
         <span className="text-[9px] opacity-70">soon</span>
       ) : null}
     </span>
