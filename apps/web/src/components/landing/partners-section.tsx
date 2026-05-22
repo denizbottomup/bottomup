@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import { useT } from '@/lib/i18n';
 
 interface Brand {
@@ -51,26 +50,7 @@ export function PartnersSection() {
   );
 }
 
-/**
- * Tries /partners/{slug}.svg first; if the asset 404s, falls back to a
- * styled wordmark. Drop a monochrome SVG (white fill, transparent bg)
- * at /apps/web/public/partners/{slug}.svg and it's live on next build.
- */
 function BrandMark({ brand }: { brand: Brand }) {
-  const [errored, setErrored] = useState(false);
-  if (!errored) {
-    return (
-      <div className="flex h-10 items-center justify-center">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={`/partners/${brand.slug}.svg`}
-          alt={brand.name}
-          className="h-8 w-auto max-w-[150px] object-contain opacity-70 transition hover:opacity-100"
-          onError={() => setErrored(true)}
-        />
-      </div>
-    );
-  }
   return (
     <div
       className="flex h-10 select-none items-center justify-center text-center font-extrabold uppercase tracking-[0.08em] text-fg-muted transition hover:text-fg"
