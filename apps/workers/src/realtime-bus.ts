@@ -65,6 +65,12 @@ export class RealtimeBus {
     await this.pub.quit();
   }
 
+  stats(): { lastHashSize: number; lastHashBytes: number } {
+    let bytes = 0;
+    for (const [k, v] of this.lastHash) bytes += k.length + v.length;
+    return { lastHashSize: this.lastHash.size, lastHashBytes: bytes * 2 };
+  }
+
   publish(channel: WsChannel, id: string, payload: unknown): void {
     const body = JSON.stringify(payload);
     const key = `${channel}:${id}`;

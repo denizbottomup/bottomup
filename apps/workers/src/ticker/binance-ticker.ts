@@ -40,6 +40,11 @@ export class BinanceTicker {
     this.sock = null;
   }
 
+  stats(): { trackedSymbols: number; connected: boolean } {
+    const sock = this.sock as { readyState?: number } | null;
+    return { trackedSymbols: this.lastPublishAt.size, connected: sock?.readyState === 1 };
+  }
+
   private connect(): void {
     if (this.closed) return;
     // `!ticker@arr` was observed returning 0 frames in practice (both from

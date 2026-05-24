@@ -3,6 +3,7 @@ import pino from 'pino';
 import { Queue, type ConnectionOptions, type Worker } from 'bullmq';
 import { z } from 'zod';
 import { Pool } from 'pg';
+import v8 from 'node:v8';
 import { QUEUE_NAMES, makeWorker } from './queues/index.js';
 import { Replicator } from './replicator/replicator.js';
 import { RealtimeBus } from './realtime-bus.js';
@@ -209,8 +210,38 @@ async function main(): Promise<void> {
     'workers: started',
   );
 
+  // Periodic heap snapshot for OOM hunting. The workers process has
+  // been crashing with a JS heap out of memory after ~11h uptime
+  // (May 2026 incident); this lets us trace which sub-system grows
+  // without attaching a profiler in prod. Drop the interval once the
+  // leak is identified and fixed.
+  const heapTimer = setInterval(() => {
+    const mem = process.memoryUsage();
+    const heap = v8.getHeapStatistics();
+    const oldSpace = v8
+      .getHeapSpaceStatistics()
+      .find((s) => s.space_name === 'old_space');
+    log.info(
+      {
+        rssMb: Math.round(mem.rss / 1024 / 1024),
+        heapUsedMb: Math.round(mem.heapUsed / 1024 / 1024),
+        heapTotalMb: Math.round(mem.heapTotal / 1024 / 1024),
+        heapLimitMb: Math.round(heap.heap_size_limit / 1024 / 1024),
+        externalMb: Math.round(mem.external / 1024 / 1024),
+        oldSpaceUsedMb: oldSpace
+          ? Math.round(oldSpace.space_used_size / 1024 / 1024)
+          : null,
+        bus: realtime.stats(),
+        ticker: ticker.stats(),
+        uptimeS: Math.round(process.uptime()),
+      },
+      'workers: heap snapshot',
+    );
+  }, 60_000);
+
   const shutdown = async (signal: string): Promise<void> => {
     log.info({ signal }, 'workers: shutting down');
+    clearInterval(heapTimer);
     if (replicatorInterval) clearInterval(replicatorInterval);
     if (newsTranslatorTimer) clearInterval(newsTranslatorTimer);
     ticker.stop();
