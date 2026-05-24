@@ -877,10 +877,13 @@ export class FoxyService implements OnModuleInit {
     const coin = (coinHint ?? '').trim() || null;
     const coinNorm = coin ? normalizeCoinName(coin).replace(/USDT$/i, '') : null;
 
-    // Pull the same context the cards do. Each call independently
-    // degrades to null/empty; we still send the prompt to Claude
-    // even if some sources are down.
-    const [setups, derivatives, whales] = await Promise.all([
+    // Pull the same context the cards do PLUS the live spot market —
+    // without current price, Claude was treating stale setup
+    // entry/stop levels as the active price band (May 2026 incident:
+    // setups frozen at $81-83K targets while BTC was actually at $77K).
+    // Each call independently degrades to null/empty; we still send
+    // the prompt to Claude even if some sources are down.
+    const [setups, derivatives, whales, market] = await Promise.all([
       coinNorm
         ? this.setupsByCoin(coinNorm).catch(() => null)
         : Promise.resolve(null),
@@ -890,10 +893,20 @@ export class FoxyService implements OnModuleInit {
       coinNorm
         ? this.whalesByCoin(coinNorm).catch(() => null)
         : Promise.resolve(null),
+      coinNorm
+        ? this.fetchMarket24h(`${coinNorm}USDT`).catch(() => null)
+        : Promise.resolve(null),
     ]);
 
     const analysis = this.client
-      ? await this.askClaudeForVerdict(prompt, coinNorm, setups, derivatives, whales)
+      ? await this.askClaudeForVerdict(
+          prompt,
+          coinNorm,
+          market,
+          setups,
+          derivatives,
+          whales,
+        )
       : foxyOfflineAnalysis();
 
     // Log the query last — only successful, non-rate-limited calls
@@ -1114,30 +1127,21 @@ export class FoxyService implements OnModuleInit {
   private async askClaudeForVerdict(
     prompt: string,
     coin: string | null,
+    market: FoxyAssetMarket | null,
     setups: FoxySetupsByCoin | null,
     derivatives: FoxyDerivatives | null,
     whales: FoxyWhales | null,
   ): Promise<FoxyAnalysis> {
     if (!this.client) return foxyOfflineAnalysis();
 
+    const now = Date.now();
     const context = JSON.stringify(
       {
         coin,
-        setups: setups
-          ? {
-              active_count: setups.active.length,
-              recent_30d: setups.recent,
-              top_active: setups.active.slice(0, 8).map((s) => ({
-                trader: s.trader_name,
-                position: s.position,
-                status: s.status,
-                entry: s.entry_value,
-                stop: s.stop_value,
-                tp1: s.profit_taking_1,
-                r: s.r_value,
-              })),
-            }
-          : null,
+        // Current spot truth — every other block describes the world
+        // around this price. Without it the model defaults to whatever
+        // entry/stop levels appear in setups.
+        market,
         derivatives,
         whales: whales
           ? {
@@ -1151,6 +1155,29 @@ export class FoxyService implements OnModuleInit {
                 usd: t.usd_value,
                 flow: t.flow,
                 ts: t.ts,
+              })),
+            }
+          : null,
+        // Community sentiment from BottomUp traders. Each entry carries
+        // its age so a setup opened weeks ago (with price targets that
+        // no longer reflect the live market) is visibly stale to the
+        // model rather than treated as a fresh active position.
+        community_setups: setups
+          ? {
+              active_count: setups.active.length,
+              recent_30d: setups.recent,
+              top_active: setups.active.slice(0, 8).map((s) => ({
+                trader: s.trader_name,
+                position: s.position,
+                status: s.status,
+                entry: s.entry_value,
+                stop: s.stop_value,
+                tp1: s.profit_taking_1,
+                r: s.r_value,
+                created_at: s.created_at?.toISOString() ?? null,
+                age_days: s.created_at
+                  ? Math.floor((now - s.created_at.getTime()) / 86_400_000)
+                  : null,
               })),
             }
           : null,
@@ -1654,13 +1681,24 @@ const FOXY_QUERY_SYSTEM_PROMPT = [
   'Kullanıcılar sana bir coin için soru sorar, sen net bir AL / SAT / BEKLE',
   'çağrısı çıkarırsın.',
   '',
-  'Sana her zaman 3 kaynaktan ham veri verilir:',
-  '  • setups: BottomUp trader topluluğunun o coinde açtığı aktif setup\'lar +',
-  '    son 30 gün performans rollup\'ı (win rate, total R, kapanmış işlem sayısı)',
-  '  • derivatives: liquidations 24h, open interest + 24h değişim, long/short ratio,',
-  '    funding rate (8h + yıllıklandırılmış)',
-  '  • whales: Arkham\'dan son 24 saatteki büyük on-chain transferler ve',
-  '    CEX in/out USD akışları',
+  'Sana her zaman 4 bloktan ham veri verilir. ÖNEM SIRASI:',
+  '  1. market (BİRİNCİL referans): spot price, 24h değişim %, 24h high/low,',
+  '     24h quote volume. Tüm analiz BU FİYAT etrafında kurulur — diğer blokları',
+  '     yorumlarken her zaman "şu an fiyat X" gerçeğini başlangıç noktası al.',
+  '  2. derivatives: liquidations 24h, open interest + 24h değişim, long/short ratio,',
+  '     funding rate (8h + yıllıklandırılmış). Pozisyonlanma ve baskıyı gösterir.',
+  '  3. whales: Arkham\'dan son 24 saatteki büyük on-chain transferler ve',
+  '     CEX in/out USD akışları. Spot biriktirme / dağıtım sinyali.',
+  '  4. community_setups (DESTEKLEYİCİ, kararı bunlara DAYANDIRMA): BottomUp',
+  '     trader\'larının açtığı setup\'lar ve son 30 gün performans rollup\'ı.',
+  '     Her setup\'ın `age_days` alanı var — 7+ günlük setup\'ların entry/stop/target',
+  '     seviyeleri büyük olasılıkla mevcut market.price\'a göre alakasızdır;',
+  '     "geçmiş analist görüşü" gibi davran, "şu anki aktif pozisyon" gibi DAVRANMA.',
+  '     Setup\'ların entry/stop seviyelerini fiyat tahmini olarak okuma — fiyat',
+  '     gerçeği market.price\'tır.',
+  '',
+  'Eğer market bloku null veya price 0 ise: BEKLE döndür, "anlık fiyat alınamadı"',
+  'gerekçesi yaz. Stale community_setups\'larla fiyat üretme.',
   '',
   'ÇIKTI FORMATI — sadece geçerli JSON döndür, başka hiçbir şey yazma:',
   '{',
