@@ -228,6 +228,7 @@ async function main(): Promise<void> {
         heapTotalMb: Math.round(mem.heapTotal / 1024 / 1024),
         heapLimitMb: Math.round(heap.heap_size_limit / 1024 / 1024),
         externalMb: Math.round(mem.external / 1024 / 1024),
+        arrayBuffersMb: Math.round(mem.arrayBuffers / 1024 / 1024),
         oldSpaceUsedMb: oldSpace
           ? Math.round(oldSpace.space_used_size / 1024 / 1024)
           : null,

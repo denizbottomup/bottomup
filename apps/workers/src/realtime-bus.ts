@@ -18,9 +18,16 @@ import { redisKey, type WsChannel } from '@bottomup/events';
  *      if it matches the last-seen hash for that (channel,id). That
  *      trims the stream to real content changes.
  */
+// Drop publishes once the in-flight command queue grows past this
+// threshold. Ticker frames are ephemeral — losing a few during a Redis
+// hiccup is preferable to letting the queue and its retained body
+// strings grow without bound (the May 2026 OOM signature).
+const MAX_PENDING_COMMANDS = 1000;
+
 export class RealtimeBus {
   private readonly pub: Redis;
   private readonly lastHash = new Map<string, string>();
+  private droppedSinceStart = 0;
 
   constructor(
     url: string,
@@ -41,6 +48,13 @@ export class RealtimeBus {
       // never tears the workers process down.
       retryStrategy: (times) => Math.min(1000 * Math.pow(2, times), 30_000),
       reconnectOnError: () => true,
+      // When Redis is unreachable, ioredis buffers commands in an
+      // unbounded `offlineQueue` by default — under the ticker's
+      // ~860 publish/sec the queue grows multiple MB per minute of
+      // outage and never gets reclaimed. Failing fast surfaces the
+      // disconnect through our `.catch()` warnings and lets V8 GC
+      // the body strings immediately.
+      enableOfflineQueue: false,
     });
     this.pub.on('error', (err) => this.log.warn({ err: err.message }, 'realtime-bus: redis error'));
   }
@@ -65,10 +79,35 @@ export class RealtimeBus {
     await this.pub.quit();
   }
 
-  stats(): { lastHashSize: number; lastHashBytes: number } {
+  stats(): {
+    lastHashSize: number;
+    lastHashBytes: number;
+    cmdQueueLen: number;
+    offlineQueueLen: number;
+    dropped: number;
+    redisStatus: string;
+  } {
     let bytes = 0;
     for (const [k, v] of this.lastHash) bytes += k.length + v.length;
-    return { lastHashSize: this.lastHash.size, lastHashBytes: bytes * 2 };
+    const pub = this.pub as unknown as {
+      commandQueue?: { length?: number };
+      offlineQueue?: { length?: number };
+      status: string;
+    };
+    return {
+      lastHashSize: this.lastHash.size,
+      lastHashBytes: bytes * 2,
+      cmdQueueLen: pub.commandQueue?.length ?? 0,
+      offlineQueueLen: pub.offlineQueue?.length ?? 0,
+      dropped: this.droppedSinceStart,
+      redisStatus: pub.status,
+    };
+  }
+
+  /** Returns true when the in-flight queue is full — caller should skip the frame. */
+  private isBackpressured(): boolean {
+    const pub = this.pub as unknown as { commandQueue?: { length?: number } };
+    return (pub.commandQueue?.length ?? 0) > MAX_PENDING_COMMANDS;
   }
 
   publish(channel: WsChannel, id: string, payload: unknown): void {
@@ -80,6 +119,10 @@ export class RealtimeBus {
     if (this.lastHash.size > 5000) {
       const firstKey = this.lastHash.keys().next().value as string | undefined;
       if (firstKey) this.lastHash.delete(firstKey);
+    }
+    if (this.isBackpressured()) {
+      this.droppedSinceStart += 1;
+      return;
     }
     void this.pub.publish(redisKey.wsPub(channel, id), body).catch((err) => {
       this.log.warn({ err: (err as Error).message, channel, id }, 'realtime-bus: publish failed');
@@ -93,6 +136,10 @@ export class RealtimeBus {
    * unchanged payload still hits the wire.
    */
   publishAlways(channel: WsChannel, id: string, payload: unknown): void {
+    if (this.isBackpressured()) {
+      this.droppedSinceStart += 1;
+      return;
+    }
     const body = JSON.stringify(payload);
     void this.pub.publish(redisKey.wsPub(channel, id), body).catch((err) => {
       this.log.warn({ err: (err as Error).message, channel, id }, 'realtime-bus: publish failed');
