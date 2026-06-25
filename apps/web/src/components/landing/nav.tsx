@@ -7,7 +7,7 @@ import { useT } from '@/lib/i18n';
 import { useAuth } from '@/lib/auth-context';
 import { LanguageSwitcher } from './language-switcher';
 
-export function LandingNav() {
+export function LandingNav({ hideAuth = false }: { hideAuth?: boolean }) {
   const { t } = useT();
   const { user, loading: authLoading } = useAuth();
   const [scrolled, setScrolled] = useState(false);
@@ -68,7 +68,7 @@ export function LandingNav() {
             still resolving (`authLoading`) to avoid the CTA briefly
             flickering for already-signed-in viewers on hard reload.
           */}
-          {authLoading ? null : user ? (
+          {hideAuth ? null : authLoading ? null : user ? (
             <Link
               href="/home"
               className="rounded-full border border-white/25 px-4 py-1.5 text-sm font-semibold text-fg transition hover:border-brand hover:text-brand"
@@ -134,7 +134,7 @@ export function LandingNav() {
               {t.nav.pricing}
             </a>
             <div className="mt-3 flex flex-col gap-2 border-t border-border pt-3">
-              {authLoading ? null : user ? (
+              {hideAuth ? null : authLoading ? null : user ? (
                 <Link
                   href="/home"
                   onClick={() => setMobileOpen(false)}

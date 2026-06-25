@@ -16,7 +16,13 @@ import { PulseSection } from './pulse-section';
 import { StructuredData } from './structured-data';
 import { TickerStrip } from './ticker-strip';
 import { fetchLanding } from './landing-data';
+import { headers } from 'next/headers';
 import type { LocaleCode } from '@/lib/locale-config';
+
+// bottomup.app is positioned as the pure marketing face — no auth CTAs.
+// bupcore.ai (and other landing hosts) keep the full Sign in / Get
+// started flow. The host arrives via the `x-host` middleware header.
+const NO_AUTH_HOSTS = new Set(['bottomup.app', 'www.bottomup.app']);
 
 /**
  * Shared landing-page body. Both `app/page.tsx` (canonical English at
@@ -29,11 +35,13 @@ import type { LocaleCode } from '@/lib/locale-config';
  */
 export async function LandingShell({ locale }: { locale: LocaleCode }) {
   const data = await fetchLanding(locale);
+  const host = ((await headers()).get('x-host') ?? '').toLowerCase();
+  const hideAuth = NO_AUTH_HOSTS.has(host);
 
   return (
     <div className="min-h-screen">
       <StructuredData locale={locale} />
-      <LandingNav />
+      <LandingNav hideAuth={hideAuth} />
       {data ? <TickerStrip pulse={data.pulse} /> : null}
 
       <Hero data={data} />

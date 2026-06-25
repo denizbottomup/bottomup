@@ -100,6 +100,10 @@ export function middleware(req: NextRequest): NextResponse {
     if (isLandingPath(pathname)) {
       const res = NextResponse.next();
       res.headers.set('x-locale', detectLocale(pathname));
+      // Forward the host so server components can vary by domain — the
+      // marketing hosts share one codebase, but bottomup.app hides the
+      // auth CTAs (pure marketing) while bupcore.ai keeps them.
+      res.headers.set('x-host', host);
       return res;
     }
     const to = new URL(pathname + search, `https://${TRADE_HOST}`);
@@ -118,6 +122,7 @@ export function middleware(req: NextRequest): NextResponse {
   // SSR works in dev.
   const res = NextResponse.next();
   res.headers.set('x-locale', detectLocale(pathname));
+  res.headers.set('x-host', host);
   return res;
 }
 
