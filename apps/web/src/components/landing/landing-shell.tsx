@@ -52,7 +52,10 @@ export async function LandingShell({ locale }: { locale: LocaleCode }) {
       <FoxyFirewallSection />
       <MarketplaceSection />
 
-      <LeaderboardSection />
+      {/* The leaderboard is auth-gated (signup CTA + token-fetched cards).
+          bottomup.app has no signup, so the section can't function there —
+          drop it on the no-auth hosts, keep it on bupcore.ai. */}
+      {hideAuth ? null : <LeaderboardSection />}
 
       <McpSuiteSection />
 
