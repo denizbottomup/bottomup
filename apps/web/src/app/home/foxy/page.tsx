@@ -5,38 +5,60 @@ import { extractCoin, type CoinMatch } from '@/lib/coin-extract';
 import { useAuth } from '@/lib/auth-context';
 import { FoxyPromptPanel } from '@/components/foxy/prompt-panel';
 import { FoxyVerdictHero } from '@/components/foxy/verdict-hero';
+import { FoxyTradingViewCard } from '@/components/foxy/tradingview-card';
+import { FoxyDataStrip } from '@/components/foxy/data-strip';
+import { FoxyTradesTable } from '@/components/foxy/trades-table';
 import {
   type FoxyAnalysis,
+  type FoxyAssetMarket,
+  type FoxyDerivatives,
   type FoxyHistoryEntry,
   type FoxyQueryReply,
+  type FoxySetupsByCoin,
+  type FoxyWhales,
 } from '@/components/foxy/types';
 
 const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE_URL ||
   'https://bottomupapi-production.up.railway.app';
 
+/** The supporting data the AI model reasoned over, surfaced as panels. */
+interface BoardData {
+  market: FoxyAssetMarket | null;
+  derivatives: FoxyDerivatives | null;
+  whales: FoxyWhales | null;
+  setups: FoxySetupsByCoin | null;
+}
+
 /**
  * Foxy — the single post-login surface. The user writes a prompt and
- * Foxy returns a desk-analyst AL / SAT / BEKLE verdict. Nothing else:
- * no sidebar, no charts, no trade tables — just prompt + answer.
- *
- * The hero call is non-negotiable — every reason inside it must read
- * like a desk-analyst observation, never a raw confluence score.
+ * gets a full decision board for that coin: our AI model's AL / SAT /
+ * BEKLE call up top, then the live data behind it — price, derivatives,
+ * whale flow, and what BottomUP traders are doing. The clean prompt is
+ * the entry; the answer is data-dense by design.
  */
 export default function FoxyPage() {
   const { user, getIdToken } = useAuth();
   const [prompt, setPrompt] = useState('');
   const [coin, setCoin] = useState<CoinMatch | null>(null);
   const [analysis, setAnalysis] = useState<FoxyAnalysis | null>(null);
+  const [board, setBoard] = useState<BoardData | null>(null);
+  const [updatedAt, setUpdatedAt] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [history, setHistory] = useState<FoxyHistoryEntry[]>([]);
   const [activeHistoryId, setActiveHistoryId] = useState<string | null>(null);
+  // Last query so the data panels can re-fetch without retyping.
+  const [lastQuery, setLastQuery] = useState<{
+    text: string;
+    match: CoinMatch;
+  } | null>(null);
 
   async function runQuery(text: string, match: CoinMatch) {
     if (!user) return;
     setLoading(true);
     setError(null);
+    setLastQuery({ text, match });
 
     const token = await getIdToken();
     if (!token) {
@@ -46,50 +68,52 @@ export default function FoxyPage() {
     }
     const auth = { Authorization: `Bearer ${token}` };
 
-    const queryPromise = fetch(`${API_BASE}/me/foxy/query`, {
-      method: 'POST',
-      headers: { ...auth, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt: text, coin: match.symbol }),
-    })
-      .then(async (r) => {
-        if (r.status === 403) {
-          const body = (await r.json().catch(() => null)) as {
-            message?: string;
-          } | null;
-          throw new Error(
-            body?.message ??
-              'Foxy haftalık sorgu limitin doldu — Premium ile devam et.',
-          );
-        }
-        if (!r.ok) throw new Error('Foxy şu an cevap veremedi.');
-        return (await r.json()) as Partial<FoxyQueryReply> & {
-          // Legacy API shape — kept here only so the UI doesn't crash
-          // against a backend that hasn't redeployed yet. Drop once
-          // both api and web are on the new contract.
-          reply?: string;
-        };
-      })
-      .then((reply): FoxyAnalysis => {
-        if (reply?.analysis && typeof reply.analysis === 'object') {
-          return reply.analysis;
-        }
-        // Legacy `{ reply: "..." }` fallback — show the narrative
-        // as a single bullet so the user gets *something* instead of
-        // a crash, until api redeploys with the structured contract.
-        const legacy = (reply?.reply ?? '').trim();
-        return {
-          verdict: 'BEKLE',
-          headline: legacy
-            ? 'Foxy yorumu (eski format)'
-            : 'Foxy yapılandırılmış cevap döndüremedi.',
-          reasons: legacy ? [legacy] : [],
-          invalidation: '',
-        };
+    try {
+      const r = await fetch(`${API_BASE}/me/foxy/query`, {
+        method: 'POST',
+        headers: { ...auth, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: text, coin: match.symbol }),
       });
 
-    try {
-      const verdict = await queryPromise;
+      if (r.status === 403) {
+        const body = (await r.json().catch(() => null)) as {
+          message?: string;
+        } | null;
+        throw new Error(
+          body?.message ??
+            'Foxy haftalık sorgu limitin doldu — Premium ile devam et.',
+        );
+      }
+      if (!r.ok) throw new Error('Foxy şu an cevap veremedi.');
+
+      const reply = (await r.json()) as Partial<FoxyQueryReply> & {
+        // Legacy `{ reply: "..." }` shape — kept so the UI doesn't crash
+        // against a backend that hasn't redeployed yet.
+        reply?: string;
+      };
+
+      const verdict: FoxyAnalysis =
+        reply?.analysis && typeof reply.analysis === 'object'
+          ? reply.analysis
+          : {
+              verdict: 'BEKLE',
+              headline: (reply?.reply ?? '').trim()
+                ? 'Foxy yorumu (eski format)'
+                : 'Foxy yapılandırılmış cevap döndüremedi.',
+              reasons: (reply?.reply ?? '').trim()
+                ? [(reply?.reply ?? '').trim()]
+                : [],
+              invalidation: '',
+            };
+
       setAnalysis(verdict);
+      setBoard({
+        market: reply?.market ?? null,
+        derivatives: reply?.derivatives ?? null,
+        whales: reply?.whales ?? null,
+        setups: reply?.setups ?? null,
+      });
+      setUpdatedAt(Date.now());
 
       const entry: FoxyHistoryEntry = {
         id: crypto.randomUUID(),
@@ -123,14 +147,14 @@ export default function FoxyPage() {
     setPrompt('');
     setCoin(match);
     setAnalysis(null);
+    setBoard(null);
     setActiveHistoryId(null);
     void runQuery(text, match);
   }
 
   function handlePickHistory(entry: FoxyHistoryEntry) {
-    // Re-run the same prompt — cheaper than persisting the full
-    // payload and keeps history-from-history coherent with the
-    // most recent backend state.
+    // Re-run the same prompt — cheaper than persisting the full payload
+    // and keeps history-from-history coherent with backend state.
     if (!entry.coinSymbol) return;
     const match = extractCoin(entry.prompt);
     if (!match) return;
@@ -138,8 +162,14 @@ export default function FoxyPage() {
     setError(null);
     setCoin(match);
     setAnalysis(null);
+    setBoard(null);
     setActiveHistoryId(entry.id);
     void runQuery(entry.prompt, match);
+  }
+
+  function handleRefresh() {
+    if (loading || !lastQuery) return;
+    void runQuery(lastQuery.text, lastQuery.match);
   }
 
   return (
@@ -157,9 +187,27 @@ export default function FoxyPage() {
 
       <main className="flex-1 overflow-y-auto p-4 md:p-6">
         {coin ? (
-          <div className="mx-auto flex max-w-[760px] flex-col gap-4">
+          <div className="mx-auto flex max-w-[860px] flex-col gap-4">
             {analysis ? (
-              <FoxyVerdictHero coin={coin} analysis={analysis} />
+              <>
+                <FoxyVerdictHero coin={coin} analysis={analysis} />
+                <FoxyDataStrip
+                  coin={coin}
+                  setups={board?.setups ?? null}
+                  derivatives={board?.derivatives ?? null}
+                  whales={board?.whales ?? null}
+                  loading={loading}
+                />
+                <FoxyTradingViewCard coin={coin} />
+                <FoxyTradesTable
+                  coin={coin}
+                  setups={board?.setups ?? null}
+                  loading={loading}
+                  updatedAt={updatedAt}
+                  refreshing={loading}
+                  onRefresh={handleRefresh}
+                />
+              </>
             ) : (
               <VerdictSkeleton />
             )}
@@ -182,8 +230,9 @@ function EmptyState() {
         Bir coin sor.
       </h1>
       <p className="mt-2 text-sm text-fg-muted">
-        Sol panelden istediğin coin'i sor — Foxy 3 kaynaktan veri sentezi
-        yapıp net bir AL / SAT / BEKLE çağrısı çıkartsın.
+        Sol panelden istediğin coin&apos;i sor — Foxy net bir AL / SAT / BEKLE
+        çağrısı verir, altında fiyat, türev verisi, balina akışı ve trader
+        pozisyonlarını gösterir.
       </p>
     </div>
   );

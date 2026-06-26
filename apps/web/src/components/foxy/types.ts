@@ -9,8 +9,19 @@ export type FoxyVerdict = 'AL' | 'SAT' | 'BEKLE';
 export interface FoxyAnalysis {
   verdict: FoxyVerdict;
   headline: string;
+  /** Plain "🦊 Senin için" actionable paragraph. Optional so older
+   *  backend responses don't break the UI; render only when present. */
+  takeaway?: string;
   reasons: string[];
   invalidation: string;
+}
+
+export interface FoxyAssetMarket {
+  price: number;
+  change_24h_pct: number;
+  high_24h: number | null;
+  low_24h: number | null;
+  quote_volume_24h: number | null;
 }
 
 export interface FoxyQuotaState {
@@ -24,6 +35,13 @@ export interface FoxyQueryReply {
   prompt: string;
   coin: string | null;
   analysis: FoxyAnalysis;
+  /** Supporting data the model reasoned over — surfaced for the full
+   *  decision board. Each may be null/absent; the UI hides empty panels.
+   *  Optional so a pre-deploy backend response still type-checks. */
+  market?: FoxyAssetMarket | null;
+  derivatives?: FoxyDerivatives | null;
+  whales?: FoxyWhales | null;
+  setups?: FoxySetupsByCoin | null;
   quota: FoxyQuotaState;
   entitlement: {
     tier: 'free' | 'trial' | 'premium';

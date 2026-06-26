@@ -41,6 +41,19 @@ export function FoxyVerdictHero({ coin, analysis }: Props) {
             {analysis.headline}
           </h2>
 
+          {analysis.takeaway ? (
+            <div
+              className={`mt-4 rounded-xl border ${palette.border} ${palette.heroBg} px-4 py-3`}
+            >
+              <div className="mb-1 flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.12em] text-fg-dim">
+                <span aria-hidden>🦊</span> Senin için
+              </div>
+              <p className="text-sm font-medium leading-relaxed text-fg">
+                {analysis.takeaway}
+              </p>
+            </div>
+          ) : null}
+
           {analysis.reasons.length > 0 ? (
             <ul className="mt-4 space-y-2.5">
               {analysis.reasons.map((r, i) => (
@@ -58,7 +71,7 @@ export function FoxyVerdictHero({ coin, analysis }: Props) {
 
           {analysis.invalidation ? (
             <div className="mt-4 rounded-xl border border-border bg-bg-elev px-3 py-2.5 text-xs leading-relaxed text-fg-muted">
-              <span className="mono-label !text-fg-dim">İptal koşulu</span>
+              <span className="mono-label !text-fg-dim">Ne zaman fikrim değişir</span>
               <span className="ml-2 text-fg">{analysis.invalidation}</span>
             </div>
           ) : null}
