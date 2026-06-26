@@ -283,6 +283,7 @@ export const vi: Dict = {
     headline_2: 'bù cả năm.',
     subtitle: 'Gói miễn phí đủ cho các lần kiểm tra nhanh hàng ngày. Các gói trả phí mở khóa kiểm duyệt rủi ro Foxy AI không giới hạn và 100% hiển thị mọi setup do trader công bố — giữa các gói trả phí chỉ khác nhau ở thời hạn cam kết.',
     most_popular: 'Phổ biến nhất',
+    best_value: 'Giá tốt nhất',
     billed_monthly: 'Thanh toán hàng tháng, gia hạn',
     billed_upfront: '{total} trả trước',
     save_13: 'Tiết kiệm 13%',
@@ -307,14 +308,14 @@ export const vi: Dict = {
         name: '3 tháng',
         features: [
           'Toàn bộ gói Hàng tháng',
-          'Rẻ hơn 13% mỗi tháng so với Hàng tháng',
+          'Chi phí mỗi tháng thấp hơn',
         ],
       },
       {
         name: '6 tháng',
         features: [
           'Toàn bộ gói Hàng tháng',
-          'Rẻ hơn 20% mỗi tháng so với Hàng tháng',
+          'Chi phí mỗi tháng thấp nhất',
         ],
       },
     ],

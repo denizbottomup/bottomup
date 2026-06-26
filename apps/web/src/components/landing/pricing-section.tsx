@@ -4,45 +4,46 @@ import { useT } from '@/lib/i18n';
 import { StoreBadges } from './store-badges';
 
 // Tiers mirror the live App Store Connect "Plans" subscription group on
-// app id 1661474993. Free tier is the in-app free experience (limited
-// Foxy AI quota + 20% trader-signal visibility); the rest are
-// auto-renewing subscriptions in USD.
-//   free          → $0 / forever  (5 Foxy/day, 20% setup visibility)
-//   monthly       → $49.99 / month
-//   3 months      → $129.99 total ($43.33 / month, ~13% off monthly)
-//   6 months      → $239.99 total ($40.00 / month, ~20% off monthly)
+// app id 1661474993. USD figures track the in-app paywall: each paid
+// tier shows the current price against a struck-through list price
+// (~50% off), the same framing the app uses. `was` is the list price;
+// `total` is the upfront amount billed for the period.
+//   free     → $0 / forever  (5 Foxy/day, 20% setup visibility)
+//   monthly  → $14.99 / month            (list $29.99,  −50%)
+//   3 months → $42.99 total / $14.33 mo  (list $85.99,  −50%)  · Most popular
+//   6 months → $74.99 total / $12.50 mo  (list $149.99, −50%)  · Best value
 const PLAN_META = [
   {
     code: 'free',
-    price: 0,
     priceLabel: '$0',
+    was: null as string | null,
     total: null as number | null,
     highlight: false,
-    saveKey: null as 'save_13' | 'save_20' | null,
+    badge: null as 'popular' | 'best' | null,
   },
   {
     code: 'monthly',
-    price: 49.99,
-    priceLabel: '$49.99',
+    priceLabel: '$14.99',
+    was: '$29.99',
     total: null as number | null,
     highlight: false,
-    saveKey: null as 'save_13' | 'save_20' | null,
+    badge: null as 'popular' | 'best' | null,
   },
   {
     code: 'quarter',
-    price: 43.33,
-    priceLabel: '$43.33',
-    total: 129.99,
+    priceLabel: '$14.33',
+    was: '$85.99',
+    total: 42.99,
     highlight: true,
-    saveKey: 'save_13' as const,
+    badge: 'popular' as const,
   },
   {
     code: 'half',
-    price: 40,
-    priceLabel: '$40',
-    total: 239.99,
+    priceLabel: '$12.50',
+    was: '$149.99',
+    total: 74.99,
     highlight: false,
-    saveKey: 'save_20' as const,
+    badge: 'best' as const,
   },
 ];
 
@@ -75,16 +76,10 @@ export function PricingSection() {
               key={p.code}
               plan={p}
               mostPopular={t.pr.most_popular}
+              bestValue={t.pr.best_value ?? 'Best value'}
               billedMonthly={t.pr.billed_monthly}
               billedUpfront={t.pr.billed_upfront}
               freeLabel={t.pr.free_label}
-              saveLabel={
-                p.saveKey === 'save_13'
-                  ? t.pr.save_13
-                  : p.saveKey === 'save_20'
-                    ? t.pr.save_20
-                    : null
-              }
             />
           ))}
         </div>
@@ -104,61 +99,66 @@ export function PricingSection() {
 interface Plan {
   code: string;
   name: string;
-  price: number;
   priceLabel: string;
+  was: string | null;
   total: number | null;
   highlight: boolean;
+  badge: 'popular' | 'best' | null;
   features: string[];
 }
 
 function PlanCard({
   plan,
   mostPopular,
+  bestValue,
   billedMonthly,
   billedUpfront,
   freeLabel,
-  saveLabel,
 }: {
   plan: Plan;
   mostPopular: string;
+  bestValue: string;
   billedMonthly: string;
   billedUpfront: string;
   freeLabel: string;
-  saveLabel: string | null;
 }) {
-  const isFree = plan.price === 0;
+  const isFree = plan.priceLabel === '$0';
   return (
     <div
       className={`relative flex flex-col rounded-2xl border p-6 transition ${
         plan.highlight
           ? 'border-brand/40 bg-brand/[0.06] shadow-2xl shadow-brand/10'
-          : 'border-border bg-bg-card'
+          : plan.badge === 'best'
+            ? 'border-violet/40 bg-violet/[0.05]'
+            : 'border-border bg-bg-card'
       }`}
     >
-      {plan.highlight ? (
+      {plan.badge === 'popular' ? (
         <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-brand px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-white">
           {mostPopular}
+        </div>
+      ) : plan.badge === 'best' ? (
+        <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-violet px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-white">
+          {bestValue}
         </div>
       ) : null}
       <div className="text-[11px] uppercase tracking-wider text-fg-muted">
         {plan.name}
       </div>
-      <div className="mt-2 flex items-baseline gap-1">
+      <div className="mt-2 flex items-baseline gap-2">
         <span className="text-4xl font-semibold text-fg">{plan.priceLabel}</span>
         {isFree ? null : (
           <span className="text-sm text-fg-muted">/ mo</span>
         )}
+        {plan.was ? (
+          <span className="text-sm text-fg-dim line-through">{plan.was}</span>
+        ) : null}
       </div>
       {isFree ? (
         <div className="mt-1 text-[11px] text-fg-dim">{freeLabel}</div>
       ) : plan.total != null ? (
         <div className="mt-1 text-[11px] text-fg-dim">
-          {billedUpfront.replace('{total}', `$${plan.total}`)}{' '}
-          {saveLabel ? (
-            <span className="ml-1 rounded-md bg-emerald-400/10 px-1.5 py-0.5 text-emerald-300 ring-1 ring-emerald-400/30">
-              {saveLabel}
-            </span>
-          ) : null}
+          {billedUpfront.replace('{total}', `$${plan.total}`)}
         </div>
       ) : (
         <div className="mt-1 text-[11px] text-fg-dim">{billedMonthly}</div>

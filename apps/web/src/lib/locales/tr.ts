@@ -284,6 +284,7 @@ export const tr: Dict = {
     headline_2: 'yılı amorti eder.',
     subtitle: 'Ücretsiz plan günlük hızlı bakış için yeter. Ücretli planlar sınırsız Foxy AI risk denetimi ve trader’ların paylaştığı setup’ların %100’üne erişim açar — ücretli planlar arasındaki tek fark commitment süresi.',
     most_popular: 'En popüler',
+    best_value: 'En iyi fiyat',
     billed_monthly: 'Aylık faturalanır, yenilenir',
     billed_upfront: '{total} peşin',
     save_13: '%13 tasarruf',
@@ -308,14 +309,14 @@ export const tr: Dict = {
         name: '3 Aylık',
         features: [
           'Aylık’taki her şey',
-          'Aylık’a göre %13 daha düşük aylık maliyet',
+          'Aylık daha düşük maliyet',
         ],
       },
       {
         name: '6 Aylık',
         features: [
           'Aylık’taki her şey',
-          'Aylık’a göre %20 daha düşük aylık maliyet',
+          'En düşük aylık maliyet',
         ],
       },
     ],

@@ -283,6 +283,7 @@ export const ko: Dict = {
     headline_2: '1년을 커버합니다.',
     subtitle: '무료는 매일 빠른 확인용으로 충분. 유료 플랜은 무제한 Foxy AI 리스크 감사와 트레이더가 게시한 모든 셋업의 100% 가시성을 잠금 해제 — 유료 플랜끼리는 약정 기간만 다릅니다.',
     most_popular: '가장 인기',
+    best_value: '최고의 가치',
     billed_monthly: '월간 청구, 자동 갱신',
     billed_upfront: '{total} 선불',
     save_13: '13% 절약',
@@ -307,14 +308,14 @@ export const ko: Dict = {
         name: '3개월',
         features: [
           '월간의 모든 것',
-          '월간 대비 월별 13% 저렴',
+          '더 낮은 월 비용',
         ],
       },
       {
         name: '6개월',
         features: [
           '월간의 모든 것',
-          '월간 대비 월별 20% 저렴',
+          '가장 낮은 월 비용',
         ],
       },
     ],

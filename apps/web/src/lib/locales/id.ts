@@ -283,6 +283,7 @@ export const id: Dict = {
     headline_2: 'menutupi setahun.',
     subtitle: 'Gratis cukup untuk pemeriksaan harian cepat. Paket berbayar membuka audit risiko Foxy AI tanpa batas dan visibilitas 100% setiap setup yang dipublikasikan trader — di antara paket berbayar yang berbeda hanya durasi komitmen.',
     most_popular: 'Paling populer',
+    best_value: 'Nilai terbaik',
     billed_monthly: 'Ditagih bulanan, diperpanjang',
     billed_upfront: '{total} dibayar di muka',
     save_13: 'Hemat 13%',
@@ -307,14 +308,14 @@ export const id: Dict = {
         name: '3 Bulan',
         features: [
           'Semua di Bulanan',
-          '13% lebih murah per bulan dibanding Bulanan',
+          'Biaya per bulan lebih rendah',
         ],
       },
       {
         name: '6 Bulan',
         features: [
           'Semua di Bulanan',
-          '20% lebih murah per bulan dibanding Bulanan',
+          'Biaya per bulan terendah',
         ],
       },
     ],

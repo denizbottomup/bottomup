@@ -195,6 +195,8 @@ export interface Dict {
     headline_2: string;
     subtitle: string;
     most_popular: string;
+    /** Badge on the longest-commitment paid tier. Optional — falls back to "Best value". */
+    best_value?: string;
     billed_monthly: string;
     billed_upfront: string;
     save_13: string;
