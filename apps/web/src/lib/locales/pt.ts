@@ -284,6 +284,7 @@ export const pt: Dict = {
     subtitle: 'Grátis serve para checagens rápidas diárias. Os planos pagos liberam auditorias Foxy AI ilimitadas e visibilidade total de cada setup publicado pelos traders — a única diferença entre os planos pagos é a duração do compromisso.',
     most_popular: 'Mais popular',
     best_value: 'Melhor custo-benefício',
+    with_code: 'A partir de {price} com código',
     billed_monthly: 'Cobrado mensalmente, renova',
     billed_upfront: '{total} adiantado',
     save_13: 'Economize 13%',
@@ -308,7 +309,7 @@ export const pt: Dict = {
         name: '3 Meses',
         features: [
           'Tudo do Mensal',
-          'Menor custo por mês',
+          'Melhor equilíbrio',
         ],
       },
       {

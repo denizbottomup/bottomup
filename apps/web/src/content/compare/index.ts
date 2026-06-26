@@ -140,7 +140,7 @@ const ETORO: Comparison = {
     {
       axis: 'Pricing for subscribers',
       bottomup:
-        'Free tier (limited daily AI usage, partial setup visibility). Monthly $14.99 / quarterly $42.99 / semi-annual $74.99 unlock unlimited AI usage and full visibility.',
+        'Free tier (limited daily AI usage, partial setup visibility). Monthly $19.99 / quarterly $59.99 / semi-annual $99.99 unlock unlimited AI usage and full visibility.',
       competitor:
         'No subscription fee for using CopyTrader. Spread-based revenue plus optional non-trading fees on the brokerage account.',
       ref: 4,
@@ -237,7 +237,7 @@ const THREECOMMAS: Comparison = {
     {
       axis: 'Pricing',
       bottomup:
-        'Free tier (limited daily AI usage, partial setup visibility). Monthly $14.99 / quarterly $42.99 / semi-annual $74.99 unlock unlimited usage.',
+        'Free tier (limited daily AI usage, partial setup visibility). Monthly $19.99 / quarterly $59.99 / semi-annual $99.99 unlock unlimited usage.',
       competitor:
         'Tiered subscriptions for the platform; published pricing has historically run roughly $14–$99/month plus exchange fees.',
       ref: 3,
@@ -338,7 +338,7 @@ const BYBIT: Comparison = {
     {
       axis: 'Pricing for subscribers',
       bottomup:
-        'Free tier (limited daily AI usage, partial setup visibility). Monthly $14.99 / quarterly $42.99 / semi-annual $74.99 unlock unlimited usage and full visibility.',
+        'Free tier (limited daily AI usage, partial setup visibility). Monthly $19.99 / quarterly $59.99 / semi-annual $99.99 unlock unlimited usage and full visibility.',
       competitor:
         'No subscription fee. Bybit\'s revenue is exchange fees plus a profit-share that the master takes from copiers on profitable trades.',
     },

@@ -197,6 +197,8 @@ export interface Dict {
     most_popular: string;
     /** Badge on the longest-commitment paid tier. Optional — falls back to "Best value". */
     best_value?: string;
+    /** Footnote showing the deepest with-a-code price. `{price}` is interpolated. Optional. */
+    with_code?: string;
     billed_monthly: string;
     billed_upfront: string;
     save_13: string;

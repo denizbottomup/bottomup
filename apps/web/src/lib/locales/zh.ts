@@ -284,6 +284,7 @@ export const zh: Dict = {
     subtitle: '免费版适合每日快速查看。付费计划解锁无限 Foxy AI 风险审核和 100% 交易员发布仓位的可见性 — 付费计划之间只是承诺时长不同。',
     most_popular: '最受欢迎',
     best_value: '最超值',
+    with_code: '用优惠码低至 {price}',
     billed_monthly: '按月计费,续订',
     billed_upfront: '{total} 预付',
     save_13: '节省 13%',
@@ -308,7 +309,7 @@ export const zh: Dict = {
         name: '3 个月',
         features: [
           '月度计划的一切',
-          '每月成本更低',
+          '最佳平衡',
         ],
       },
       {

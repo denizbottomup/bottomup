@@ -180,9 +180,9 @@ not indicative of future results.
 | Plan | Total | Per month | Save | Notes |
 | --- | --- | --- | --- | --- |
 | Free | $0 | — | — | Limited daily AI usage, 20% trader-signal visibility |
-| Monthly | $14.99 | $14.99 | 50% off | Full marketplace, unlimited AI usage |
-| 3 months | $42.99 | $14.33 | 50% off | Adds OKX copy trading, full MCP Suite |
-| 6 months | $74.99 | $12.50 | 50% off | Adds $BUP token rewards, Q1 2027 TradFi early access |
+| Monthly | $19.99 | $19.99 | 33% off | Full marketplace, unlimited AI usage |
+| 3 months | $59.99 | $20.00 | 25% off | Adds OKX copy trading, full MCP Suite |
+| 6 months | $99.99 | $16.67 | 33% off | Adds $BUP token rewards, Q1 2027 TradFi early access |
 
 All plans billed in USD, auto-renew at end of period, cancellable
 any time. Partial periods not pro-rated.

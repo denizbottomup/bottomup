@@ -256,6 +256,7 @@ export const en: Dict = {
       'Free is good for daily quick checks. Paid plans unlock unlimited Foxy AI risk audits and 100% visibility into every trader-published setup — only the commitment length differs between paid tiers.',
     most_popular: 'Most popular',
     best_value: 'Best value',
+    with_code: 'From {price} with a code',
     billed_monthly: 'Billed monthly, renews',
     billed_upfront: '{total} billed upfront',
     save_13: 'Save 13%',
@@ -280,7 +281,7 @@ export const en: Dict = {
         name: '3 Months',
         features: [
           'Everything in Monthly',
-          'Lower cost per month',
+          'Best balance',
         ],
       },
       {

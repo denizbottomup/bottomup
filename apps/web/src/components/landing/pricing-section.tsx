@@ -4,44 +4,48 @@ import { useT } from '@/lib/i18n';
 import { StoreBadges } from './store-badges';
 
 // Tiers mirror the live App Store Connect "Plans" subscription group on
-// app id 1661474993. USD figures track the in-app paywall: each paid
-// tier shows the current price against a struck-through list price
-// (~50% off), the same framing the app uses. `was` is the list price;
-// `total` is the upfront amount billed for the period.
-//   free     → $0 / forever  (5 Foxy/day, 20% setup visibility)
-//   monthly  → $14.99 / month            (list $29.99,  −50%)
-//   3 months → $42.99 total / $14.33 mo  (list $85.99,  −50%)  · Most popular
-//   6 months → $74.99 total / $12.50 mo  (list $149.99, −50%)  · Best value
+// app id 1661474993. Each paid tier shows the in-app discount price for
+// the whole period (the headline), struck through against the normal
+// list price, with the deepest with-a-code price as a footnote.
+//   priceLabel = discount price / period · was = normal list · withCode = code price
+//   free     → $0 / forever
+//   monthly  → $19.99 / mo    (list $29.99,  code $12.99)
+//   3 months → $59.99 / 3 mo  (list $79.99,  code $34.99)  · Most popular
+//   6 months → $99.99 / 6 mo  (list $149.99, code $64.99)  · Best value
 const PLAN_META = [
   {
     code: 'free',
     priceLabel: '$0',
+    unit: '',
     was: null as string | null,
-    total: null as number | null,
+    withCode: null as string | null,
     highlight: false,
     badge: null as 'popular' | 'best' | null,
   },
   {
     code: 'monthly',
-    priceLabel: '$14.99',
+    priceLabel: '$19.99',
+    unit: '/ mo',
     was: '$29.99',
-    total: null as number | null,
+    withCode: '$12.99',
     highlight: false,
     badge: null as 'popular' | 'best' | null,
   },
   {
     code: 'quarter',
-    priceLabel: '$14.33',
-    was: '$85.99',
-    total: 42.99,
+    priceLabel: '$59.99',
+    unit: '/ 3 mo',
+    was: '$79.99',
+    withCode: '$34.99',
     highlight: true,
     badge: 'popular' as const,
   },
   {
     code: 'half',
-    priceLabel: '$12.50',
+    priceLabel: '$99.99',
+    unit: '/ 6 mo',
     was: '$149.99',
-    total: 74.99,
+    withCode: '$64.99',
     highlight: false,
     badge: 'best' as const,
   },
@@ -77,8 +81,7 @@ export function PricingSection() {
               plan={p}
               mostPopular={t.pr.most_popular}
               bestValue={t.pr.best_value ?? 'Best value'}
-              billedMonthly={t.pr.billed_monthly}
-              billedUpfront={t.pr.billed_upfront}
+              withCodeTpl={t.pr.with_code ?? 'From {price} with a code'}
               freeLabel={t.pr.free_label}
             />
           ))}
@@ -100,8 +103,9 @@ interface Plan {
   code: string;
   name: string;
   priceLabel: string;
+  unit: string;
   was: string | null;
-  total: number | null;
+  withCode: string | null;
   highlight: boolean;
   badge: 'popular' | 'best' | null;
   features: string[];
@@ -111,15 +115,13 @@ function PlanCard({
   plan,
   mostPopular,
   bestValue,
-  billedMonthly,
-  billedUpfront,
+  withCodeTpl,
   freeLabel,
 }: {
   plan: Plan;
   mostPopular: string;
   bestValue: string;
-  billedMonthly: string;
-  billedUpfront: string;
+  withCodeTpl: string;
   freeLabel: string;
 }) {
   const isFree = plan.priceLabel === '$0';
@@ -147,22 +149,20 @@ function PlanCard({
       </div>
       <div className="mt-2 flex items-baseline gap-2">
         <span className="text-4xl font-semibold text-fg">{plan.priceLabel}</span>
-        {isFree ? null : (
-          <span className="text-sm text-fg-muted">/ mo</span>
-        )}
+        {plan.unit ? (
+          <span className="text-sm text-fg-muted">{plan.unit}</span>
+        ) : null}
         {plan.was ? (
           <span className="text-sm text-fg-dim line-through">{plan.was}</span>
         ) : null}
       </div>
       {isFree ? (
         <div className="mt-1 text-[11px] text-fg-dim">{freeLabel}</div>
-      ) : plan.total != null ? (
-        <div className="mt-1 text-[11px] text-fg-dim">
-          {billedUpfront.replace('{total}', `$${plan.total}`)}
+      ) : plan.withCode ? (
+        <div className="mt-1 text-[11px] text-emerald-300/90">
+          {withCodeTpl.replace('{price}', plan.withCode)}
         </div>
-      ) : (
-        <div className="mt-1 text-[11px] text-fg-dim">{billedMonthly}</div>
-      )}
+      ) : null}
 
       <ul className="mt-6 flex flex-1 flex-col gap-2 text-sm text-fg">
         {plan.features.map((f) => (
