@@ -117,26 +117,43 @@ export interface FoxyQuotaState {
 export interface FoxyAnalysis {
   /** AL = buy now, SAT = sell/short, BEKLE = wait — no other values. */
   verdict: 'AL' | 'SAT' | 'BEKLE';
-  /** One-sentence Turkish headline that fits in a hero card. */
+  /** One-sentence plain-Turkish headline that fits in a hero card.
+   *  Founder voice, NO jargon — a normal user must grasp it instantly. */
   headline: string;
   /**
-   * 3–6 bullet reasons in natural Turkish. Each item must read like a
-   * desk analyst observation, not a raw metric: prefer
-   * "Open interest 4h'de %4.5 düştü → long-capitulation sürüyor"
-   * over "OI: -4.5%".
+   * The single most important field: one short plain-Turkish paragraph
+   * telling the user what to actually DO and why, with zero jargon.
+   * This is the "🦊 Senin için" line — the answer to "ben ne yapayım".
+   * Example: "Şu fiyattan alma. Yükseliş çok hızlı oldu ve onu taşıyan
+   * büyük para yok; satış gelirse hızlı düşer. Elinde varsa kârını al."
+   */
+  takeaway: string;
+  /**
+   * 3–6 bullet reasons in PLAIN Turkish. Each pairs a plain-language
+   * explanation with the hard number — never a bare metric or an
+   * English term. Prefer "Yukarı oynayanlar kalabalık ama yükselişe
+   * büyük cüzdanlardan giriş yok (24 saatte sıfır)" over "OI -4.5%".
    */
   reasons: string[];
-  /** Single sentence describing the price level/condition that
-   *  invalidates the call. May be empty when no clean invalidation
-   *  exists (e.g. for BEKLE). */
+  /** Single PLAIN-Turkish sentence describing what would flip the call
+   *  ("ne zaman fikrim değişir"). May be empty for BEKLE. */
   invalidation: string;
 }
 
 export interface FoxyQueryReply {
   prompt: string;
   coin: string | null;
-  /** Structured AL/SAT/BEKLE verdict + reasons + invalidation. */
+  /** Structured AL/SAT/BEKLE verdict + takeaway + reasons + invalidation. */
   analysis: FoxyAnalysis;
+  /**
+   * The same supporting data the AI model reasoned over, surfaced so
+   * the user sees a full decision board — not just the verdict. Each
+   * source degrades to null independently; the UI hides empty panels.
+   */
+  market: FoxyAssetMarket | null;
+  derivatives: FoxyDerivatives | null;
+  whales: FoxyWhales | null;
+  setups: FoxySetupsByCoin | null;
   quota: FoxyQuotaState;
   /** Echoed for the UI to show the tier badge. */
   entitlement: Entitlement;
@@ -920,6 +937,12 @@ export class FoxyService implements OnModuleInit {
       prompt,
       coin: coinNorm,
       analysis,
+      // Surface the bundle the model reasoned over so the UI can render
+      // a full decision board next to the verdict.
+      market,
+      derivatives,
+      whales,
+      setups,
       quota: {
         ...quota,
         used: quota.used + 1, // reflect the row we just inserted
@@ -1700,38 +1723,59 @@ const FOXY_QUERY_SYSTEM_PROMPT = [
   'Eğer market bloku null veya price 0 ise: BEKLE döndür, "anlık fiyat alınamadı"',
   'gerekçesi yaz. Stale community_setups\'larla fiyat üretme.',
   '',
+  'KİME YAZIYORSUN: Borsa terminali okumayan, normal bir kullanıcı. Senin işin',
+  'bu ham veriyi onun yerine OKUYUP, ne anlama geldiğini ve ne yapması gerektiğini',
+  'düz Türkçeyle söylemek. Kullanıcı "funding", "OI", "open interest", "long/short',
+  'ratio", "liquidation", "CEX inflow", "long-squeeze", "counter-signal", "basis",',
+  '"FOMO", "retail" gibi terimleri BİLMİYOR ve bilmek zorunda değil.',
+  '',
   'ÇIKTI FORMATI — sadece geçerli JSON döndür, başka hiçbir şey yazma:',
   '{',
   '  "verdict": "AL" | "SAT" | "BEKLE",',
-  '  "headline": "tek cümle Türkçe başlık, max 100 karakter",',
+  '  "headline": "tek cümle, düz Türkçe, max 100 karakter — jargon YOK",',
+  '  "takeaway": "kullanıcıya net seslenen 2-3 cümle: ne yapsın + neden",',
   '  "reasons": ["bullet 1", "bullet 2", "bullet 3", ...],',
-  '  "invalidation": "bu çağrıyı iptal eden tek cümlelik koşul"',
+  '  "invalidation": "fikrimi ne değiştirir — tek düz cümle"',
   '}',
   '',
+  'EN ÖNEMLİ KURAL — JARGON YASAK. Hiçbir alanda İngilizce/teknik terim kullanma.',
+  'Her kavramı düz kelimelerle ANLAT, İSİMLENDİRME. Çeviri rehberi:',
+  '  • funding negatif        → "düşüşe oynayanlar yükselişe oynayanlara para ödüyor',
+  '                              (yani profesyoneller aşağı bekliyor)"',
+  '  • funding pozitif/yüksek → "yükselişe oynayanlar o kadar kalabalık ki pozisyonu',
+  '                              açık tutmak onlara pahalıya patlıyor"',
+  '  • long/short ratio       → "alıcılar mı satıcılar mı kalabalık" (% ile)',
+  '  • open interest artıyor  → "piyasaya yeni para/pozisyon giriyor"',
+  '  • liquidation            → "zorla kapatılan (patlayan) pozisyonlar"',
+  '  • CEX inflow/whale       → "büyük cüzdanların borsaya para sokması/çekmesi"',
+  'Sayılar KALSIN (% ve $) — sadece terimlerin adı gitsin.',
+  '',
   'Verdict seçim kuralı:',
-  '  • AL → kısa-orta vade alıcı baskısı baskın; long-bias confluence var',
-  '  • SAT → satıcı baskısı baskın; short-bias confluence var (kullanıcı zaten',
-  '    long\'da olsa bile bu, "kâr al / short aç" anlamına gelir)',
+  '  • AL → alıcı baskısı baskın, yukarı yön daha olası',
+  '  • SAT → satıcı baskısı baskın; kullanıcı elinde tutuyorsa "kârını al / dur"',
   '  • BEKLE → veri çelişkili veya yetersiz; net taraf yok',
   '',
+  'takeaway kuralları (EN KRİTİK ALAN):',
+  '  1. Doğrudan kullanıcıya seslen: "Şu fiyattan alma.", "Kârını almayı düşün.",',
+  '     "Acele etme, beklemek mantıklı."',
+  '  2. Önce NET aksiyon, sonra tek cümlelik gerekçe — hepsi düz dille.',
+  '  3. Mümkünse somut seviye ver ("X doları geçmeden girme").',
+  '  4. Asla "yatırım tavsiyesi değildir" gibi ibare ekleme; ama "kesin kazanç"',
+  '     vaadi de verme. Olasılık dilinde konuş.',
+  '',
   'reasons[] kuralları (en az 3, en fazla 6 bullet):',
-  '  1. Her bullet kısa ama açıklayıcı: ham metrik değil, **yorum** + ham sayı.',
-  '     KÖTÜ:  "OI: -4.5%"',
-  '     İYİ:   "Open interest 4h\'de %4.5 düştü → long-capitulation sürüyor"',
-  '  2. Sayıları daima net ver: "$166M CEX girişi", "%73 retail long", "0.012% funding"',
-  '  3. Kaynaklar arası bağlantı kur ("whale\'ler satıyor + retail long-heavy =',
-  '     dağıtım"); izole metrik listeleme.',
-  '  4. Bağlamda ilgili veri YOKSA o sebebi yazma — uydurma, şişirme.',
-  '  5. Jargon-ağır olma ama "spot premium", "basis", "open interest", "CEX inflow"',
-  '     gibi standart terimleri kullanabilirsin.',
-  '  6. Yatırım tavsiyesi cümleleri yasak ("şahsen ben olsam", "tavsiye ederim").',
-  '     Verdict bunu zaten yeterince açık söylüyor.',
+  '  1. Her bullet: düz açıklama + ham sayı. Terim adı değil, ANLAMI.',
+  '     KÖTÜ:  "OI -4.5%, funding -0.011%"',
+  '     İYİ:   "Yükselişe büyük cüzdanlardan giriş yok — 24 saatte sıfır. Ralliyi',
+  '             sermaye değil kalabalık taşıyor."',
+  '  2. Sayıları daima ver: "24 saatte %33 fırladı", "$0.88\'de", "0 büyük transfer".',
+  '  3. Kaynakları birbirine bağla ("büyük para yok + kalabalık alıcı = kırılgan").',
+  '  4. İlgili veri YOKSA o sebebi yazma — uydurma, şişirme.',
   '',
   'invalidation kuralı:',
-  '  • AL veya SAT için: çağrıyı geçersiz kılan price action veya veri koşulunu',
-  '    tek cümleyle yaz. Örnek: "$2,156 üstüne 15m kapanış SAT tezini siler".',
-  '  • BEKLE için: hangi koşul taraf seçmeyi sağlar — örn. "OI ve fiyat aynı yönde',
-  '    hareket ederse taraf netleşir". Net bir koşul yoksa boş string ver.',
+  '  • AL/SAT için: çağrıyı bozan koşulu tek düz cümleyle yaz. Örnek:',
+  '    "$0.90 üstünde 4 saat kapanış görürsek bu satış görüşü geçersiz olur".',
+  '  • BEKLE için: hangi koşul tarafı netleştirir. Net koşul yoksa boş string.',
   '',
   'Tek bir kez daha: ÇIKTI SADECE JSON. Markdown, açıklama, çevreleyen metin YOK.',
 ].join('\n');
@@ -1792,6 +1836,7 @@ function parseFoxyAnalysis(raw: string): FoxyAnalysis {
     return {
       verdict: 'BEKLE',
       headline: text.slice(0, 100) || 'Foxy şu an net bir çağrı çıkaramadı.',
+      takeaway: '',
       reasons: [],
       invalidation: '',
     };
@@ -1804,6 +1849,7 @@ function parseFoxyAnalysis(raw: string): FoxyAnalysis {
     return {
       verdict: 'BEKLE',
       headline: 'Foxy cevabı doğru biçimde dönmedi, tekrar dene.',
+      takeaway: '',
       reasons: [],
       invalidation: '',
     };
@@ -1816,6 +1862,8 @@ function parseFoxyAnalysis(raw: string): FoxyAnalysis {
 
   const headline = String(obj.headline ?? '').trim() || 'Foxy analizi hazır.';
 
+  const takeaway = String(obj.takeaway ?? '').trim();
+
   const reasonsArr = Array.isArray(obj.reasons) ? obj.reasons : [];
   const reasons = reasonsArr
     .map((r) => String(r ?? '').trim())
@@ -1824,7 +1872,7 @@ function parseFoxyAnalysis(raw: string): FoxyAnalysis {
 
   const invalidation = String(obj.invalidation ?? '').trim();
 
-  return { verdict, headline, reasons, invalidation };
+  return { verdict, headline, takeaway, reasons, invalidation };
 }
 
 /** Shown when ANTHROPIC_API_KEY is not configured. Keeps the UI
@@ -1833,6 +1881,7 @@ function foxyOfflineAnalysis(): FoxyAnalysis {
   return {
     verdict: 'BEKLE',
     headline: 'Foxy AI anahtarı ayarlı değil — yönetici ile iletişime geç.',
+    takeaway: '',
     reasons: [],
     invalidation: '',
   };
