@@ -1,20 +1,14 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
+import { useState, type FormEvent } from 'react';
 import { extractCoin, type CoinMatch } from '@/lib/coin-extract';
 import { useAuth } from '@/lib/auth-context';
 import { FoxyPromptPanel } from '@/components/foxy/prompt-panel';
 import { FoxyVerdictHero } from '@/components/foxy/verdict-hero';
-import { FoxyTradingViewCard } from '@/components/foxy/tradingview-card';
-import { FoxyTradesTable } from '@/components/foxy/trades-table';
-import { FoxyDataStrip } from '@/components/foxy/data-strip';
 import {
   type FoxyAnalysis,
-  type FoxyDerivatives,
   type FoxyHistoryEntry,
   type FoxyQueryReply,
-  type FoxySetupsByCoin,
-  type FoxyWhales,
 } from '@/components/foxy/types';
 
 const API_BASE =
@@ -22,13 +16,9 @@ const API_BASE =
   'https://bottomupapi-production.up.railway.app';
 
 /**
- * Foxy — AI market analyst. The product surface is two columns:
- *
- *   ┌─ left ──────────┬─ right ──────────────────────────┐
- *   │ Prompt + history │ Verdict hero (AL/SAT/BEKLE)      │
- *   │                  │ TradingView chart                 │
- *   │                  │ BottomUP / Borsa / Arkham cards   │
- *   └──────────────────┴───────────────────────────────────┘
+ * Foxy — the single post-login surface. The user writes a prompt and
+ * Foxy returns a desk-analyst AL / SAT / BEKLE verdict. Nothing else:
+ * no sidebar, no charts, no trade tables — just prompt + answer.
  *
  * The hero call is non-negotiable — every reason inside it must read
  * like a desk-analyst observation, never a raw confluence score.
@@ -38,103 +28,23 @@ export default function FoxyPage() {
   const [prompt, setPrompt] = useState('');
   const [coin, setCoin] = useState<CoinMatch | null>(null);
   const [analysis, setAnalysis] = useState<FoxyAnalysis | null>(null);
-  const [setups, setSetups] = useState<FoxySetupsByCoin | null>(null);
-  const [derivatives, setDerivatives] = useState<FoxyDerivatives | null>(null);
-  const [whales, setWhales] = useState<FoxyWhales | null>(null);
   const [loading, setLoading] = useState(false);
-  const [cardsLoading, setCardsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [history, setHistory] = useState<FoxyHistoryEntry[]>([]);
   const [activeHistoryId, setActiveHistoryId] = useState<string | null>(null);
-  const [setupsUpdatedAt, setSetupsUpdatedAt] = useState<number | null>(null);
-  const [setupsRefreshing, setSetupsRefreshing] = useState(false);
-
-  // Polls only the setups endpoint while the result panel is open so
-  // new trader signals show up without re-running the (quota-bound)
-  // Claude verdict. 30s matches the cadence at which the replicator
-  // pulls from the source DB twice, so anything fresh arrives quickly.
-  const refreshSetups = useCallback(
-    async (match: CoinMatch) => {
-      if (!user) return;
-      setSetupsRefreshing(true);
-      try {
-        const token = await getIdToken();
-        if (!token) return;
-        const r = await fetch(
-          `${API_BASE}/me/foxy/setups/${encodeURIComponent(match.symbol)}`,
-          { headers: { Authorization: `Bearer ${token}` } },
-        );
-        if (!r.ok) return;
-        const data = (await r.json()) as FoxySetupsByCoin;
-        setSetups(data);
-        setSetupsUpdatedAt(Date.now());
-      } catch {
-        // Swallow — the next tick will retry; the table keeps its
-        // previous snapshot rather than blanking out.
-      } finally {
-        setSetupsRefreshing(false);
-      }
-    },
-    [user, getIdToken],
-  );
-
-  // The interval lives at component scope so a re-submit or coin
-  // change doesn't leak two timers. Cleared in the cleanup phase.
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  useEffect(() => {
-    if (pollRef.current) clearInterval(pollRef.current);
-    if (!coin) return;
-    pollRef.current = setInterval(() => {
-      void refreshSetups(coin);
-    }, 30_000);
-    return () => {
-      if (pollRef.current) clearInterval(pollRef.current);
-      pollRef.current = null;
-    };
-  }, [coin, refreshSetups]);
 
   async function runQuery(text: string, match: CoinMatch) {
     if (!user) return;
     setLoading(true);
-    setCardsLoading(true);
     setError(null);
 
     const token = await getIdToken();
     if (!token) {
       setError('Oturum açılamadı — sayfayı yenile.');
       setLoading(false);
-      setCardsLoading(false);
       return;
     }
     const auth = { Authorization: `Bearer ${token}` };
-
-    // Fan out: cards + verdict at the same time. Cards land first
-    // (cheap), then the Claude verdict resolves and re-renders the
-    // hero. The user always sees *something* moving on the right.
-    const cardsPromise = Promise.all([
-      fetch(`${API_BASE}/me/foxy/setups/${encodeURIComponent(match.symbol)}`, {
-        headers: auth,
-      })
-        .then((r) => (r.ok ? (r.json() as Promise<FoxySetupsByCoin>) : null))
-        .catch(() => null),
-      fetch(
-        `${API_BASE}/me/foxy/derivatives/${encodeURIComponent(match.symbol)}`,
-        { headers: auth },
-      )
-        .then((r) => (r.ok ? (r.json() as Promise<FoxyDerivatives>) : null))
-        .catch(() => null),
-      fetch(`${API_BASE}/me/foxy/whales/${encodeURIComponent(match.symbol)}`, {
-        headers: auth,
-      })
-        .then((r) => (r.ok ? (r.json() as Promise<FoxyWhales>) : null))
-        .catch(() => null),
-    ]).then(([s, d, w]) => {
-      setSetups(s);
-      setDerivatives(d);
-      setWhales(w);
-      setSetupsUpdatedAt(Date.now());
-      setCardsLoading(false);
-    });
 
     const queryPromise = fetch(`${API_BASE}/me/foxy/query`, {
       method: 'POST',
@@ -196,10 +106,6 @@ export default function FoxyPage() {
     } finally {
       setLoading(false);
     }
-
-    await cardsPromise.catch(() => {
-      setCardsLoading(false);
-    });
   }
 
   function handleSubmit(e: FormEvent) {
@@ -217,9 +123,6 @@ export default function FoxyPage() {
     setPrompt('');
     setCoin(match);
     setAnalysis(null);
-    setSetups(null);
-    setDerivatives(null);
-    setWhales(null);
     setActiveHistoryId(null);
     void runQuery(text, match);
   }
@@ -235,9 +138,6 @@ export default function FoxyPage() {
     setError(null);
     setCoin(match);
     setAnalysis(null);
-    setSetups(null);
-    setDerivatives(null);
-    setWhales(null);
     setActiveHistoryId(entry.id);
     void runQuery(entry.prompt, match);
   }
@@ -257,28 +157,12 @@ export default function FoxyPage() {
 
       <main className="flex-1 overflow-y-auto p-4 md:p-6">
         {coin ? (
-          <div className="mx-auto flex max-w-[1400px] flex-col gap-4">
+          <div className="mx-auto flex max-w-[760px] flex-col gap-4">
             {analysis ? (
               <FoxyVerdictHero coin={coin} analysis={analysis} />
             ) : (
               <VerdictSkeleton />
             )}
-            <FoxyTradesTable
-              coin={coin}
-              setups={setups}
-              loading={cardsLoading}
-              updatedAt={setupsUpdatedAt}
-              refreshing={setupsRefreshing}
-              onRefresh={() => void refreshSetups(coin)}
-            />
-            <FoxyTradingViewCard coin={coin} />
-            <FoxyDataStrip
-              coin={coin}
-              setups={setups}
-              derivatives={derivatives}
-              whales={whales}
-              loading={cardsLoading}
-            />
           </div>
         ) : (
           <EmptyState />

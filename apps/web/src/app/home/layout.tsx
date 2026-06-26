@@ -3,12 +3,11 @@
 import { useEffect, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
-import { HomeSidebar } from '@/components/home/sidebar';
 
 /**
- * Authenticated app shell. Every `/home/*` route renders inside the
- * sidebar layout. Anonymous viewers get bounced to /signin (which
- * itself redirects back here once auth resolves).
+ * Authenticated app shell. Post-login is a single prompt surface
+ * (Foxy) — no sidebar, no module tabs. Anonymous viewers get bounced
+ * to /signin (which redirects back here once auth resolves).
  */
 export default function HomeLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
@@ -27,9 +26,8 @@ export default function HomeLayout({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div className="flex min-h-screen bg-bg">
-      <HomeSidebar />
-      <main className="flex-1 min-w-0 overflow-x-hidden">{children}</main>
+    <div className="min-h-screen bg-bg">
+      <main className="min-w-0 overflow-x-hidden">{children}</main>
     </div>
   );
 }
