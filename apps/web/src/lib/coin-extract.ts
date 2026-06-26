@@ -126,19 +126,59 @@ const ALIAS_TO_ENTRY: Record<string, Entry> = (() => {
 })();
 
 /**
- * Pull the first coin reference out of `prompt`. We tokenize on
- * whitespace + common punctuation, lowercase each token, and look it
- * up in the alias map. The first hit wins — multi-coin prompts
- * ("ETH vs BTC") resolve to whichever is mentioned earlier, which
- * mirrors how the user typically frames the question.
+ * Uppercase tokens that look like tickers but aren't coins — trading
+ * verbs, fiat, and Foxy's own vocabulary. Keeps the generic fallback
+ * from mistaking "AL" / "SAT" / "USDT" for a coin symbol.
+ */
+const TICKER_STOPWORDS = new Set([
+  'AL',
+  'SAT',
+  'BEKLE',
+  'BUY',
+  'SELL',
+  'HOLD',
+  'AI',
+  'TL',
+  'USD',
+  'USDT',
+  'USDC',
+  'FOXY',
+  'RSI',
+  'ATH',
+  'ATL',
+  'OK',
+  'VS',
+  'PNL',
+  'API',
+  'CEO',
+  'NFT',
+  'DEX',
+  'CEX',
+]);
+
+/** Looks like a bare ticker the user typed in caps: `JTO`, `WIF`, `PEPE`. */
+const TICKER_RE = /^[A-Z][A-Z0-9]{1,5}$/;
+
+/**
+ * Pull the first coin reference out of `prompt`. First pass: tokenize,
+ * lowercase, and look each token up in the curated alias map — those
+ * win and carry canonical display/slug/ticker. Second pass: if nothing
+ * curated matched, accept the first ALL-CAPS ticker-shaped token (how
+ * users naturally write a symbol — "JTO analizi yapar mısın?"), so any
+ * coin reaches the backend instead of being rejected by a 12-row table.
+ * The first hit wins — multi-coin prompts ("ETH vs BTC") resolve to
+ * whichever is mentioned earlier, mirroring how users frame questions.
  */
 export function extractCoin(prompt: string): CoinMatch | null {
   if (!prompt) return null;
-  const tokens = prompt
+  const splitter = /[\s,.!?;:()/\\\-_'"]+/;
+
+  // Pass 1 — curated table (canonical display/slug/ticker).
+  const lowered = prompt
     .toLowerCase()
-    .split(/[\s,.!?;:()/\\\-_'"]+/)
+    .split(splitter)
     .filter((t) => t.length > 0);
-  for (const token of tokens) {
+  for (const token of lowered) {
     const hit = ALIAS_TO_ENTRY[token];
     if (hit) {
       return {
@@ -149,6 +189,21 @@ export function extractCoin(prompt: string): CoinMatch | null {
       };
     }
   }
+
+  // Pass 2 — generic ticker fallback for coins outside the table.
+  const rawTokens = prompt.split(splitter).filter((t) => t.length > 0);
+  for (const token of rawTokens) {
+    if (TICKER_RE.test(token) && !TICKER_STOPWORDS.has(token)) {
+      const symbol = token.toUpperCase();
+      return {
+        symbol,
+        slug: symbol.toLowerCase(),
+        tvTicker: `BINANCE:${symbol}USDT`,
+        display: symbol,
+      };
+    }
+  }
+
   return null;
 }
 
