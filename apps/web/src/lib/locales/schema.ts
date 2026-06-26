@@ -199,6 +199,10 @@ export interface Dict {
     best_value?: string;
     /** Footnote showing the deepest with-a-code price. `{price}` is interpolated. Optional. */
     with_code?: string;
+    /** Localized period units shown after the price (e.g. "/ ay", "/ 3 ay"). Optional — fall back to English. */
+    unit_mo?: string;
+    unit_3mo?: string;
+    unit_6mo?: string;
     billed_monthly: string;
     billed_upfront: string;
     save_13: string;

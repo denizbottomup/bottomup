@@ -53,8 +53,16 @@ const PLAN_META = [
 
 export function PricingSection() {
   const { t } = useT();
+  // The period unit is localized (e.g. "/ ay", "/ 3 ay" in TR; "/月" in
+  // ZH). PLAN_META keeps the English string only as a fallback.
+  const unitByCode: Record<string, string | undefined> = {
+    monthly: t.pr.unit_mo,
+    quarter: t.pr.unit_3mo,
+    half: t.pr.unit_6mo,
+  };
   const plans = PLAN_META.map((m, i) => ({
     ...m,
+    unit: m.code === 'free' ? '' : unitByCode[m.code] ?? m.unit,
     name: t.pr.plans[i]?.name ?? '',
     features: t.pr.plans[i]?.features ?? [],
   }));
@@ -147,13 +155,13 @@ function PlanCard({
       <div className="text-[11px] uppercase tracking-wider text-fg-muted">
         {plan.name}
       </div>
-      <div className="mt-2 flex items-baseline gap-2">
+      <div className="mt-2 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
         <span className="text-4xl font-semibold text-fg">{plan.priceLabel}</span>
         {plan.unit ? (
-          <span className="text-sm text-fg-muted">{plan.unit}</span>
+          <span className="whitespace-nowrap text-sm text-fg-muted">{plan.unit}</span>
         ) : null}
         {plan.was ? (
-          <span className="text-sm text-fg-dim line-through">{plan.was}</span>
+          <span className="whitespace-nowrap text-sm text-fg-dim line-through">{plan.was}</span>
         ) : null}
       </div>
       {isFree ? (
