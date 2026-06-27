@@ -15,6 +15,7 @@ import {
   type Entitlement,
 } from '../entitlement/entitlement.service.js';
 import type { AuthedUser } from '../common/decorators/current-user.decorator.js';
+import { okxClient } from '../okx/okx.client.js';
 
 export interface FoxyVerdict {
   risk_score: number;         // 0..100 (0 = low risk)
@@ -154,6 +155,8 @@ export interface FoxyQueryReply {
   derivatives: FoxyDerivatives | null;
   whales: FoxyWhales | null;
   setups: FoxySetupsByCoin | null;
+  /** OKX live order-book snapshot (top levels) for the "canlı tahta" panel. */
+  orderbook: FoxyOrderBook | null;
   quota: FoxyQuotaState;
   /** Echoed for the UI to show the tier badge. */
   entitlement: Entitlement;
@@ -165,6 +168,30 @@ export interface FoxyAssetMarket {
   high_24h: number | null;
   low_24h: number | null;
   quote_volume_24h: number | null;
+}
+
+export interface FoxyOrderBookLevel {
+  /** Price level. */
+  px: number;
+  /** Size at this level, in base units (e.g. BTC). */
+  sz: number;
+}
+
+export interface FoxyOrderBook {
+  /** OKX instrument id, e.g. "BTC-USDT". */
+  inst_id: string;
+  /** Best asks first (ascending price). Capped to a handful of levels. */
+  asks: FoxyOrderBookLevel[];
+  /** Best bids first (descending price). */
+  bids: FoxyOrderBookLevel[];
+  /** Midpoint between best bid/ask. */
+  mid: number;
+  /** Best ask − best bid, absolute. */
+  spread: number;
+  /** Spread as a percent of mid. */
+  spread_pct: number;
+  /** Snapshot epoch ms from OKX. */
+  ts: number;
 }
 
 export interface FoxyOverviewAsset {
@@ -900,7 +927,7 @@ export class FoxyService implements OnModuleInit {
     // setups frozen at $81-83K targets while BTC was actually at $77K).
     // Each call independently degrades to null/empty; we still send
     // the prompt to Claude even if some sources are down.
-    const [setups, derivatives, whales, market] = await Promise.all([
+    const [setups, derivatives, whales, market, orderbook] = await Promise.all([
       coinNorm
         ? this.setupsByCoin(coinNorm).catch(() => null)
         : Promise.resolve(null),
@@ -912,6 +939,9 @@ export class FoxyService implements OnModuleInit {
         : Promise.resolve(null),
       coinNorm
         ? this.fetchMarket24h(`${coinNorm}USDT`).catch(() => null)
+        : Promise.resolve(null),
+      coinNorm
+        ? this.orderBookByCoin(coinNorm).catch(() => null)
         : Promise.resolve(null),
     ]);
 
@@ -943,11 +973,60 @@ export class FoxyService implements OnModuleInit {
       derivatives,
       whales,
       setups,
+      orderbook,
       quota: {
         ...quota,
         used: quota.used + 1, // reflect the row we just inserted
       },
       entitlement: ent,
+    };
+  }
+
+  /**
+   * Live order-book snapshot for the "canlı tahta" panel. Pulls the top
+   * levels from OKX's public market endpoint (no auth needed) and shapes
+   * them into a small, render-ready ladder with mid/spread computed.
+   *
+   * OKX `GET /api/v5/market/books` returns levels as
+   * `[price, size, _, numOrders]` strings; asks ascend, bids descend.
+   * We keep the best `DEPTH` levels each side. Any coin OKX doesn't list
+   * (or a transient error) bubbles up as null via the caller's catch.
+   */
+  private async orderBookByCoin(coinInput: string): Promise<FoxyOrderBook | null> {
+    const symbol = normalizeCoinName(coinInput).replace(/USDT$/i, '');
+    const instId = `${symbol}-USDT`;
+    const DEPTH = 8;
+
+    const data = await okxClient.publicGet<
+      Array<{ asks: string[][]; bids: string[][]; ts: string }>
+    >(`/api/v5/market/books?instId=${instId}&sz=${DEPTH}`);
+
+    const book = Array.isArray(data) ? data[0] : null;
+    if (!book) return null;
+
+    const toLevels = (rows: string[][]): FoxyOrderBookLevel[] =>
+      (rows ?? [])
+        .map((r) => ({ px: Number(r[0]), sz: Number(r[1]) }))
+        .filter((l) => Number.isFinite(l.px) && Number.isFinite(l.sz))
+        .slice(0, DEPTH);
+
+    const asks = toLevels(book.asks);
+    const bids = toLevels(book.bids);
+    const bestAsk = asks[0];
+    const bestBidLvl = bids[0];
+    if (!bestAsk || !bestBidLvl) return null;
+
+    const mid = (bestAsk.px + bestBidLvl.px) / 2;
+    const spread = bestAsk.px - bestBidLvl.px;
+
+    return {
+      inst_id: instId,
+      asks,
+      bids,
+      mid,
+      spread,
+      spread_pct: mid > 0 ? (spread / mid) * 100 : 0,
+      ts: Number(book.ts) || 0,
     };
   }
 
