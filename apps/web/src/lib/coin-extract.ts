@@ -207,5 +207,31 @@ export function extractCoin(prompt: string): CoinMatch | null {
   return null;
 }
 
+/**
+ * Build a `CoinMatch` from a bare symbol the backend resolved (against
+ * the full OKX universe). Uses the curated table for a nice display
+ * name / slug when known, otherwise a generic shape. Lets the UI render
+ * a board for any coin the backend accepted, even ones the local table
+ * never heard of.
+ */
+export function coinFromSymbol(symbol: string): CoinMatch {
+  const up = symbol.toUpperCase().replace(/USDT$/i, '');
+  const hit = TABLE.find((e) => e.symbol === up);
+  if (hit) {
+    return {
+      symbol: hit.symbol,
+      slug: hit.slug,
+      tvTicker: hit.tvTicker,
+      display: hit.display,
+    };
+  }
+  return {
+    symbol: up,
+    slug: up.toLowerCase(),
+    tvTicker: `BINANCE:${up}USDT`,
+    display: up,
+  };
+}
+
 /** All known coins, useful for hint chips. */
 export const KNOWN_COINS: CoinMatch[] = TABLE.map(({ aliases: _a, ...rest }) => rest);

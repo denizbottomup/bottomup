@@ -918,8 +918,22 @@ export class FoxyService implements OnModuleInit {
       });
     }
 
-    const coin = (coinHint ?? '').trim() || null;
-    const coinNorm = coin ? normalizeCoinName(coin).replace(/USDT$/i, '') : null;
+    // Coin resolution is scoped to OKX's full tradable universe, not a
+    // curated table — anything OKX lists should be askable. We trust the
+    // client's hint only when it's a real OKX coin, otherwise resolve
+    // straight from the prompt text (handles lowercase tickers, full
+    // names, and coins the frontend doesn't know).
+    const universe = await this.okxUniverse().catch(() => new Set<string>());
+    const hinted = coinHint
+      ? normalizeCoinName(coinHint).replace(/USDT$/i, '').toUpperCase()
+      : '';
+    let coinNorm: string | null = null;
+    if (hinted && (universe.size === 0 || universe.has(hinted))) {
+      coinNorm = hinted;
+    }
+    if (!coinNorm) {
+      coinNorm = resolveCoinFromPrompt(prompt, universe);
+    }
 
     // Pull the same context the cards do PLUS the live spot market —
     // without current price, Claude was treating stale setup
@@ -980,6 +994,40 @@ export class FoxyService implements OnModuleInit {
       },
       entitlement: ent,
     };
+  }
+
+  /**
+   * Every base symbol OKX lists a USDT spot market for, as an uppercase
+   * set (BTC, ETH, JTO, WIF…). Cached hourly so coin resolution can
+   * accept anything tradable on OKX, not just a curated table. Returns
+   * an empty set if OKX is unreachable — callers degrade gracefully.
+   */
+  private async okxUniverse(): Promise<Set<string>> {
+    const cached = okxUniverseCache;
+    if (cached && Date.now() - cached.at < OKX_UNIVERSE_TTL_MS) {
+      return cached.set;
+    }
+    try {
+      const rows = await okxClient.publicGet<
+        Array<{ baseCcy?: string; quoteCcy?: string; state?: string }>
+      >('/api/v5/public/instruments?instType=SPOT');
+      const set = new Set<string>();
+      for (const r of rows) {
+        if (r.quoteCcy === 'USDT' && r.baseCcy && r.state === 'live') {
+          set.add(r.baseCcy.toUpperCase());
+        }
+      }
+      if (set.size > 0) {
+        okxUniverseCache = { at: Date.now(), set };
+        return set;
+      }
+    } catch (err) {
+      this.log.warn(
+        { err: (err as Error).message },
+        'okx instruments fetch failed — coin resolution degrades to ticker shape',
+      );
+    }
+    return cached?.set ?? new Set<string>();
   }
 
   /**
@@ -1662,6 +1710,68 @@ function normalizeCoinName(input: string): string {
   if (raw.endsWith('USDT')) return raw;
   if (raw.endsWith('USD')) return raw + 'T';
   return raw + 'USDT';
+}
+
+/** Cached set of every base symbol OKX lists a USDT spot market for
+ *  (e.g. BTC, ETH, JTO, WIF…). Refreshed hourly. */
+let okxUniverseCache: { at: number; set: Set<string> } | null = null;
+const OKX_UNIVERSE_TTL_MS = 60 * 60 * 1000;
+
+/** Full-word coin names users type instead of the ticker. */
+const COIN_NAME_ALIASES: Record<string, string> = {
+  bitcoin: 'BTC',
+  ether: 'ETH',
+  ethereum: 'ETH',
+  solana: 'SOL',
+  ripple: 'XRP',
+  dogecoin: 'DOGE',
+  cardano: 'ADA',
+  avalanche: 'AVAX',
+  chainlink: 'LINK',
+  polygon: 'POL',
+  toncoin: 'TON',
+  tron: 'TRX',
+  jito: 'JTO',
+  bonk: 'BONK',
+  pepe: 'PEPE',
+  shiba: 'SHIB',
+  litecoin: 'LTC',
+  polkadot: 'DOT',
+};
+
+/** Upper-cased tokens that look like tickers but are trading verbs /
+ *  fiat / Foxy vocabulary — never a coin even if OKX lists a collision. */
+const COIN_STOPWORDS = new Set([
+  'AL', 'SAT', 'BEKLE', 'BUY', 'SELL', 'HOLD', 'AI', 'TL', 'USD', 'USDT',
+  'USDC', 'FOXY', 'OK', 'VE', 'BU', 'NE', 'MI', 'MU', 'DA', 'DE',
+]);
+
+/**
+ * Resolve which coin the user means from their free-text prompt, scoped
+ * to what OKX actually lists. We scan tokens, first honouring explicit
+ * full-word names (bitcoin→BTC), then matching any ticker-shaped token
+ * against the live OKX universe. The first hit wins. When the universe
+ * is empty (OKX unreachable) we fall back to a generic ticker shape so
+ * the request still flows through.
+ */
+function resolveCoinFromPrompt(prompt: string, universe: Set<string>): string | null {
+  const splitter = /[\s,.!?;:()/\\\-_'"]+/;
+  const tokens = prompt.split(splitter).filter((t) => t.length > 0);
+
+  for (const tok of tokens) {
+    const lower = tok.toLowerCase();
+    if (COIN_NAME_ALIASES[lower]) return COIN_NAME_ALIASES[lower];
+
+    const up = tok.toUpperCase();
+    if (COIN_STOPWORDS.has(up)) continue;
+    if (universe.size > 0) {
+      if (universe.has(up)) return up;
+    } else if (/^[A-Z][A-Z0-9]{1,9}$/.test(up)) {
+      // OKX list unavailable — accept a plausible ticker shape.
+      return up;
+    }
+  }
+  return null;
 }
 
 /**

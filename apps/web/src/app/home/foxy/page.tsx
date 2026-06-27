@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, type FormEvent } from 'react';
-import { extractCoin, type CoinMatch } from '@/lib/coin-extract';
+import { extractCoin, coinFromSymbol, type CoinMatch } from '@/lib/coin-extract';
 import { useAuth } from '@/lib/auth-context';
 import { FoxyPromptPanel } from '@/components/foxy/prompt-panel';
 import { FoxyBoard } from '@/components/foxy/board';
@@ -47,7 +47,7 @@ export default function FoxyPage() {
   const [history, setHistory] = useState<FoxyHistoryEntry[]>([]);
   const [activeHistoryId, setActiveHistoryId] = useState<string | null>(null);
 
-  async function runQuery(text: string, match: CoinMatch) {
+  async function runQuery(text: string, match: CoinMatch | null) {
     if (!user) return;
     setLoading(true);
     setError(null);
@@ -64,7 +64,7 @@ export default function FoxyPage() {
       const r = await fetch(`${API_BASE}/me/foxy/query`, {
         method: 'POST',
         headers: { ...auth, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: text, coin: match.symbol }),
+        body: JSON.stringify({ prompt: text, coin: match?.symbol ?? null }),
       });
 
       if (r.status === 403) {
@@ -98,6 +98,18 @@ export default function FoxyPage() {
               invalidation: '',
             };
 
+      // The backend resolves the coin against the full OKX universe.
+      // Trust its answer (it knows coins the local table doesn't); fall
+      // back to the local guess. If neither found a coin, say so.
+      const resolved =
+        (reply?.coin && coinFromSymbol(reply.coin)) || match;
+      if (!resolved) {
+        throw new Error(
+          "Bu coini bulamadım — OKX'te işlem gören bir sembolle dene (ör. BTC, JTO, WIF).",
+        );
+      }
+
+      setCoin(resolved);
       setAnalysis(verdict);
       setBoard({
         market: reply?.market ?? null,
@@ -110,8 +122,8 @@ export default function FoxyPage() {
       const entry: FoxyHistoryEntry = {
         id: crypto.randomUUID(),
         prompt: text,
-        coinSymbol: match.symbol,
-        coinDisplay: match.display,
+        coinSymbol: resolved.symbol,
+        coinDisplay: resolved.display,
         verdict: verdict.verdict,
         at: Date.now(),
       };
@@ -128,13 +140,10 @@ export default function FoxyPage() {
     e.preventDefault();
     const text = prompt.trim();
     if (!text || loading) return;
+    // No client-side gate: a local match (when we have one) just gives an
+    // instant header + hint; otherwise the backend resolves the coin from
+    // the prompt against the full OKX universe.
     const match = extractCoin(text);
-    if (!match) {
-      setError(
-        'Hangi coin olduğunu çıkaramadım — ETH, BTC, SOL, BNB, XRP gibi bir sembolle dene.',
-      );
-      return;
-    }
     setError(null);
     setPrompt('');
     setCoin(match);
@@ -147,9 +156,7 @@ export default function FoxyPage() {
   function handlePickHistory(entry: FoxyHistoryEntry) {
     // Re-run the same prompt — cheaper than persisting the full payload
     // and keeps history-from-history coherent with backend state.
-    if (!entry.coinSymbol) return;
     const match = extractCoin(entry.prompt);
-    if (!match) return;
     setPrompt('');
     setError(null);
     setCoin(match);
@@ -173,22 +180,20 @@ export default function FoxyPage() {
       />
 
       <main className="flex-1 overflow-y-auto bg-slate-50 p-4 md:p-7">
-        {coin ? (
-          analysis ? (
-            <FoxyBoard
-              coin={coin}
-              analysis={analysis}
-              market={board?.market ?? null}
-              derivatives={board?.derivatives ?? null}
-              whales={board?.whales ?? null}
-              setups={board?.setups ?? null}
-              orderbook={board?.orderbook ?? null}
-            />
-          ) : (
-            <div className="mx-auto max-w-[920px]">
-              <VerdictSkeleton />
-            </div>
-          )
+        {coin && analysis ? (
+          <FoxyBoard
+            coin={coin}
+            analysis={analysis}
+            market={board?.market ?? null}
+            derivatives={board?.derivatives ?? null}
+            whales={board?.whales ?? null}
+            setups={board?.setups ?? null}
+            orderbook={board?.orderbook ?? null}
+          />
+        ) : loading ? (
+          <div className="mx-auto max-w-[920px]">
+            <VerdictSkeleton />
+          </div>
         ) : (
           <EmptyState />
         )}
