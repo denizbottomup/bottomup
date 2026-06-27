@@ -178,11 +178,14 @@ export interface FoxyOrderBookLevel {
 }
 
 export interface FoxyOrderBook {
-  /** OKX instrument id, e.g. "BTC-USDT". */
+  /** Trading pair, e.g. "BTC-USDT". */
   inst_id: string;
-  /** Best asks first (ascending price). Capped to a handful of levels. */
+  /** Exchanges that contributed to this aggregated book (e.g. ["OKX",
+   *  "Binance", "Bybit", "Bitget", "Coinbase"]). */
+  sources: string[];
+  /** Best asks first (ascending price). Size summed across exchanges. */
   asks: FoxyOrderBookLevel[];
-  /** Best bids first (descending price). */
+  /** Best bids first (descending price). Size summed across exchanges. */
   bids: FoxyOrderBookLevel[];
   /** Midpoint between best bid/ask. */
   mid: number;
@@ -190,7 +193,7 @@ export interface FoxyOrderBook {
   spread: number;
   /** Spread as a percent of mid. */
   spread_pct: number;
-  /** Snapshot epoch ms from OKX. */
+  /** Snapshot epoch ms. */
   ts: number;
 }
 
@@ -955,7 +958,7 @@ export class FoxyService implements OnModuleInit {
         ? this.fetchMarket24h(`${coinNorm}USDT`).catch(() => null)
         : Promise.resolve(null),
       coinNorm
-        ? this.orderBookByCoin(coinNorm).catch(() => null)
+        ? this.compoundOrderBook(coinNorm).catch(() => null)
         : Promise.resolve(null),
     ]);
 
@@ -1031,50 +1034,117 @@ export class FoxyService implements OnModuleInit {
   }
 
   /**
-   * Live order-book snapshot for the "canlı tahta" panel. Pulls the top
-   * levels from OKX's public market endpoint (no auth needed) and shapes
-   * them into a small, render-ready ladder with mid/spread computed.
-   *
-   * OKX `GET /api/v5/market/books` returns levels as
-   * `[price, size, _, numOrders]` strings; asks ascend, bids descend.
-   * We keep the best `DEPTH` levels each side. Any coin OKX doesn't list
-   * (or a transient error) bubbles up as null via the caller's catch.
+   * Compound "canlı tahta" — an aggregated order book stitched from up to
+   * five exchanges (OKX, Binance, Bybit, Bitget, Coinbase). Each book is
+   * fetched in parallel from the venue's public REST endpoint (no auth);
+   * exchanges that don't list the coin or time out are skipped. Levels
+   * are bucketed to a price tick and summed across venues so the ladder
+   * reflects true market-wide depth, with best bid/ask taken across all
+   * venues. Returns null only when no exchange responded.
    */
-  private async orderBookByCoin(coinInput: string): Promise<FoxyOrderBook | null> {
+  private async compoundOrderBook(coinInput: string): Promise<FoxyOrderBook | null> {
     const symbol = normalizeCoinName(coinInput).replace(/USDT$/i, '');
-    const instId = `${symbol}-USDT`;
+    const pair = `${symbol}-USDT`;
+    const sym = `${symbol}USDT`;
+    const TIMEOUT = 3500;
+
+    const jget = async (url: string): Promise<unknown> => {
+      try {
+        const res = await fetch(url, { signal: AbortSignal.timeout(TIMEOUT) });
+        if (!res.ok) return null;
+        return await res.json();
+      } catch {
+        return null;
+      }
+    };
+    const okxGet = async (): Promise<{ asks: string[][]; bids: string[][] } | null> => {
+      try {
+        const d = await okxClient.publicGet<
+          Array<{ asks: string[][]; bids: string[][] }>
+        >(`/api/v5/market/books?instId=${pair}&sz=20`);
+        return Array.isArray(d) ? d[0] ?? null : null;
+      } catch {
+        return null;
+      }
+    };
+
+    const num = (rows: unknown): Array<[number, number]> =>
+      Array.isArray(rows)
+        ? (rows as unknown[][])
+            .map((r): [number, number] => [Number(r[0]), Number(r[1])])
+            .filter((l) => Number.isFinite(l[0]) && Number.isFinite(l[1]))
+        : [];
+
+    const [okx, binance, bybit, bitget, coinbase] = await Promise.all([
+      okxGet(),
+      jget(`https://api.binance.com/api/v3/depth?symbol=${sym}&limit=20`),
+      jget(`https://api.bybit.com/v5/market/orderbook?category=spot&symbol=${sym}&limit=25`),
+      jget(`https://api.bitget.com/api/v2/spot/market/orderbook?symbol=${sym}&limit=25`),
+      jget(`https://api.exchange.coinbase.com/products/${pair}/book?level=2`),
+    ]);
+
+    const bn = binance as { asks?: unknown; bids?: unknown } | null;
+    const bb = bybit as { result?: { a?: unknown; b?: unknown } } | null;
+    const bg = bitget as { data?: { asks?: unknown; bids?: unknown } } | null;
+    const cb = coinbase as { asks?: unknown; bids?: unknown } | null;
+
+    const raws: Array<{
+      name: string;
+      asks: Array<[number, number]>;
+      bids: Array<[number, number]>;
+    }> = [];
+    if (okx) raws.push({ name: 'OKX', asks: num(okx.asks), bids: num(okx.bids) });
+    if (bn?.asks) raws.push({ name: 'Binance', asks: num(bn.asks), bids: num(bn.bids) });
+    if (bb?.result?.a) raws.push({ name: 'Bybit', asks: num(bb.result.a), bids: num(bb.result.b) });
+    if (bg?.data?.asks) raws.push({ name: 'Bitget', asks: num(bg.data.asks), bids: num(bg.data.bids) });
+    if (cb?.asks) raws.push({ name: 'Coinbase', asks: num(cb.asks), bids: num(cb.bids) });
+
+    if (raws.length === 0) return null;
+
+    const allBidPx = raws.flatMap((r) => r.bids.map((l) => l[0] as number));
+    const allAskPx = raws.flatMap((r) => r.asks.map((l) => l[0] as number));
+    if (!allBidPx.length || !allAskPx.length) return null;
+    const bestBid = Math.max(...allBidPx);
+    const bestAsk = Math.min(...allAskPx);
+    const mid = (bestBid + bestAsk) / 2;
+    const tick = tickFor(mid);
+    const dec = decimalsFor(tick);
+    const round = (n: number) => Number(n.toFixed(dec));
+    const bucket = (px: number) => round(Math.round(px / tick) * tick);
+
+    const askMap = new Map<number, number>();
+    const bidMap = new Map<number, number>();
+    for (const r of raws) {
+      for (const [px, sz] of r.asks) {
+        const b = bucket(px);
+        askMap.set(b, (askMap.get(b) ?? 0) + sz);
+      }
+      for (const [px, sz] of r.bids) {
+        const b = bucket(px);
+        bidMap.set(b, (bidMap.get(b) ?? 0) + sz);
+      }
+    }
+
     const DEPTH = 8;
+    const asks = [...askMap.entries()]
+      .map(([px, sz]) => ({ px, sz }))
+      .sort((a, b) => a.px - b.px)
+      .slice(0, DEPTH);
+    const bids = [...bidMap.entries()]
+      .map(([px, sz]) => ({ px, sz }))
+      .sort((a, b) => b.px - a.px)
+      .slice(0, DEPTH);
 
-    const data = await okxClient.publicGet<
-      Array<{ asks: string[][]; bids: string[][]; ts: string }>
-    >(`/api/v5/market/books?instId=${instId}&sz=${DEPTH}`);
-
-    const book = Array.isArray(data) ? data[0] : null;
-    if (!book) return null;
-
-    const toLevels = (rows: string[][]): FoxyOrderBookLevel[] =>
-      (rows ?? [])
-        .map((r) => ({ px: Number(r[0]), sz: Number(r[1]) }))
-        .filter((l) => Number.isFinite(l.px) && Number.isFinite(l.sz))
-        .slice(0, DEPTH);
-
-    const asks = toLevels(book.asks);
-    const bids = toLevels(book.bids);
-    const bestAsk = asks[0];
-    const bestBidLvl = bids[0];
-    if (!bestAsk || !bestBidLvl) return null;
-
-    const mid = (bestAsk.px + bestBidLvl.px) / 2;
-    const spread = bestAsk.px - bestBidLvl.px;
-
+    const spread = Math.max(0, bestAsk - bestBid);
     return {
-      inst_id: instId,
+      inst_id: pair,
+      sources: raws.map((r) => r.name),
       asks,
       bids,
-      mid,
-      spread,
+      mid: round(mid),
+      spread: round(spread),
       spread_pct: mid > 0 ? (spread / mid) * 100 : 0,
-      ts: Number(book.ts) || 0,
+      ts: Date.now(),
     };
   }
 
@@ -1710,6 +1780,25 @@ function normalizeCoinName(input: string): string {
   if (raw.endsWith('USDT')) return raw;
   if (raw.endsWith('USD')) return raw + 'T';
   return raw + 'USDT';
+}
+
+/** Price-bucket size for the compound order book, scaled to magnitude so
+ *  near-identical levels across exchanges merge cleanly. */
+function tickFor(mid: number): number {
+  if (mid >= 10000) return 1;
+  if (mid >= 1000) return 0.5;
+  if (mid >= 100) return 0.1;
+  if (mid >= 10) return 0.01;
+  if (mid >= 1) return 0.001;
+  if (mid >= 0.1) return 0.0001;
+  if (mid >= 0.01) return 0.00001;
+  return 0.000001;
+}
+
+/** Decimal places implied by a tick (e.g. 0.001 → 3), capped at 8. */
+function decimalsFor(tick: number): number {
+  if (tick >= 1) return 0;
+  return Math.min(8, Math.ceil(-Math.log10(tick)));
 }
 
 /** Cached set of every base symbol OKX lists a USDT spot market for
