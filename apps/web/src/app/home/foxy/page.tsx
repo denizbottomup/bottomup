@@ -4,15 +4,13 @@ import { useState, type FormEvent } from 'react';
 import { extractCoin, type CoinMatch } from '@/lib/coin-extract';
 import { useAuth } from '@/lib/auth-context';
 import { FoxyPromptPanel } from '@/components/foxy/prompt-panel';
-import { FoxyVerdictHero } from '@/components/foxy/verdict-hero';
-import { FoxyTradingViewCard } from '@/components/foxy/tradingview-card';
-import { FoxyDataStrip } from '@/components/foxy/data-strip';
-import { FoxyTradesTable } from '@/components/foxy/trades-table';
+import { FoxyBoard } from '@/components/foxy/board';
 import {
   type FoxyAnalysis,
   type FoxyAssetMarket,
   type FoxyDerivatives,
   type FoxyHistoryEntry,
+  type FoxyOrderBook,
   type FoxyQueryReply,
   type FoxySetupsByCoin,
   type FoxyWhales,
@@ -28,6 +26,7 @@ interface BoardData {
   derivatives: FoxyDerivatives | null;
   whales: FoxyWhales | null;
   setups: FoxySetupsByCoin | null;
+  orderbook: FoxyOrderBook | null;
 }
 
 /**
@@ -43,22 +42,15 @@ export default function FoxyPage() {
   const [coin, setCoin] = useState<CoinMatch | null>(null);
   const [analysis, setAnalysis] = useState<FoxyAnalysis | null>(null);
   const [board, setBoard] = useState<BoardData | null>(null);
-  const [updatedAt, setUpdatedAt] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [history, setHistory] = useState<FoxyHistoryEntry[]>([]);
   const [activeHistoryId, setActiveHistoryId] = useState<string | null>(null);
-  // Last query so the data panels can re-fetch without retyping.
-  const [lastQuery, setLastQuery] = useState<{
-    text: string;
-    match: CoinMatch;
-  } | null>(null);
 
   async function runQuery(text: string, match: CoinMatch) {
     if (!user) return;
     setLoading(true);
     setError(null);
-    setLastQuery({ text, match });
 
     const token = await getIdToken();
     if (!token) {
@@ -112,8 +104,8 @@ export default function FoxyPage() {
         derivatives: reply?.derivatives ?? null,
         whales: reply?.whales ?? null,
         setups: reply?.setups ?? null,
+        orderbook: reply?.orderbook ?? null,
       });
-      setUpdatedAt(Date.now());
 
       const entry: FoxyHistoryEntry = {
         id: crypto.randomUUID(),
@@ -167,13 +159,8 @@ export default function FoxyPage() {
     void runQuery(entry.prompt, match);
   }
 
-  function handleRefresh() {
-    if (loading || !lastQuery) return;
-    void runQuery(lastQuery.text, lastQuery.match);
-  }
-
   return (
-    <div className="flex h-screen flex-col md:flex-row">
+    <div className="flex h-screen flex-col bg-slate-50 md:flex-row">
       <FoxyPromptPanel
         prompt={prompt}
         setPrompt={setPrompt}
@@ -185,33 +172,23 @@ export default function FoxyPage() {
         activeHistoryId={activeHistoryId}
       />
 
-      <main className="flex-1 overflow-y-auto p-4 md:p-6">
+      <main className="flex-1 overflow-y-auto bg-slate-50 p-4 md:p-7">
         {coin ? (
-          <div className="mx-auto flex max-w-[860px] flex-col gap-4">
-            {analysis ? (
-              <>
-                <FoxyVerdictHero coin={coin} analysis={analysis} />
-                <FoxyDataStrip
-                  coin={coin}
-                  setups={board?.setups ?? null}
-                  derivatives={board?.derivatives ?? null}
-                  whales={board?.whales ?? null}
-                  loading={loading}
-                />
-                <FoxyTradingViewCard coin={coin} />
-                <FoxyTradesTable
-                  coin={coin}
-                  setups={board?.setups ?? null}
-                  loading={loading}
-                  updatedAt={updatedAt}
-                  refreshing={loading}
-                  onRefresh={handleRefresh}
-                />
-              </>
-            ) : (
+          analysis ? (
+            <FoxyBoard
+              coin={coin}
+              analysis={analysis}
+              market={board?.market ?? null}
+              derivatives={board?.derivatives ?? null}
+              whales={board?.whales ?? null}
+              setups={board?.setups ?? null}
+              orderbook={board?.orderbook ?? null}
+            />
+          ) : (
+            <div className="mx-auto max-w-[920px]">
               <VerdictSkeleton />
-            )}
-          </div>
+            </div>
+          )
         ) : (
           <EmptyState />
         )}
@@ -223,16 +200,16 @@ export default function FoxyPage() {
 function EmptyState() {
   return (
     <div className="mx-auto flex h-full max-w-md flex-col items-center justify-center text-center">
-      <div className="font-mono text-[11px] uppercase tracking-[0.12em] text-fg-dim">
+      <div className="text-[11px] font-bold uppercase tracking-[0.12em] text-slate-400">
         Foxy AI
       </div>
-      <h1 className="mt-3 text-3xl font-extrabold tracking-tight text-fg">
+      <h1 className="mt-3 text-3xl font-extrabold tracking-tight text-slate-900">
         Bir coin sor.
       </h1>
-      <p className="mt-2 text-sm text-fg-muted">
+      <p className="mt-2 text-sm font-medium text-slate-500">
         Sol panelden istediğin coin&apos;i sor — Foxy net bir AL / SAT / BEKLE
-        çağrısı verir, altında fiyat, türev verisi, balina akışı ve trader
-        pozisyonlarını gösterir.
+        çağrısı verir, altında fiyat, türev verisi, canlı tahta, cüzdan
+        hareketleri ve trader pozisyonlarını gösterir.
       </p>
     </div>
   );
@@ -240,18 +217,16 @@ function EmptyState() {
 
 function VerdictSkeleton() {
   return (
-    <section className="rounded-2xl border border-border bg-bg-card overflow-hidden">
-      <div className="flex items-stretch">
-        <div className="flex w-[140px] shrink-0 flex-col items-center justify-center gap-2 bg-bg-elev py-6">
-          <div className="h-3 w-16 animate-pulse rounded bg-border" />
-          <div className="h-9 w-20 animate-pulse rounded bg-border" />
+    <section className="overflow-hidden rounded-[20px] border border-slate-200 bg-white shadow-sm">
+      <div className="space-y-3 p-6">
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-24 animate-pulse rounded-xl bg-slate-100" />
+          <div className="h-5 w-2/3 animate-pulse rounded bg-slate-100" />
         </div>
-        <div className="flex-1 space-y-3 p-5">
-          <div className="h-5 w-3/4 animate-pulse rounded bg-bg-elev" />
-          <div className="h-3 w-5/6 animate-pulse rounded bg-bg-elev" />
-          <div className="h-3 w-4/6 animate-pulse rounded bg-bg-elev" />
-          <div className="h-3 w-3/6 animate-pulse rounded bg-bg-elev" />
-        </div>
+        <div className="h-20 w-full animate-pulse rounded-2xl bg-slate-50" />
+        <div className="h-3 w-5/6 animate-pulse rounded bg-slate-100" />
+        <div className="h-3 w-4/6 animate-pulse rounded bg-slate-100" />
+        <div className="h-3 w-3/6 animate-pulse rounded bg-slate-100" />
       </div>
     </section>
   );

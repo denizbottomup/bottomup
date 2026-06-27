@@ -24,6 +24,21 @@ export interface FoxyAssetMarket {
   quote_volume_24h: number | null;
 }
 
+export interface FoxyOrderBookLevel {
+  px: number;
+  sz: number;
+}
+
+export interface FoxyOrderBook {
+  inst_id: string;
+  asks: FoxyOrderBookLevel[];
+  bids: FoxyOrderBookLevel[];
+  mid: number;
+  spread: number;
+  spread_pct: number;
+  ts: number;
+}
+
 export interface FoxyQuotaState {
   used: number;
   limit: number;
@@ -42,6 +57,7 @@ export interface FoxyQueryReply {
   derivatives?: FoxyDerivatives | null;
   whales?: FoxyWhales | null;
   setups?: FoxySetupsByCoin | null;
+  orderbook?: FoxyOrderBook | null;
   quota: FoxyQuotaState;
   entitlement: {
     tier: 'free' | 'trial' | 'premium';

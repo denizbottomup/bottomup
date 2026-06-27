@@ -21,6 +21,8 @@ interface Props {
   activeHistoryId: string | null;
 }
 
+const LABEL = 'text-[11px] font-bold uppercase tracking-[0.1em] text-slate-400';
+
 export function FoxyPromptPanel({
   prompt,
   setPrompt,
@@ -32,20 +34,22 @@ export function FoxyPromptPanel({
   activeHistoryId,
 }: Props) {
   return (
-    <aside className="flex h-full w-full flex-col border-r border-border bg-bg/60 md:w-[340px] md:min-w-[340px]">
-      <div className="border-b border-border p-5">
-        <div className="mono-label !text-brand">Foxy · AI market analyst</div>
-        <p className="mt-2 text-sm text-fg-muted">
-          Bir coin sor. AL · SAT · BEKLE çağrısı, BottomUP trader'lar,
-          Arkham balina akışı ve borsa verisinden çıkarılır.
+    <aside className="flex h-full w-full flex-col border-r border-slate-200 bg-white md:w-[340px] md:min-w-[340px]">
+      <div className="border-b border-slate-100 p-5">
+        <div className="text-[11px] font-extrabold uppercase tracking-[0.1em] text-slate-900">
+          Foxy <span className="text-indigo-600">· AI market analyst</span>
+        </div>
+        <p className="mt-2 text-sm font-medium leading-relaxed text-slate-500">
+          Bir coin sor. AL · SAT · BEKLE çağrısı; canlı tahta, cüzdan
+          hareketleri ve borsa verisiyle birlikte.
         </p>
       </div>
 
-      <form onSubmit={onSubmit} className="border-b border-border p-5">
-        <label htmlFor="foxy-prompt" className="mono-label !text-fg-dim">
+      <form onSubmit={onSubmit} className="border-b border-slate-100 p-5">
+        <label htmlFor="foxy-prompt" className={LABEL}>
           Sorgu
         </label>
-        <div className="mt-2 rounded-2xl border border-border bg-bg-card focus-within:border-white/25 transition">
+        <div className="mt-2 rounded-2xl border border-slate-200 bg-slate-50 transition focus-within:border-slate-900/25 focus-within:bg-white">
           <textarea
             id="foxy-prompt"
             value={prompt}
@@ -53,7 +57,7 @@ export function FoxyPromptPanel({
             placeholder="ETH analizi yapar mısın?"
             rows={3}
             disabled={loading}
-            className="w-full resize-none bg-transparent px-4 py-3 text-sm text-fg placeholder-fg-dim outline-none disabled:opacity-60"
+            className="w-full resize-none bg-transparent px-4 py-3 text-sm font-medium text-slate-900 outline-none placeholder:text-slate-400 disabled:opacity-60"
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
@@ -65,26 +69,26 @@ export function FoxyPromptPanel({
         <button
           type="submit"
           disabled={loading || !prompt.trim()}
-          className="mt-3 w-full rounded-full bg-brand px-4 py-2 text-sm font-semibold text-black disabled:opacity-40 disabled:cursor-not-allowed hover:bg-brand/90 transition"
+          className="mt-3 w-full rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40"
         >
           {loading ? 'Analiz ediliyor…' : 'Analiz et →'}
         </button>
         {error ? (
-          <div className="mt-3 rounded-lg border border-rose-400/30 bg-rose-500/[0.06] px-3 py-2 text-xs text-rose-200">
+          <div className="mt-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-medium text-rose-600">
             {error}
           </div>
         ) : null}
 
         {history.length === 0 ? (
           <div className="mt-5">
-            <div className="mono-label !text-fg-dim mb-2">Hızlı başlangıç</div>
+            <div className={`${LABEL} mb-2`}>Hızlı başlangıç</div>
             <div className="flex flex-wrap gap-2">
               {SUGGESTIONS.map((s) => (
                 <button
                   key={s}
                   type="button"
                   onClick={() => setPrompt(s)}
-                  className="rounded-full border border-border bg-bg-card px-3 py-1.5 text-xs text-fg-muted hover:border-white/25 hover:text-fg transition"
+                  className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-500 transition hover:border-slate-300 hover:text-slate-900"
                 >
                   {s}
                 </button>
@@ -97,7 +101,7 @@ export function FoxyPromptPanel({
       <div className="flex-1 overflow-y-auto p-5">
         {history.length > 0 ? (
           <>
-            <div className="mono-label !text-fg-dim mb-3">Bu oturum</div>
+            <div className={`${LABEL} mb-3`}>Bu oturum</div>
             <ul className="space-y-1.5">
               {history.map((h) => (
                 <li key={h.id}>
@@ -106,17 +110,17 @@ export function FoxyPromptPanel({
                     onClick={() => onPickHistory(h)}
                     className={`group block w-full rounded-xl border px-3 py-2 text-left text-sm transition ${
                       h.id === activeHistoryId
-                        ? 'border-white/25 bg-bg-elev text-fg'
-                        : 'border-border bg-bg-card text-fg-muted hover:border-white/15 hover:text-fg'
+                        ? 'border-slate-300 bg-slate-50 text-slate-900'
+                        : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300 hover:text-slate-900'
                     }`}
                   >
                     <div className="flex items-center justify-between gap-2">
-                      <span className="truncate font-medium">
+                      <span className="truncate font-semibold">
                         {h.coinDisplay ?? h.prompt}
                       </span>
-                      <VerdictPill verdict={h.verdict} small />
+                      <VerdictPill verdict={h.verdict} />
                     </div>
-                    <div className="mt-0.5 truncate text-[11px] text-fg-dim">
+                    <div className="mt-0.5 truncate text-[11px] text-slate-400">
                       {h.prompt}
                     </div>
                   </button>
@@ -125,7 +129,7 @@ export function FoxyPromptPanel({
             </ul>
           </>
         ) : (
-          <div className="text-xs text-fg-dim">
+          <div className="text-xs font-medium text-slate-400">
             Henüz bir analiz yok. Yukarıdan bir coin sor.
           </div>
         )}
@@ -134,25 +138,15 @@ export function FoxyPromptPanel({
   );
 }
 
-function VerdictPill({
-  verdict,
-  small,
-}: {
-  verdict: FoxyVerdict;
-  small?: boolean;
-}) {
+function VerdictPill({ verdict }: { verdict: FoxyVerdict }) {
   const tone =
     verdict === 'AL'
-      ? 'border-mint/40 bg-mint/10 text-mint-soft'
+      ? 'bg-emerald-50 text-emerald-600'
       : verdict === 'SAT'
-        ? 'border-rose-400/40 bg-rose-500/10 text-rose-200'
-        : 'border-brand/40 bg-brand/10 text-brand-soft';
+        ? 'bg-rose-50 text-rose-600'
+        : 'bg-amber-50 text-amber-700';
   return (
-    <span
-      className={`shrink-0 rounded-full border px-2 py-0.5 font-mono ${
-        small ? 'text-[10px]' : 'text-[11px]'
-      } ${tone}`}
-    >
+    <span className={`shrink-0 rounded-md px-2 py-0.5 text-[10px] font-extrabold ${tone}`}>
       {verdict}
     </span>
   );
