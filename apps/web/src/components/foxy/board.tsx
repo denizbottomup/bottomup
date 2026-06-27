@@ -294,31 +294,49 @@ function OrderBookPanel({
     : 0;
   const asks = orderbook ? orderbook.asks.slice(0, 5).reverse() : [];
   const bids = orderbook ? orderbook.bids.slice(0, 5) : [];
+  const sources = orderbook?.sources ?? [];
 
   return (
     <Panel
       title="Canlı tahta"
       right={
         <Live>
-          OKX · {orderbook?.inst_id ?? `${coin.symbol}-USDT`}
+          {sources.length > 0 ? `${sources.length} borsa` : coin.symbol}
         </Live>
       }
     >
       {orderbook ? (
-        <div className="py-1.5">
-          {asks.map((l, i) => (
-            <ObRow key={`a${i}`} level={l} maxSz={maxSz} side="ask" />
-          ))}
-          <div className="my-0.5 flex items-center justify-between bg-slate-50 px-[18px] py-2.5">
-            <span className="text-[16px] font-extrabold text-slate-900">{fmtPrice(orderbook.mid)}</span>
-            <span className="text-[11.5px] font-semibold text-slate-400">
-              spread {fmtPrice(orderbook.spread)} · {orderbook.spread_pct.toFixed(3)}%
-            </span>
+        <>
+          {sources.length > 0 ? (
+            <div className="flex flex-wrap gap-1.5 border-b border-slate-100 px-[18px] py-2.5">
+              {sources.map((s) => (
+                <span
+                  key={s}
+                  className="rounded-md bg-slate-100 px-2 py-0.5 text-[10.5px] font-bold text-slate-500"
+                >
+                  {s}
+                </span>
+              ))}
+              <span className="ml-auto self-center text-[10.5px] font-semibold text-slate-300">
+                {orderbook.inst_id} · toplam derinlik
+              </span>
+            </div>
+          ) : null}
+          <div className="py-1.5">
+            {asks.map((l, i) => (
+              <ObRow key={`a${i}`} level={l} maxSz={maxSz} side="ask" />
+            ))}
+            <div className="my-0.5 flex items-center justify-between bg-slate-50 px-[18px] py-2.5">
+              <span className="text-[16px] font-extrabold text-slate-900">{fmtPrice(orderbook.mid)}</span>
+              <span className="text-[11.5px] font-semibold text-slate-400">
+                spread {fmtPrice(orderbook.spread)} · {orderbook.spread_pct.toFixed(3)}%
+              </span>
+            </div>
+            {bids.map((l, i) => (
+              <ObRow key={`b${i}`} level={l} maxSz={maxSz} side="bid" />
+            ))}
           </div>
-          {bids.map((l, i) => (
-            <ObRow key={`b${i}`} level={l} maxSz={maxSz} side="bid" />
-          ))}
-        </div>
+        </>
       ) : (
         <Empty>Canlı tahta şu an alınamadı.</Empty>
       )}

@@ -31,6 +31,8 @@ export interface FoxyOrderBookLevel {
 
 export interface FoxyOrderBook {
   inst_id: string;
+  /** Exchanges that contributed to this aggregated book. */
+  sources?: string[];
   asks: FoxyOrderBookLevel[];
   bids: FoxyOrderBookLevel[];
   mid: number;
