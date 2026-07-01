@@ -1,6 +1,6 @@
 'use client';
 
-import type { ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import type { CoinMatch } from '@/lib/coin-extract';
 import type {
   FoxyAnalysis,
@@ -282,13 +282,48 @@ function Meaning({ children }: { children: ReactNode }) {
 
 /* ────────────────────────── order book ──────────────────────── */
 
+const API_BASE =
+  process.env.NEXT_PUBLIC_API_BASE_URL ||
+  'https://bottomupapi-production.up.railway.app';
+
 function OrderBookPanel({
-  orderbook,
+  orderbook: seed,
   coin,
 }: {
   orderbook: FoxyOrderBook | null;
   coin: CoinMatch;
 }) {
+  // The Foxy query seeds the first frame; then we poll the public
+  // order-book endpoint so "canlı tahta" is genuinely live (~2s cadence).
+  const [orderbook, setOrderbook] = useState<FoxyOrderBook | null>(seed);
+  useEffect(() => {
+    setOrderbook(seed);
+  }, [seed]);
+  useEffect(() => {
+    let alive = true;
+    const tick = async () => {
+      try {
+        const res = await fetch(
+          `${API_BASE}/public/orderbook/${encodeURIComponent(coin.symbol)}`,
+          { cache: 'no-store' },
+        );
+        if (!res.ok) return;
+        const json = (await res.json()) as FoxyOrderBook | null;
+        if (alive && json && Array.isArray(json.asks) && json.asks.length > 0) {
+          setOrderbook(json);
+        }
+      } catch {
+        // transient — keep the last good book
+      }
+    };
+    void tick();
+    const id = setInterval(() => void tick(), 2000);
+    return () => {
+      alive = false;
+      clearInterval(id);
+    };
+  }, [coin.symbol]);
+
   const maxSz = orderbook
     ? Math.max(...orderbook.asks.concat(orderbook.bids).map((l) => l.sz), 0)
     : 0;
