@@ -75,7 +75,8 @@ interface TraderDetail {
     /** True for free viewers on locked trades — fields are stripped. */
     is_locked: boolean;
   }>;
-  entitlement: Entitlement;
+  /** Only present on the authed route; absent on /public/trader. */
+  entitlement?: Entitlement;
 }
 
 export function TraderDetailModal({
@@ -336,7 +337,7 @@ function DetailBody({
           <section className="mt-4 rounded-2xl border border-border bg-bg p-5">
             <div className="flex items-center justify-between">
               <div className="mono-label">Last {data.recent.length} trades</div>
-              {data.entitlement.tier === 'free' &&
+              {data.entitlement?.tier === 'free' &&
               data.recent.some((t) => t.is_locked) ? (
                 <a
                   href="https://trade.bupcore.ai/account"
