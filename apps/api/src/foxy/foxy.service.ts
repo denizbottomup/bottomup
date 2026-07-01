@@ -1043,6 +1043,15 @@ export class FoxyService implements OnModuleInit {
    * venues. Returns null only when no exchange responded.
    */
   async compoundOrderBook(coinInput: string): Promise<FoxyOrderBook | null> {
+    const key = normalizeCoinName(coinInput).replace(/USDT$/i, '');
+    const cached = orderbookCache.get(key);
+    if (cached && Date.now() - cached.at < ORDERBOOK_TTL_MS) return cached.value;
+    const value = await this.buildOrderBook(coinInput);
+    orderbookCache.set(key, { at: Date.now(), value });
+    return value;
+  }
+
+  private async buildOrderBook(coinInput: string): Promise<FoxyOrderBook | null> {
     const symbol = normalizeCoinName(coinInput).replace(/USDT$/i, '');
     const pair = `${symbol}-USDT`;
     const sym = `${symbol}USDT`;
@@ -1805,6 +1814,15 @@ function decimalsFor(tick: number): number {
  *  (e.g. BTC, ETH, JTO, WIF…). Refreshed hourly. */
 let okxUniverseCache: { at: number; set: Set<string> } | null = null;
 const OKX_UNIVERSE_TTL_MS = 60 * 60 * 1000;
+
+/** Short-lived compound order-book cache. The public endpoint is polled
+ *  ~1×/sec per viewer; caching ~900ms means every poll (across all
+ *  viewers) shares one 5-exchange fanout instead of hammering them. */
+const orderbookCache = new Map<
+  string,
+  { at: number; value: FoxyOrderBook | null }
+>();
+const ORDERBOOK_TTL_MS = 900;
 
 /** Full-word coin names users type instead of the ticker. */
 const COIN_NAME_ALIASES: Record<string, string> = {
