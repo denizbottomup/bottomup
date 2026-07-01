@@ -17,17 +17,35 @@ export class RedisBus {
     url: string,
     private readonly log: Logger,
   ) {
-    // `family: 0` lets ioredis resolve Railway's IPv6-only private DNS
-    // (redis.railway.internal). Without it ioredis defaults to IPv4-only
-    // lookups → connect ETIMEDOUT → the ws process crash-loops.
-    const opts = { lazyConnect: true, maxRetriesPerRequest: null, family: 0 };
+    // Mirror the workers realtime-bus resilience so a transient Redis
+    // hiccup never crash-loops the ws process (Railway incident
+    // 2026-06-27). `family: 0` resolves Railway's IPv6-only private DNS
+    // (redis.railway.internal); retryStrategy keeps reconnecting; and —
+    // critically — the per-client `error` handlers absorb events that
+    // would otherwise be an unhandled 'error' → hard process crash.
+    const opts = {
+      lazyConnect: true,
+      maxRetriesPerRequest: null,
+      family: 0,
+      retryStrategy: (times: number) => Math.min(1000 * Math.pow(2, times), 30_000),
+      reconnectOnError: () => true,
+    };
     this.sub = new Redis(url, opts);
-    this.pub = new Redis(url, opts);
-  }
+    this.pub = new Redis(url, { ...opts, enableOfflineQueue: false });
 
-  async start(): Promise<void> {
-    await Promise.all([this.sub.connect(), this.pub.connect()]);
-    await this.sub.psubscribe('ws:*');
+    this.sub.on('error', (err) => this.log.warn({ err: err.message }, 'redis sub error'));
+    this.pub.on('error', (err) => this.log.warn({ err: err.message }, 'redis pub error'));
+
+    // Subscriptions are dropped on disconnect, so (re)subscribe on every
+    // `ready` — keeps ws:* live across reconnects, not just first boot.
+    this.sub.on('ready', () => {
+      this.sub.psubscribe('ws:*').then(
+        () => this.log.info('redis bus subscribed to ws:*'),
+        (err: unknown) =>
+          this.log.warn({ err: (err as Error).message }, 'redis psubscribe failed'),
+      );
+    });
+
     this.sub.on('pmessage', (_pattern: string, channel: string, message: string) => {
       const match = /^ws:([^:]+):(.+)$/.exec(channel);
       if (!match) return;
@@ -48,7 +66,18 @@ export class RedisBus {
         }
       }
     });
-    this.log.info('redis bus connected, subscribed to ws:*');
+  }
+
+  async start(): Promise<void> {
+    // Fire-and-forget connect: ioredis retries forever on its own and
+    // the `error` handlers absorb transient ETIMEDOUTs. Awaiting here
+    // (the old behaviour) is exactly what tore the process down at boot.
+    this.sub.connect().catch((err) =>
+      this.log.warn({ err: (err as Error).message }, 'redis sub connect failed; retrying'),
+    );
+    this.pub.connect().catch((err) =>
+      this.log.warn({ err: (err as Error).message }, 'redis pub connect failed; retrying'),
+    );
   }
 
   onMessage(handler: (channel: WsChannel, id: string, payload: unknown) => void): void {
