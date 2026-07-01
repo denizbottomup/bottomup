@@ -17,8 +17,12 @@ export class RedisBus {
     url: string,
     private readonly log: Logger,
   ) {
-    this.sub = new Redis(url, { lazyConnect: true, maxRetriesPerRequest: null });
-    this.pub = new Redis(url, { lazyConnect: true, maxRetriesPerRequest: null });
+    // `family: 0` lets ioredis resolve Railway's IPv6-only private DNS
+    // (redis.railway.internal). Without it ioredis defaults to IPv4-only
+    // lookups → connect ETIMEDOUT → the ws process crash-loops.
+    const opts = { lazyConnect: true, maxRetriesPerRequest: null, family: 0 };
+    this.sub = new Redis(url, opts);
+    this.pub = new Redis(url, opts);
   }
 
   async start(): Promise<void> {
