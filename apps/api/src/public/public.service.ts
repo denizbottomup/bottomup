@@ -55,6 +55,8 @@ export interface TraderDetailSummary {
     coin: string;
     position: 'long' | 'short' | null;
     status: string;
+    /** When the position was opened (setup created). */
+    entry_date: Date | null;
     close_date: Date | null;
     pnl: number;
     r: number;
@@ -71,6 +73,32 @@ export interface TraderDetailSummary {
      * free viewer. The public surface always returns full data.
      */
     is_locked: boolean;
+  }>;
+  /** Currently-open positions (status='active') — entry filled, live now. */
+  active: Array<{
+    id: string;
+    coin: string;
+    position: 'long' | 'short' | null;
+    entry: number | null;
+    stop: number | null;
+    target: number | null;
+    r: number | null;
+    /** First take-profit already hit (partial close). */
+    tp1_hit: boolean;
+    opened_at: Date | null;
+  }>;
+  /** Pending limit orders (status='incoming') — waiting for entry to fill. */
+  limit: Array<{
+    id: string;
+    coin: string;
+    position: 'long' | 'short' | null;
+    entry: number | null;
+    /** Upper bound of the entry range for laddered limit orders. */
+    entry_end: number | null;
+    stop: number | null;
+    target: number | null;
+    r: number | null;
+    placed_at: Date | null;
   }>;
 }
 
@@ -298,6 +326,7 @@ export class PublicService {
               s.status::text AS status,
               COALESCE(s.close_date, s.stop_date, s.tp1_date, s.last_acted_at, p.updated_at, p.created_at) AS close_date,
               COALESCE(s.close_date, s.stop_date, s.tp1_date, s.last_acted_at) AS real_close_date,
+              s.created_at AS created_at,
               COALESCE(p.estimated_pnl, 0) AS pnl,
               COALESCE(p.estimated_pnl_rate, 0) AS r
          FROM setup s
@@ -486,11 +515,70 @@ export class PublicService {
             ? (t.position as 'long' | 'short')
             : null,
         status: String(t.status ?? ''),
+        entry_date: (t.created_at as Date | null) ?? null,
         close_date: real,
         pnl: Math.round(Number(t.pnl ?? 0) * 100) / 100,
         r: Math.round(Number(t.r ?? 0) * 100) / 100,
         index: fullIdx,
         is_locked: false,
+      }));
+
+    // Live positions + pending limit orders — separate from the closed
+    // stream above. `active` = entry filled (open now); `incoming` =
+    // limit order still waiting to fill. Dates matter, so we keep
+    // created_at (placed/opened) on every row.
+    const openRows = await this.prisma.$queryRawUnsafe<Array<Record<string, unknown>>>(
+      `SELECT s.id::text AS id,
+              s.coin_name,
+              s.position::text AS position,
+              s.status::text AS status,
+              s.entry_value,
+              s.entry_value_end,
+              s.stop_value,
+              s.profit_taking_1,
+              s.r_value,
+              s.is_tp1,
+              s.created_at
+         FROM setup s
+        WHERE s.is_deleted = FALSE
+          AND s.trader_id = $1::uuid
+          AND s.category = 'futures'::categories_type
+          AND s.status IN ('active'::statuses_type, 'incoming'::statuses_type)
+        ORDER BY s.created_at DESC NULLS LAST`,
+      traderId,
+    );
+
+    const numOrNull = (v: unknown): number | null =>
+      v == null || !Number.isFinite(Number(v)) ? null : Number(v);
+    const posOf = (v: unknown): 'long' | 'short' | null =>
+      v === 'long' || v === 'short' ? v : null;
+
+    const active = openRows
+      .filter((r) => r.status === 'active')
+      .map((r) => ({
+        id: r.id as string,
+        coin: String(r.coin_name ?? ''),
+        position: posOf(r.position),
+        entry: numOrNull(r.entry_value),
+        stop: numOrNull(r.stop_value),
+        target: numOrNull(r.profit_taking_1),
+        r: numOrNull(r.r_value),
+        tp1_hit: r.is_tp1 === true,
+        opened_at: (r.created_at as Date | null) ?? null,
+      }));
+
+    const limit = openRows
+      .filter((r) => r.status === 'incoming')
+      .map((r) => ({
+        id: r.id as string,
+        coin: String(r.coin_name ?? ''),
+        position: posOf(r.position),
+        entry: numOrNull(r.entry_value),
+        entry_end: numOrNull(r.entry_value_end),
+        stop: numOrNull(r.stop_value),
+        target: numOrNull(r.profit_taking_1),
+        r: numOrNull(r.r_value),
+        placed_at: (r.created_at as Date | null) ?? null,
       }));
 
     return {
@@ -533,6 +621,8 @@ export class PublicService {
       coins,
       long_short: { long, short },
       recent,
+      active,
+      limit,
     };
   }
 

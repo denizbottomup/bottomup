@@ -63,6 +63,7 @@ interface TraderDetail {
     coin: string;
     position: 'long' | 'short' | null;
     status: string;
+    entry_date: string | null;
     close_date: string | null;
     pnl: number;
     r: number;
@@ -74,6 +75,28 @@ interface TraderDetail {
     index: number;
     /** True for free viewers on locked trades — fields are stripped. */
     is_locked: boolean;
+  }>;
+  active?: Array<{
+    id: string;
+    coin: string;
+    position: 'long' | 'short' | null;
+    entry: number | null;
+    stop: number | null;
+    target: number | null;
+    r: number | null;
+    tp1_hit: boolean;
+    opened_at: string | null;
+  }>;
+  limit?: Array<{
+    id: string;
+    coin: string;
+    position: 'long' | 'short' | null;
+    entry: number | null;
+    entry_end: number | null;
+    stop: number | null;
+    target: number | null;
+    r: number | null;
+    placed_at: string | null;
   }>;
   /** Only present on the authed route; absent on /public/trader. */
   entitlement?: Entitlement;
@@ -333,10 +356,60 @@ function DetailBody({
           </section>
         </div>
 
+        {data.active && data.active.length > 0 ? (
+          <section className="mt-4 rounded-2xl border border-emerald-400/25 bg-emerald-400/[0.03] p-5">
+            <div className="mono-label text-emerald-300">
+              Açık pozisyonlar · {data.active.length}
+            </div>
+            <div className="mt-3 space-y-1.5">
+              {data.active.map((a) => (
+                <OpenRow
+                  key={a.id}
+                  kind="active"
+                  coin={a.coin}
+                  position={a.position}
+                  entry={a.entry}
+                  entryEnd={null}
+                  stop={a.stop}
+                  target={a.target}
+                  r={a.r}
+                  date={a.opened_at}
+                  tp1Hit={a.tp1_hit}
+                />
+              ))}
+            </div>
+          </section>
+        ) : null}
+
+        {data.limit && data.limit.length > 0 ? (
+          <section className="mt-4 rounded-2xl border border-amber-400/25 bg-amber-400/[0.03] p-5">
+            <div className="mono-label text-amber-300">
+              Bekleyen limit emirleri · {data.limit.length}
+            </div>
+            <div className="mt-3 space-y-1.5">
+              {data.limit.map((l) => (
+                <OpenRow
+                  key={l.id}
+                  kind="limit"
+                  coin={l.coin}
+                  position={l.position}
+                  entry={l.entry}
+                  entryEnd={l.entry_end}
+                  stop={l.stop}
+                  target={l.target}
+                  r={l.r}
+                  date={l.placed_at}
+                  tp1Hit={false}
+                />
+              ))}
+            </div>
+          </section>
+        ) : null}
+
         {data.recent.length > 0 ? (
           <section className="mt-4 rounded-2xl border border-border bg-bg p-5">
             <div className="flex items-center justify-between">
-              <div className="mono-label">Last {data.recent.length} trades</div>
+              <div className="mono-label">Last {data.recent.length} closed trades</div>
               {data.entitlement?.tier === 'free' &&
               data.recent.some((t) => t.is_locked) ? (
                 <a
@@ -598,16 +671,88 @@ function RecentRow({ t }: { t: TraderDetail['recent'][0] }) {
         {t.pnl >= 0 ? '+' : ''}
         {formatUsd(t.pnl)}
       </span>
-      <span className="w-16 text-right text-fg-dim">
-        {t.close_date
-          ? new Date(t.close_date).toLocaleDateString('en-US', {
-              day: 'numeric',
-              month: 'short',
-            })
-          : '—'}
+      <span className="w-[104px] text-right text-fg-dim">
+        {fmtDate(t.entry_date)} <span className="opacity-50">→</span> {fmtDate(t.close_date)}
       </span>
     </div>
   );
+}
+
+/** Live position / pending limit order row — entry, stop, target + date. */
+function OpenRow({
+  kind,
+  coin,
+  position,
+  entry,
+  entryEnd,
+  stop,
+  target,
+  r,
+  date,
+  tp1Hit,
+}: {
+  kind: 'active' | 'limit';
+  coin: string;
+  position: 'long' | 'short' | null;
+  entry: number | null;
+  entryEnd: number | null;
+  stop: number | null;
+  target: number | null;
+  r: number | null;
+  date: string | null;
+  tp1Hit: boolean;
+}) {
+  const posTone =
+    position === 'long'
+      ? 'text-emerald-300'
+      : position === 'short'
+        ? 'text-rose-300'
+        : 'text-fg-dim';
+  const badge =
+    kind === 'active'
+      ? 'bg-emerald-400/10 text-emerald-300 ring-emerald-400/30'
+      : 'bg-amber-400/10 text-amber-300 ring-amber-400/30';
+  return (
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg bg-white/[0.02] px-3 py-2 font-mono text-[11px]">
+      <span className="w-14 font-semibold text-fg">{coin.replace('USDT', '')}</span>
+      <span className={`w-8 ${posTone}`}>
+        {position === 'long' ? '↑ L' : position === 'short' ? '↓ S' : '—'}
+      </span>
+      <span className={`rounded px-1.5 py-0.5 text-[9px] uppercase ring-1 ${badge}`}>
+        {kind === 'active' ? (tp1Hit ? 'TP1 · LIVE' : 'LIVE') : 'LIMIT'}
+      </span>
+      <span className="text-fg-muted">
+        Giriş{' '}
+        <span className="text-fg">
+          {fmtLevel(entry)}
+          {entryEnd != null ? `–${fmtLevel(entryEnd)}` : ''}
+        </span>
+      </span>
+      <span className="text-fg-muted">
+        Stop <span className="text-rose-300">{fmtLevel(stop)}</span>
+      </span>
+      <span className="text-fg-muted">
+        Hedef <span className="text-emerald-300">{fmtLevel(target)}</span>
+      </span>
+      <span className="ml-auto text-fg">
+        {r != null ? `${r >= 0 ? '+' : ''}${r.toFixed(1)}R` : ''}
+      </span>
+      <span className="w-16 text-right text-fg-dim">{fmtDate(date)}</span>
+    </div>
+  );
+}
+
+function fmtDate(d: string | null): string {
+  if (!d) return '—';
+  const dt = new Date(d);
+  if (Number.isNaN(dt.getTime())) return '—';
+  return dt.toLocaleDateString('en-US', { day: 'numeric', month: 'short' });
+}
+
+function fmtLevel(n: number | null): string {
+  if (n == null || !Number.isFinite(n)) return '—';
+  const d = n >= 1000 ? 0 : n >= 1 ? 2 : 4;
+  return `$${n.toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d })}`;
 }
 
 function formatUsd(n: number): string {
