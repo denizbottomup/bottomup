@@ -490,7 +490,14 @@ function TradersPanel({ setups, coin }: { setups: FoxySetupsByCoin | null; coin:
                       <span className="grid size-7 place-items-center rounded-full bg-slate-200 text-[11px] font-extrabold text-slate-500">
                         {(s.trader_name ?? '?').slice(0, 1)}
                       </span>
-                      {s.trader_name ?? 'Trader'}
+                      <span className="flex flex-col leading-tight">
+                        <span>{s.trader_name ?? 'Trader'}</span>
+                        {fmtDay(s.created_at) ? (
+                          <span className="text-[10.5px] font-semibold text-slate-400">
+                            {fmtDay(s.created_at)} açıldı
+                          </span>
+                        ) : null}
+                      </span>
                     </div>
                   </td>
                   <td className="px-[18px] py-3 text-right">
@@ -654,4 +661,11 @@ function fmtTime(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return '';
   return d.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+}
+
+function fmtDay(value: string | Date | null | undefined): string {
+  if (!value) return '';
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return '';
+  return d.toLocaleDateString('tr-TR', { day: '2-digit', month: 'short' });
 }
