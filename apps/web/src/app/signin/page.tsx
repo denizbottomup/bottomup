@@ -2,88 +2,24 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useRef, useState } from 'react';
-import {
-  RecaptchaVerifier,
-  signInWithEmailAndPassword,
-  signInWithPhoneNumber,
-  type ConfirmationResult,
-} from 'firebase/auth';
+import { useEffect, useState } from 'react';
 import { useAuth } from '@/lib/auth-context';
-import { getFirebaseAuth, signInWithGoogle, signInWithApple } from '@/lib/firebase';
+import { signInWithGoogle, signInWithApple } from '@/lib/firebase';
 import { AuthCard } from '@/components/auth-card';
 
-type Mode = 'email' | 'phone';
-
+/**
+ * OAuth-only sign in. Email/password and phone were removed so nobody can
+ * self-register a throwaway account — access is via Google or Apple only.
+ */
 export default function SignInPage() {
   const router = useRouter();
   const { user, loading } = useAuth();
-  const [mode, setMode] = useState<Mode>('email');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [phone, setPhone] = useState('+90');
-  const [otp, setOtp] = useState('');
-  const [confirmer, setConfirmer] = useState<ConfirmationResult | null>(null);
-  const recaptchaRef = useRef<HTMLDivElement | null>(null);
-  const recaptchaVerifierRef = useRef<RecaptchaVerifier | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     if (!loading && user) router.replace('/home');
   }, [loading, user, router]);
-
-  const onEmailSignIn = async (e: React.FormEvent): Promise<void> => {
-    e.preventDefault();
-    setErr(null);
-    setBusy(true);
-    try {
-      await signInWithEmailAndPassword(getFirebaseAuth(), email, password);
-    } catch (x) {
-      setErr((x as Error).message.replace('Firebase: ', ''));
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const ensureRecaptcha = (): RecaptchaVerifier => {
-    if (recaptchaVerifierRef.current) return recaptchaVerifierRef.current;
-    const auth = getFirebaseAuth();
-    const verifier = new RecaptchaVerifier(auth, recaptchaRef.current!, {
-      size: 'invisible',
-    });
-    recaptchaVerifierRef.current = verifier;
-    return verifier;
-  };
-
-  const onPhoneSend = async (e: React.FormEvent): Promise<void> => {
-    e.preventDefault();
-    setErr(null);
-    setBusy(true);
-    try {
-      const verifier = ensureRecaptcha();
-      const c = await signInWithPhoneNumber(getFirebaseAuth(), phone.trim(), verifier);
-      setConfirmer(c);
-    } catch (x) {
-      setErr((x as Error).message.replace('Firebase: ', ''));
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const onPhoneVerify = async (e: React.FormEvent): Promise<void> => {
-    e.preventDefault();
-    if (!confirmer) return;
-    setErr(null);
-    setBusy(true);
-    try {
-      await confirmer.confirm(otp.trim());
-    } catch (x) {
-      setErr((x as Error).message.replace('Firebase: ', ''));
-    } finally {
-      setBusy(false);
-    }
-  };
 
   const onOAuth = async (provider: 'google' | 'apple'): Promise<void> => {
     setErr(null);
@@ -104,9 +40,9 @@ export default function SignInPage() {
       subtitle="Sign in to your account"
       footer={
         <>
-          Don't have an account?{' '}
+          New to BottomUP?{' '}
           <Link href="/signup" className="text-brand hover:underline">
-            Sign up
+            Create an account
           </Link>
         </>
       }
@@ -118,7 +54,7 @@ export default function SignInPage() {
           disabled={busy}
           className="btn-ghost w-full py-3"
         >
-          <GoogleIcon /> Continue with Google
+          <GoogleIcon /> {busy ? 'Signing in…' : 'Continue with Google'}
         </button>
         <button
           type="button"
@@ -128,122 +64,8 @@ export default function SignInPage() {
         >
           <AppleIcon /> Continue with Apple
         </button>
+        {err ? <p className="text-sm text-red-400">{err}</p> : null}
       </div>
-
-      <div className="relative my-6">
-        <div className="absolute inset-0 flex items-center">
-          <div className="w-full border-t border-border" />
-        </div>
-        <div className="relative flex justify-center text-xs text-fg-dim">
-          <span className="px-2 bg-bg-card">or</span>
-        </div>
-      </div>
-
-      <div className="mb-3 flex items-center gap-1 rounded-lg bg-white/5 p-1 ring-1 ring-white/10">
-        <button
-          type="button"
-          onClick={() => {
-            setMode('email');
-            setConfirmer(null);
-            setErr(null);
-          }}
-          className={`flex-1 rounded-md px-3 py-1.5 text-xs font-medium transition ${
-            mode === 'email' ? 'bg-bg-card text-fg ring-1 ring-white/10' : 'text-fg-muted'
-          }`}
-        >
-          Email
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            setMode('phone');
-            setErr(null);
-          }}
-          className={`flex-1 rounded-md px-3 py-1.5 text-xs font-medium transition ${
-            mode === 'phone' ? 'bg-bg-card text-fg ring-1 ring-white/10' : 'text-fg-muted'
-          }`}
-        >
-          Phone
-        </button>
-      </div>
-
-      {mode === 'email' ? (
-        <form onSubmit={onEmailSignIn} className="space-y-3">
-          <input
-            type="email"
-            placeholder="Email"
-            className="input"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            autoComplete="email"
-            required
-          />
-          <input
-            type="password"
-            placeholder="Password"
-            className="input"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            autoComplete="current-password"
-            required
-          />
-          {err ? <p className="text-sm text-red-400">{err}</p> : null}
-          <button type="submit" className="btn-primary w-full py-3" disabled={busy}>
-            {busy ? 'Signing in…' : 'Sign in'}
-          </button>
-        </form>
-      ) : !confirmer ? (
-        <form onSubmit={onPhoneSend} className="space-y-3">
-          <input
-            type="tel"
-            placeholder="+90 555 123 4567"
-            className="input"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            autoComplete="tel"
-            required
-          />
-          <p className="text-[11px] text-fg-dim">
-            Include the country code (e.g. +1, +44, +90).
-          </p>
-          {err ? <p className="text-sm text-red-400">{err}</p> : null}
-          <button type="submit" className="btn-primary w-full py-3" disabled={busy}>
-            {busy ? 'Sending code…' : 'Send code'}
-          </button>
-        </form>
-      ) : (
-        <form onSubmit={onPhoneVerify} className="space-y-3">
-          <input
-            type="text"
-            inputMode="numeric"
-            placeholder="SMS code"
-            className="input font-mono tracking-widest"
-            value={otp}
-            onChange={(e) => setOtp(e.target.value)}
-            maxLength={6}
-            required
-          />
-          <p className="text-[11px] text-fg-dim">
-            Enter the 6-digit code we sent to {phone}.
-          </p>
-          {err ? <p className="text-sm text-red-400">{err}</p> : null}
-          <button type="submit" className="btn-primary w-full py-3" disabled={busy}>
-            {busy ? 'Verifying…' : 'Verify'}
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setConfirmer(null);
-              setOtp('');
-            }}
-            className="w-full text-xs text-fg-muted hover:text-fg"
-          >
-            Change number
-          </button>
-        </form>
-      )}
-
-      <div ref={recaptchaRef} className="mt-3" />
     </AuthCard>
   );
 }
