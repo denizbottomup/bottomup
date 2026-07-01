@@ -25,6 +25,9 @@ export interface LandingPayload {
     success_rate_30d: number | null;
     active_setups: number;
   };
+  /** Public top-trader cards. Present on `/public/landing`; used on
+   *  no-signup hosts (bottomup.app) to show performances without auth. */
+  top_traders: LeaderboardTrader[];
   news: Array<{
     id: string;
     title: string | null;
@@ -127,6 +130,20 @@ export async function fetchMyLeaderboard(
   } catch {
     return [];
   }
+}
+
+/**
+ * Public trader leaderboard — no auth. Reads the `top_traders` block the
+ * backend already ships on `/public/landing`. Used on no-signup hosts
+ * (bottomup.app) so the Traders section shows real performances without
+ * a login gate.
+ */
+export async function fetchPublicLeaderboard(
+  locale = 'en',
+  limit = 6,
+): Promise<LeaderboardTrader[]> {
+  const payload = await fetchLanding(locale);
+  return (payload?.top_traders ?? []).slice(0, limit);
 }
 
 /**

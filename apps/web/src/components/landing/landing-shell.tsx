@@ -52,10 +52,12 @@ export async function LandingShell({ locale }: { locale: LocaleCode }) {
       <FoxyFirewallSection />
       <MarketplaceSection />
 
-      {/* The leaderboard is auth-gated (signup CTA + token-fetched cards).
-          bottomup.app has no signup, so the section can't function there —
-          drop it on the no-auth hosts, keep it on bupcore.ai. */}
-      {hideAuth ? null : <LeaderboardSection />}
+      {/* Trader leaderboard. On bupcore.ai it's auth-gated (signup CTA +
+          token-fetched cards). bottomup.app has no signup, so it runs in
+          public mode instead — real performances from `/public/landing`,
+          no gate — rather than being dropped (which broke the Traders nav
+          link → #leaderboard). */}
+      <LeaderboardSection publicMode={hideAuth} />
 
       <McpSuiteSection />
 

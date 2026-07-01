@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import {
   displayName,
   fetchMyLeaderboard,
+  fetchPublicLeaderboard,
   type LeaderboardTrader,
 } from './landing-data';
 import { TraderDetailModal } from './trader-detail-modal';
@@ -17,7 +18,12 @@ import { useAuth } from '@/lib/auth-context';
  * (label, headline, subtitle, disclaimer) renders for everyone so the
  * section still has SEO value and conveys the pitch.
  */
-export function LeaderboardSection() {
+export function LeaderboardSection({
+  publicMode = false,
+}: {
+  /** No-signup hosts (bottomup.app): show public performances, no gate. */
+  publicMode?: boolean;
+}) {
   const { t } = useT();
   return (
     <section id="leaderboard" className="relative overflow-hidden">
@@ -40,16 +46,20 @@ export function LeaderboardSection() {
         </header>
 
         <div className="mt-10">
-          <AuthGate fallback="leaderboard-blur">
-            <LeaderboardCards />
-          </AuthGate>
+          {publicMode ? (
+            <LeaderboardCards publicMode />
+          ) : (
+            <AuthGate fallback="leaderboard-blur">
+              <LeaderboardCards />
+            </AuthGate>
+          )}
         </div>
       </div>
     </section>
   );
 }
 
-function LeaderboardCards() {
+function LeaderboardCards({ publicMode = false }: { publicMode?: boolean }) {
   const { t } = useT();
   const { getIdToken } = useAuth();
   const [traders, setTraders] = useState<LeaderboardTrader[] | null>(null);
@@ -61,6 +71,13 @@ function LeaderboardCards() {
   useEffect(() => {
     let alive = true;
     (async () => {
+      // Public hosts read the no-auth `/public/landing` top_traders;
+      // signed-in product reads the personalised authed leaderboard.
+      if (publicMode) {
+        const items = await fetchPublicLeaderboard('en', 12);
+        if (alive) setTraders(items);
+        return;
+      }
       const token = await getIdToken();
       if (!token) return;
       const items = await fetchMyLeaderboard(token, 12);
@@ -69,7 +86,7 @@ function LeaderboardCards() {
     return () => {
       alive = false;
     };
-  }, [getIdToken]);
+  }, [getIdToken, publicMode]);
 
   if (traders == null) {
     return (
