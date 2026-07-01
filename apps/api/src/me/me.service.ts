@@ -82,8 +82,9 @@ function gateTrades(
       id: row.id,
       coin: row.coin,
       position: row.position,
-      // Strip every leak — status (win/loss), date, R, $.
+      // Strip every leak — status (win/loss), dates, R, $.
       status: '',
+      entry_date: null,
       close_date: null,
       pnl: 0,
       r: 0,
