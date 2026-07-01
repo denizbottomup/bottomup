@@ -71,7 +71,7 @@ echo "api restarted"
 ### Postgres
 
 - Railway-managed Postgres `${{Postgres.DATABASE_URL}}` referansıyla okunur. API/web buraya bakar.
-- Source-of-truth: `85.105.161.240:5432/app`. Workers servisindeki replicator `SOURCE_DATABASE_URL` set olduğunda 10 sn'de bir buradan SELECT edip Railway Postgres'e ON CONFLICT DO UPDATE yapar. Source TLS self-signed → `?sslmode=require` zorunlu. Read-only `report_user` source için yeterli (replicator sadece SELECT yapar). Detay [`apps/workers/src/main.ts`](../apps/workers/src/main.ts).
+- Source-of-truth prod DB Hetzner'de firewall'lu, Railway'in static outbound IPv4'ü yok (sadece Pro plan IPv6, o da kapalı) — allowlist ile direkt Postgres bağlantısı mümkün değil. Bunun yerine workers servisindeki replicator, `REPLICATION_API_URL` + `REPLICATION_API_KEY` set olduğunda 10 sn'de bir bottomup-backend'in `/internal/replication/tables/{table}` endpoint'inden (bearer-auth, HTTPS) satır çekip Railway Postgres'e ON CONFLICT DO UPDATE yapar. Tablo/cursor-column allowlist'i her iki repoda da senkron tutulmalı: [`apps/workers/src/replicator/tables.ts`](../apps/workers/src/replicator/tables.ts) ↔ bottomup-backend `apps/replication/api.py`. Detay [`apps/workers/src/main.ts`](../apps/workers/src/main.ts).
 
 ### Redis
 

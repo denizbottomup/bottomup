@@ -21,10 +21,13 @@ import {
  * registry and lifecycle, real handlers plug in one queue at a time.
  */
 const workersEnvSchema = workersSchema.extend({
-  // Source production Postgres (`85.105.161.240:5432/app`) we mirror
-  // FROM into the Railway Postgres every MIRROR_INTERVAL_MS. Read-only
-  // user is sufficient — replicator only SELECTs from the source.
-  SOURCE_DATABASE_URL: z.string().url().optional(),
+  // bottomup-backend's read-only replication export (apps/replication/api.py)
+  // we pull FROM into the Railway Postgres every MIRROR_INTERVAL_MS. Not a
+  // Postgres DSN — the source DB is Hetzner-firewalled with no static-IP
+  // allowlist path available on Railway's plan, so we go over HTTPS with a
+  // bearer key instead of a direct DB connection.
+  REPLICATION_API_URL: z.string().url().optional(),
+  REPLICATION_API_KEY: z.string().optional(),
   MIRROR_INTERVAL_MS: z.coerce.number().int().positive().default(10_000),
   // News translator runs on Google Translate's free widget endpoint.
   // No API key required. Set to 'false' to disable in CI / local dev.
@@ -154,16 +157,16 @@ async function main(): Promise<void> {
   ticker.start();
 
   // ─── Source → Railway Postgres mirror ──────────────────────────────
-  // Pulls fresh rows from the source production Postgres
-  // (`85.105.161.240:5432/app`) every MIRROR_INTERVAL_MS into the
-  // Railway Postgres that API/web services read from. Skipped when
-  // SOURCE_DATABASE_URL is unset (useful in local dev where only the
-  // target is reachable).
+  // Pulls fresh rows from bottomup-backend's replication API every
+  // MIRROR_INTERVAL_MS into the Railway Postgres that API/web services
+  // read from. Skipped when REPLICATION_API_URL/KEY are unset (useful in
+  // local dev where only the target is reachable).
   let replicator: Replicator | null = null;
   let replicatorInterval: NodeJS.Timeout | null = null;
-  if (env.SOURCE_DATABASE_URL) {
+  if (env.REPLICATION_API_URL && env.REPLICATION_API_KEY) {
     replicator = new Replicator({
-      sourceUrl: env.SOURCE_DATABASE_URL,
+      sourceApiUrl: env.REPLICATION_API_URL,
+      sourceApiKey: env.REPLICATION_API_KEY,
       targetUrl: env.DATABASE_URL,
       log: log.child({ component: 'replicator' }),
       realtime,
@@ -183,7 +186,7 @@ async function main(): Promise<void> {
     replicatorInterval = setInterval(tick, env.MIRROR_INTERVAL_MS);
     log.info({ intervalMs: env.MIRROR_INTERVAL_MS }, 'replicator: enabled');
   } else {
-    log.info('replicator: disabled (set SOURCE_DATABASE_URL to enable)');
+    log.info('replicator: disabled (set REPLICATION_API_URL + REPLICATION_API_KEY to enable)');
   }
 
   // ─── Trader watcher ────────────────────────────────────────────────

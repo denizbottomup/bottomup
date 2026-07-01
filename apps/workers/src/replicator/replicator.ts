@@ -1,4 +1,4 @@
-import { Client, Pool } from 'pg';
+import { Pool } from 'pg';
 import type { Logger } from 'pino';
 import { REPLICATED_TABLES, type TableReplicationSpec } from './tables.js';
 import type { RealtimeBus } from '../realtime-bus.js';
@@ -16,21 +16,27 @@ const REALTIME_TABLES: Record<string, 'setup' | 'trader'> = {
 };
 
 export interface ReplicatorOpts {
-  sourceUrl: string;
+  // Base URL of the bottomup-backend /internal/replication router, e.g.
+  // https://api.bottomup.app/internal/replication — NOT a Postgres DSN.
+  // Source Postgres is Hetzner-firewalled with no static-IP allowlist path
+  // (Railway's outbound IPv4 is Pro-plan-only and unavailable here), so we
+  // pull rows over HTTPS instead of connecting to the DB port directly.
+  sourceApiUrl: string;
+  sourceApiKey: string;
   targetUrl: string;
   log: Logger;
   realtime?: RealtimeBus | null;
 }
 
 /**
- * Polls each table for rows newer than the last-seen cursor and upserts
- * them into the target DB. Uses connection POOLS (not single clients) so
- * we're resilient to connection drops and concurrent ticks.
+ * Polls each table for rows newer than the last-seen cursor (via the
+ * bottomup-backend replication API) and upserts them into the target DB.
  *
  * Deletes are NOT captured — logical replication would be needed for that.
  */
 export class Replicator {
-  private readonly src: Pool;
+  private readonly sourceApiUrl: string;
+  private readonly sourceApiKey: string;
   private readonly dst: Pool;
   private readonly log: Logger;
   private readonly cursors = new Map<string, string | null>();
@@ -38,15 +44,19 @@ export class Replicator {
   private ticking = false;
 
   constructor(opts: ReplicatorOpts) {
-    const ssl = { rejectUnauthorized: false as const };
-    this.src = new Pool({ connectionString: opts.sourceUrl, ssl, max: 3, idleTimeoutMillis: 30_000 });
-    this.dst = new Pool({ connectionString: opts.targetUrl, ssl, max: 3, idleTimeoutMillis: 30_000 });
+    this.sourceApiUrl = opts.sourceApiUrl.replace(/\/+$/, '');
+    this.sourceApiKey = opts.sourceApiKey;
+    this.dst = new Pool({
+      connectionString: opts.targetUrl,
+      ssl: { rejectUnauthorized: false as const },
+      max: 3,
+      idleTimeoutMillis: 30_000,
+    });
     this.log = opts.log;
     this.realtime = opts.realtime ?? null;
 
     // Swallow idle-client errors so one bad connection doesn't crash the
     // whole process — the pool will reconnect on next checkout.
-    this.src.on('error', (err) => this.log.warn({ err: err.message }, 'replicator: src pool idle error'));
     this.dst.on('error', (err) => this.log.warn({ err: err.message }, 'replicator: dst pool idle error'));
   }
 
@@ -91,7 +101,7 @@ export class Replicator {
   }
 
   async stop(): Promise<void> {
-    await Promise.all([this.src.end(), this.dst.end()]);
+    await this.dst.end();
   }
 
   /**
@@ -123,31 +133,29 @@ export class Replicator {
   }
 
   private async tickTable(spec: TableReplicationSpec): Promise<number> {
-    const cols = await this.getCommonColumns(spec);
-    if (cols.length === 0) return 0;
+    const dstCols = await this.getDstColumns(spec);
+    if (dstCols.length === 0) return 0;
 
     const jsonCols = await this.getJsonColumns(spec.name);
 
     const cursor = this.cursors.get(spec.name) ?? null;
-    const selectSql = spec.cursorCol
-      ? `SELECT ${cols.map(q).join(', ')} FROM ${q(spec.name)}
-           WHERE ${q(spec.cursorCol)} > $1::timestamptz - INTERVAL '${CURSOR_SLACK_MS} milliseconds'
-           ORDER BY ${q(spec.cursorCol)} ASC
-           LIMIT ${BATCH_SIZE}`
-      : `SELECT ${cols.map(q).join(', ')} FROM ${q(spec.name)} LIMIT ${BATCH_SIZE}`;
+    // Same slack the old direct-SQL query applied via `$1::timestamptz -
+    // INTERVAL '2000ms'` — absorbs clock skew between rows committed within
+    // the same tick window so none land exactly on the cursor boundary and
+    // get skipped.
+    const since = spec.cursorCol
+      ? new Date(new Date(cursor ?? '1970-01-01').getTime() - CURSOR_SLACK_MS).toISOString()
+      : undefined;
 
-    const params = spec.cursorCol ? [cursor ?? '1970-01-01'] : [];
-
-    // One fresh source checkout for the fetch
-    const src = await this.src.connect();
-    let rows: Record<string, unknown>[];
-    try {
-      const res = await src.query<Record<string, unknown>>(selectSql, params);
-      rows = res.rows;
-    } finally {
-      src.release();
-    }
+    const rows = await this.fetchSourceRows(spec.name, since, BATCH_SIZE);
     if (rows.length === 0) return 0;
+
+    // Source now returns every column it has (SELECT * on the backend) —
+    // intersect with dst's columns here, same safety net the old two-sided
+    // information_schema intersection gave us against schema drift.
+    const firstRow = rows[0];
+    const cols = dstCols.filter((c) => Object.prototype.hasOwnProperty.call(firstRow, c));
+    if (cols.length === 0) return 0;
 
     // Fresh target checkout for the upsert transaction. Each row is
     // wrapped in its own SAVEPOINT — a single bad row (e.g. duplicate
@@ -196,9 +204,8 @@ export class Replicator {
 
     if (spec.cursorCol) {
       const lastRow = rows[rows.length - 1];
-      const lastVal = lastRow?.[spec.cursorCol] as Date | string | undefined;
-      const normalized = lastVal instanceof Date ? lastVal.toISOString() : String(lastVal ?? '');
-      if (normalized) this.cursors.set(spec.name, normalized);
+      const lastVal = lastRow?.[spec.cursorCol] as string | undefined;
+      if (lastVal) this.cursors.set(spec.name, lastVal);
     }
 
     const channel = REALTIME_TABLES[spec.name];
@@ -255,21 +262,38 @@ export class Replicator {
     return rows.length;
   }
 
-  private async getCommonColumns(spec: TableReplicationSpec): Promise<string[]> {
-    const cached = commonColsCache.get(spec.name);
+  /** GET {sourceApiUrl}/tables/{table}?since=...&limit=... — see
+   * bottomup-backend apps/replication/api.py for the contract. */
+  private async fetchSourceRows(
+    table: string,
+    since: string | undefined,
+    limit: number,
+  ): Promise<Record<string, unknown>[]> {
+    const url = new URL(`${this.sourceApiUrl}/tables/${encodeURIComponent(table)}`);
+    url.searchParams.set('limit', String(limit));
+    if (since) url.searchParams.set('since', since);
+    const res = await fetch(url, {
+      headers: { Authorization: `Bearer ${this.sourceApiKey}` },
+    });
+    if (!res.ok) {
+      const body = await res.text().catch(() => '');
+      throw new Error(`replication source fetch failed: ${res.status} ${body}`.trim());
+    }
+    return (await res.json()) as Record<string, unknown>[];
+  }
+
+  private async getDstColumns(spec: TableReplicationSpec): Promise<string[]> {
+    const cached = dstColsCache.get(spec.name);
     if (cached) return cached;
-    const selectCols = `SELECT column_name FROM information_schema.columns
-                         WHERE table_schema='public' AND table_name=$1`;
-    const [srcCols, dstCols] = await Promise.all([
-      this.src.query<{ column_name: string }>(selectCols, [spec.name]),
-      this.dst.query<{ column_name: string }>(selectCols, [spec.name]),
-    ]);
-    const srcSet = new Set(srcCols.rows.map((r) => r.column_name));
-    const dstSet = new Set(dstCols.rows.map((r) => r.column_name));
+    const { rows } = await this.dst.query<{ column_name: string }>(
+      `SELECT column_name FROM information_schema.columns
+        WHERE table_schema='public' AND table_name=$1`,
+      [spec.name],
+    );
     const excluded = new Set(spec.excludeCols ?? []);
-    const common = [...srcSet].filter((c) => dstSet.has(c) && !excluded.has(c));
-    commonColsCache.set(spec.name, common);
-    return common;
+    const cols = rows.map((r) => r.column_name).filter((c) => !excluded.has(c));
+    dstColsCache.set(spec.name, cols);
+    return cols;
   }
 
   private async getJsonColumns(table: string): Promise<Set<string>> {
@@ -287,7 +311,7 @@ export class Replicator {
   }
 }
 
-const commonColsCache = new Map<string, string[]>();
+const dstColsCache = new Map<string, string[]>();
 const jsonColsCache = new Map<string, Set<string>>();
 
 function q(name: string): string {
@@ -306,4 +330,3 @@ function buildUpsert(spec: TableReplicationSpec, cols: string[]): string {
     : `INSERT INTO ${q(spec.name)} (${colList}) VALUES (${placeholders})
          ON CONFLICT (${pkList}) DO NOTHING`;
 }
-// replicator deploy trigger
