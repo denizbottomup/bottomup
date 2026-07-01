@@ -492,25 +492,54 @@ export class FoxyService implements OnModuleInit {
     const scored = wins + losses;
     const winRate = scored > 0 ? wins / scored : null;
 
+    // Freshness guard. The source DB can carry setups that are still
+    // flagged `active`/`incoming` long after they became irrelevant —
+    // a long whose stop the market blew through weeks ago, or a limit
+    // resting 40% away from spot. Those show entry/stop/target levels
+    // that no longer mean anything ("bu işlemlerin hiçbiri güncel
+    // değil"). We reconcile against the live price and drop the dead
+    // ones so the panel only ever shows tradeable setups.
+    const live = await this.fetchMarket24h(`${coinName}USDT`).catch(() => null);
+    const price = live?.price ?? null;
+    const isStale = (
+      position: 'long' | 'short' | null,
+      entry: number | null,
+      stop: number | null,
+    ): boolean => {
+      if (price == null || price <= 0) return false; // no price → can't judge, keep
+      // Stop already breached → the position would have closed.
+      if (stop != null && stop > 0) {
+        if (position === 'long' && price <= stop) return true;
+        if (position === 'short' && price >= stop) return true;
+      }
+      // Levels sitting absurdly far from spot are no longer meaningful.
+      if (entry != null && entry > 0) {
+        if (Math.abs(price - entry) / entry > 0.35) return true;
+      }
+      return false;
+    };
+
     return {
       coin: coinName,
-      active: active.map((r) => ({
-        id: r.id as string,
-        status: String(r.status ?? ''),
-        position:
-          r.position === 'long' || r.position === 'short'
-            ? (r.position as 'long' | 'short')
-            : null,
-        entry_value: r.entry_value == null ? null : Number(r.entry_value),
-        stop_value: r.stop_value == null ? null : Number(r.stop_value),
-        profit_taking_1: r.profit_taking_1 == null ? null : Number(r.profit_taking_1),
-        r_value: r.r_value == null ? null : Number(r.r_value),
-        trader_id: (r.trader_id as string | null) ?? null,
-        trader_name: (r.trader_name as string | null) ?? null,
-        trader_image: (r.trader_image as string | null) ?? null,
-        created_at: (r.created_at as Date | null) ?? null,
-        last_acted_at: (r.last_acted_at as Date | null) ?? null,
-      })),
+      active: active
+        .map((r) => ({
+          id: r.id as string,
+          status: String(r.status ?? ''),
+          position:
+            r.position === 'long' || r.position === 'short'
+              ? (r.position as 'long' | 'short')
+              : null,
+          entry_value: r.entry_value == null ? null : Number(r.entry_value),
+          stop_value: r.stop_value == null ? null : Number(r.stop_value),
+          profit_taking_1: r.profit_taking_1 == null ? null : Number(r.profit_taking_1),
+          r_value: r.r_value == null ? null : Number(r.r_value),
+          trader_id: (r.trader_id as string | null) ?? null,
+          trader_name: (r.trader_name as string | null) ?? null,
+          trader_image: (r.trader_image as string | null) ?? null,
+          created_at: (r.created_at as Date | null) ?? null,
+          last_acted_at: (r.last_acted_at as Date | null) ?? null,
+        }))
+        .filter((s) => !isStale(s.position, s.entry_value, s.stop_value)),
       recent: {
         count: recentRows.length,
         wins,
