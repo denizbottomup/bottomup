@@ -1233,11 +1233,56 @@ export class FoxyService implements OnModuleInit {
   }
 
   /**
-   * 24h ticker from Binance spot — public, no key, returns last
-   * price + change + day range + quote-volume. Re-uses the existing
-   * fetchJson helper.
+   * 24h ticker — OKX first, Binance as fallback.
+   *
+   * Callers pass a Binance-style `<COIN>USDT` symbol. We resolve the
+   * price against OKX because the whole Foxy coin universe (and the
+   * traders' setups) are OKX-based. Ticker symbols collide across
+   * venues: Binance `LITUSDT` is Litentry (~$0.74, effectively dead),
+   * while OKX `LIT-USDT` is a different asset at ~$2.05 — pricing an
+   * OKX coin off Binance showed a wildly wrong number ("fiyat su an
+   * 2.02 lerde"). OKX spot keeps the price consistent with the setups
+   * and the compound order book; Binance is only a fallback for coins
+   * OKX doesn't list (no collision risk there, since such a coin was
+   * never surfaced from the OKX universe).
    */
   private async fetchMarket24h(symbol: string): Promise<FoxyAssetMarket | null> {
+    const base = symbol.replace(/USDT$/i, '').replace(/[-_/]/g, '');
+    const okx = await this.fetchMarketOkx(base).catch(() => null);
+    if (okx) return okx;
+    return this.fetchMarketBinance(symbol).catch(() => null);
+  }
+
+  /** OKX spot 24h ticker for `<base>-USDT`. */
+  private async fetchMarketOkx(base: string): Promise<FoxyAssetMarket | null> {
+    const json = await fetchJson<{
+      data?: Array<{
+        last?: string;
+        open24h?: string;
+        high24h?: string;
+        low24h?: string;
+        volCcy24h?: string;
+      }>;
+    }>(
+      `https://www.okx.com/api/v5/market/ticker?instId=${encodeURIComponent(`${base}-USDT`)}`,
+    );
+    const row = json.data?.[0];
+    if (!row) return null;
+    const price = Number(row.last ?? 0);
+    const open = Number(row.open24h ?? 0);
+    if (!Number.isFinite(price) || price <= 0) return null;
+    return {
+      price,
+      change_24h_pct:
+        Number.isFinite(open) && open > 0 ? ((price - open) / open) * 100 : 0,
+      high_24h: row.high24h == null ? null : Number(row.high24h),
+      low_24h: row.low24h == null ? null : Number(row.low24h),
+      quote_volume_24h: row.volCcy24h == null ? null : Number(row.volCcy24h),
+    };
+  }
+
+  /** Binance spot 24h ticker — fallback for coins OKX doesn't list. */
+  private async fetchMarketBinance(symbol: string): Promise<FoxyAssetMarket | null> {
     const json = await fetchJson<{
       lastPrice?: string;
       priceChangePercent?: string;
