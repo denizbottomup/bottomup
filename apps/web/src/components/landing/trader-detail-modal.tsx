@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useAuth } from '@/lib/auth-context';
 
 const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE_URL ||
@@ -90,20 +89,15 @@ export function TraderDetailModal({
 }) {
   const [data, setData] = useState<TraderDetail | null>(null);
   const [err, setErr] = useState<string | null>(null);
-  const { getIdToken } = useAuth();
-
   useEffect(() => {
     let alive = true;
     (async () => {
-      const token = await getIdToken();
-      if (!token) {
-        if (alive) setErr('AUTH_REQUIRED');
-        return;
-      }
       try {
+        // Public analytics — same shape as the authed /me/trader route
+        // but no login required, so "View full analytics" works on the
+        // no-signup landing (bottomup.app) and for anonymous visitors.
         const res = await fetch(
-          `${API_BASE}/me/trader/${encodeURIComponent(analyst)}`,
-          { headers: { Authorization: `Bearer ${token}` } },
+          `${API_BASE}/public/trader/${encodeURIComponent(analyst)}`,
         );
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const json = (await res.json()) as TraderDetail;
@@ -115,7 +109,7 @@ export function TraderDetailModal({
     return () => {
       alive = false;
     };
-  }, [analyst, getIdToken]);
+  }, [analyst]);
 
   useEffect(() => {
     const prev = document.body.style.overflow;
