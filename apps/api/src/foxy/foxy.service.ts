@@ -1042,7 +1042,7 @@ export class FoxyService implements OnModuleInit {
    * reflects true market-wide depth, with best bid/ask taken across all
    * venues. Returns null only when no exchange responded.
    */
-  private async compoundOrderBook(coinInput: string): Promise<FoxyOrderBook | null> {
+  async compoundOrderBook(coinInput: string): Promise<FoxyOrderBook | null> {
     const symbol = normalizeCoinName(coinInput).replace(/USDT$/i, '');
     const pair = `${symbol}-USDT`;
     const sym = `${symbol}USDT`;

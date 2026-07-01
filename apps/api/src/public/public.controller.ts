@@ -1,5 +1,6 @@
 import { Controller, Get, NotFoundException, Param, Query } from '@nestjs/common';
 import { PublicService } from './public.service.js';
+import { FoxyService } from '../foxy/foxy.service.js';
 
 const SUPPORTED_LOCALES = new Set([
   'en',
@@ -28,7 +29,10 @@ function normalizeLocale(input: string | undefined): string {
  */
 @Controller('/public')
 export class PublicController {
-  constructor(private readonly pub: PublicService) {}
+  constructor(
+    private readonly pub: PublicService,
+    private readonly foxy: FoxyService,
+  ) {}
 
   @Get('/landing')
   landing(
@@ -65,6 +69,20 @@ export class PublicController {
     const out = await this.pub.traderDetail(name);
     if (!out) throw new NotFoundException(`Trader "${name}" not found`);
     return out;
+  }
+
+  /**
+   * Live compound order book for a coin — top levels aggregated across
+   * OKX, Binance, Bybit, Bitget and Coinbase. Unauthenticated and side-
+   * effect-free, so the "canlı tahta" panel can poll it every few
+   * seconds for a genuinely live ladder (the Foxy query only seeds the
+   * first frame).
+   */
+  @Get('/orderbook/:coin')
+  orderbook(
+    @Param('coin') coin: string,
+  ): ReturnType<FoxyService['compoundOrderBook']> {
+    return this.foxy.compoundOrderBook(coin);
   }
 
   /**
