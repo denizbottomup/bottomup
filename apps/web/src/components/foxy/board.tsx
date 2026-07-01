@@ -301,26 +301,31 @@ function OrderBookPanel({
   }, [seed]);
   useEffect(() => {
     let alive = true;
-    const tick = async () => {
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    // Recursive poll: schedule the next fetch AFTER the current one
+    // resolves so slow venues never stack up. ~1s cadence keeps the
+    // ladder flowing without hammering the exchanges.
+    const loop = async () => {
       try {
         const res = await fetch(
           `${API_BASE}/public/orderbook/${encodeURIComponent(coin.symbol)}`,
           { cache: 'no-store' },
         );
-        if (!res.ok) return;
-        const json = (await res.json()) as FoxyOrderBook | null;
-        if (alive && json && Array.isArray(json.asks) && json.asks.length > 0) {
-          setOrderbook(json);
+        if (res.ok) {
+          const json = (await res.json()) as FoxyOrderBook | null;
+          if (alive && json && Array.isArray(json.asks) && json.asks.length > 0) {
+            setOrderbook(json);
+          }
         }
       } catch {
         // transient — keep the last good book
       }
+      if (alive) timer = setTimeout(() => void loop(), 1000);
     };
-    void tick();
-    const id = setInterval(() => void tick(), 2000);
+    void loop();
     return () => {
       alive = false;
-      clearInterval(id);
+      if (timer) clearTimeout(timer);
     };
   }, [coin.symbol]);
 
@@ -393,7 +398,7 @@ function ObRow({
   return (
     <div className="relative z-[1] flex items-center justify-between px-[18px] py-[5px] text-[13px] font-semibold">
       <span
-        className={`absolute inset-y-0 right-0 -z-[1] ${ask ? 'bg-rose-50' : 'bg-emerald-50'}`}
+        className={`absolute inset-y-0 right-0 -z-[1] transition-[width] duration-700 ease-out ${ask ? 'bg-rose-50' : 'bg-emerald-50'}`}
         style={{ width: `${w}%` }}
       />
       <span className={ask ? 'text-rose-600' : 'text-emerald-600'}>{fmtPrice(level.px)}</span>
