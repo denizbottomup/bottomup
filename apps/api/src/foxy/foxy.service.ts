@@ -1276,6 +1276,28 @@ export class FoxyService implements OnModuleInit {
       : Math.max(entry + atr * 1.2, swingHigh + atr * 0.1);
     const stop = roundPrice(stopRaw, price);
     const risk = Math.abs(entry - stop);
+    if (risk <= 0 || stop === roundPrice(entry, price)) {
+      // Degenerate levels (stop collapsed onto entry — dust-priced coin
+      // or zero ATR). Refuse to publish a signal whose 1R is zero.
+      return {
+        coin,
+        direction: 'NONE',
+        timeframe: '5-15 dk',
+        price: roundPrice(price, price),
+        entry: null,
+        entry_zone: null,
+        stop: null,
+        targets: [],
+        risk_per_unit: null,
+        rr: null,
+        confidence: 0,
+        headline: 'Bu coinde sağlıklı seviye üretilemiyor — işlem önerilmez',
+        reasons: ['Fiyat hareket aralığı seviye çizemeyecek kadar dar'],
+        invalidation: '',
+        generated_at,
+        meta,
+      };
+    }
     const targets: FoxyScalpTarget[] = [1, 1.6, 2.6].map((m) => {
       const tp = long ? entry + risk * m : entry - risk * m;
       return {
@@ -2109,11 +2131,23 @@ function orderBookImbalance(ob: FoxyOrderBook | null): number | null {
   return (bidSz - askSz) / tot;
 }
 
-/** Round a price to a sane number of decimals for its magnitude. */
+/**
+ * Round a price to a sane number of decimals for its magnitude. Micro-
+ * caps go by SIGNIFICANT digits, not a fixed decimal count — SHIB at
+ * $0.0000043 needs 10 decimals or entry/stop/TP all collapse onto the
+ * same number (and SATS at ~$4e-8 rounds to a flat 0).
+ */
 function roundPrice(value: number, ref: number): number {
   if (!Number.isFinite(value)) return 0;
   const a = Math.abs(ref);
-  const dp = a >= 1000 ? 2 : a >= 100 ? 3 : a >= 1 ? 4 : a >= 0.01 ? 5 : 7;
+  if (a <= 0) return value;
+  const dp =
+    a >= 1000 ? 2
+    : a >= 100 ? 3
+    : a >= 1 ? 4
+    : a >= 0.01 ? 5
+    // below 1 cent: 4 significant digits, however deep that goes
+    : Math.ceil(-Math.log10(a)) + 4;
   const p = Math.pow(10, dp);
   return Math.round(value * p) / p;
 }
