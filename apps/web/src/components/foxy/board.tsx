@@ -109,7 +109,7 @@ export function FoxyBoard({
 
       <div className="grid gap-3.5 md:grid-cols-[1fr_1.25fr]">
         <OrderBookPanel orderbook={orderbook} coin={coin} />
-        <WhaleFeedPanel whales={whales} />
+        <WhaleFeedPanel whales={whales} coin={coin} getIdToken={getIdToken} />
       </div>
 
       <TradersPanel setups={setups} coin={coin} />
@@ -603,7 +603,50 @@ function LevelTile({
 
 /* ───────────────────────── whale feed ───────────────────────── */
 
-function WhaleFeedPanel({ whales }: { whales: FoxyWhales | null }) {
+function WhaleFeedPanel({
+  whales: seed,
+  coin,
+  getIdToken,
+}: {
+  whales: FoxyWhales | null;
+  coin: CoinMatch;
+  getIdToken: () => Promise<string | null>;
+}) {
+  // The query seeds the first frame; then we poll the authed whales
+  // endpoint so new Arkham transfers surface while the board is open.
+  // On-chain 1M$+ transfers arrive on minute scales (and Arkham has
+  // rate limits), so a ~45s cadence is genuinely live without burning
+  // the API key.
+  const [whales, setWhales] = useState<FoxyWhales | null>(seed);
+  useEffect(() => setWhales(seed), [seed]);
+  useEffect(() => {
+    let alive = true;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const loop = async () => {
+      try {
+        const token = await getIdToken();
+        if (token) {
+          const res = await fetch(
+            `${API_BASE}/me/foxy/whales/${encodeURIComponent(coin.symbol)}`,
+            { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' },
+          );
+          if (res.ok) {
+            const json = (await res.json()) as FoxyWhales | null;
+            if (alive && json) setWhales(json);
+          }
+        }
+      } catch {
+        // transient — keep the last good feed
+      }
+      if (alive) timer = setTimeout(() => void loop(), 45000);
+    };
+    timer = setTimeout(() => void loop(), 45000);
+    return () => {
+      alive = false;
+      if (timer) clearTimeout(timer);
+    };
+  }, [coin.symbol, getIdToken]);
+
   const transfers = whales?.transfers ?? [];
   return (
     <Panel title="Cüzdan hareketleri" right={<Live>Arkham · 1M$+ · 24s</Live>}>
