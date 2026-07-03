@@ -1333,6 +1333,31 @@ export class FoxyService implements OnModuleInit {
     };
   }
 
+  /**
+   * Public candle feed for the board's live chart. Same OKX source the
+   * scalp engine computes its levels from, so the chart, the signal
+   * card and the order book all describe the same market. Short cache
+   * keeps a polling chart from hammering OKX.
+   */
+  async candles(
+    coinInput: string,
+    bar: string,
+    limit: number,
+  ): Promise<{
+    coin: string;
+    bar: string;
+    candles: Array<{ ts: number; open: number; high: number; low: number; close: number }>;
+  }> {
+    const coin = normalizeCoinName(coinInput).replace(/USDT$/i, '').toUpperCase();
+    const key = `${coin}:${bar}:${limit}`;
+    const cached = candlesCache.get(key);
+    if (cached && Date.now() - cached.at < CANDLES_TTL_MS) return cached.value;
+    const rows = await this.fetchOkxCandles(coin, bar, limit);
+    const value = { coin, bar, candles: rows };
+    candlesCache.set(key, { at: Date.now(), value });
+    return value;
+  }
+
   /** OKX candles → oldest-first OHLC rows. `bar` is an OKX interval. */
   private async fetchOkxCandles(
     coin: string,
@@ -2279,6 +2304,21 @@ const orderbookCache = new Map<
   { at: number; value: FoxyOrderBook | null }
 >();
 const ORDERBOOK_TTL_MS = 900;
+
+/** Candle cache for the board's live chart — same rationale as the
+ *  order-book cache: many polling viewers share one OKX fetch. */
+const candlesCache = new Map<
+  string,
+  {
+    at: number;
+    value: {
+      coin: string;
+      bar: string;
+      candles: Array<{ ts: number; open: number; high: number; low: number; close: number }>;
+    };
+  }
+>();
+const CANDLES_TTL_MS = 1500;
 
 /** Full-word coin names users type instead of the ticker. */
 const COIN_NAME_ALIASES: Record<string, string> = {

@@ -86,6 +86,24 @@ export class PublicController {
   }
 
   /**
+   * OKX candles for the board's live chart — the same source the scalp
+   * engine computes its levels from, so chart and signal always agree.
+   * `bar` is whitelisted to the intervals the UI offers; `limit` is
+   * capped. Unauthenticated + server-cached (~1.5s) for polling.
+   */
+  @Get('/candles/:coin')
+  candles(
+    @Param('coin') coin: string,
+    @Query('bar') barRaw?: string,
+    @Query('limit') limitRaw?: string,
+  ): ReturnType<FoxyService['candles']> {
+    const ALLOWED_BARS = new Set(['1m', '5m', '15m', '1H', '4H', '1D']);
+    const bar = barRaw && ALLOWED_BARS.has(barRaw) ? barRaw : '5m';
+    const limit = Math.max(30, Math.min(300, Number(limitRaw ?? 180) || 180));
+    return this.foxy.candles(coin, bar, limit);
+  }
+
+  /**
    * Public analyst directory — name, image, pre-aggregated stats and
    * the trader's referral code. Powers `bottomup.app/analyst` (and
    * `bupcore.ai/analyst` while the page is in lab). All fields are
