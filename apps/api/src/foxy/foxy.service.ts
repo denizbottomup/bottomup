@@ -157,6 +157,8 @@ export interface FoxyQueryReply {
   setups: FoxySetupsByCoin | null;
   /** OKX live order-book snapshot (top levels) for the "canlı tahta" panel. */
   orderbook: FoxyOrderBook | null;
+  /** Foxy's own 5-15 min scalp setup: direction + entry/stop/TP levels. */
+  signal: FoxyScalpSignal | null;
   quota: FoxyQuotaState;
   /** Echoed for the UI to show the tier badge. */
   entitlement: Entitlement;
@@ -195,6 +197,67 @@ export interface FoxyOrderBook {
   spread_pct: number;
   /** Snapshot epoch ms. */
   ts: number;
+}
+
+/** One take-profit level on a scalp signal. */
+export interface FoxyScalpTarget {
+  /** Price for this take-profit. */
+  price: number;
+  /** R multiple (reward ÷ risk) this level pays. */
+  r: number;
+  /** Signed % move from entry to this level. */
+  pct: number;
+}
+
+/**
+ * A concrete, tradeable scalp setup Foxy generates itself — not a
+ * relayed trader setup. Levels are computed algorithmically off OKX
+ * 5-minute candles (ATR for the stop distance, R-multiples for the
+ * targets) so the numbers are deterministic and never LLM-hallucinated.
+ * Direction comes from a transparent multi-factor confluence score
+ * (trend / momentum / order-book imbalance / funding). When confluence
+ * is weak the direction is 'NONE' — an honest "no clean trade, wait".
+ */
+export interface FoxyScalpSignal {
+  coin: string;
+  /** LONG, SHORT, or NONE (no clean edge right now → wait). */
+  direction: 'LONG' | 'SHORT' | 'NONE';
+  /** Intended holding window, e.g. "5-15 dk". */
+  timeframe: string;
+  /** Reference price at signal time (last 5m close). */
+  price: number;
+  /** Suggested entry (mid of the entry zone). Null when NONE. */
+  entry: number | null;
+  /** [low, high] entry band — scalps fill on a small zone, not a tick. */
+  entry_zone: [number, number] | null;
+  /** Protective stop. Null when NONE. */
+  stop: number | null;
+  /** Take-profit ladder (TP1..TP3), nearest first. Empty when NONE. */
+  targets: FoxyScalpTarget[];
+  /** |entry − stop| in quote currency (the "1R" distance). */
+  risk_per_unit: number | null;
+  /** Reward:risk to the furthest target. */
+  rr: number | null;
+  /** Confluence confidence, 0–100. */
+  confidence: number;
+  /** Plain-Turkish one-liner: what to do. */
+  headline: string;
+  /** 2–4 plain-Turkish confluence reasons, each with its hard number. */
+  reasons: string[];
+  /** Plain-Turkish: the single thing that kills this setup. */
+  invalidation: string;
+  /** ISO timestamp the signal was generated. */
+  generated_at: string;
+  /** Indicator snapshot powering the call (transparency row). */
+  meta: {
+    rsi: number | null;
+    ema_fast: number | null;
+    ema_slow: number | null;
+    atr: number | null;
+    trend: 'up' | 'down' | 'flat';
+    /** Order-book bid/ask imbalance, −1 (all asks) … +1 (all bids). */
+    ob_imbalance: number | null;
+  };
 }
 
 export interface FoxyOverviewAsset {
@@ -973,7 +1036,7 @@ export class FoxyService implements OnModuleInit {
     // setups frozen at $81-83K targets while BTC was actually at $77K).
     // Each call independently degrades to null/empty; we still send
     // the prompt to Claude even if some sources are down.
-    const [setups, derivatives, whales, market, orderbook] = await Promise.all([
+    const [setups, derivatives, whales, market, orderbook, signal] = await Promise.all([
       coinNorm
         ? this.setupsByCoin(coinNorm).catch(() => null)
         : Promise.resolve(null),
@@ -988,6 +1051,9 @@ export class FoxyService implements OnModuleInit {
         : Promise.resolve(null),
       coinNorm
         ? this.compoundOrderBook(coinNorm).catch(() => null)
+        : Promise.resolve(null),
+      coinNorm
+        ? this.scalpSignal(coinNorm).catch(() => null)
         : Promise.resolve(null),
     ]);
 
@@ -1020,6 +1086,7 @@ export class FoxyService implements OnModuleInit {
       whales,
       setups,
       orderbook,
+      signal,
       quota: {
         ...quota,
         used: quota.used + 1, // reflect the row we just inserted
@@ -1078,6 +1145,192 @@ export class FoxyService implements OnModuleInit {
     const value = await this.buildOrderBook(coinInput);
     orderbookCache.set(key, { at: Date.now(), value });
     return value;
+  }
+
+  /**
+   * Foxy's own 5-15 minute scalp signal. Everything numeric is computed
+   * deterministically off OKX 5m candles — ATR sets the stop distance,
+   * R-multiples set the take-profits — so the levels can never be an LLM
+   * hallucination. Direction is a transparent confluence score across
+   * trend (EMA9/EMA21), momentum (RSI), live order-book imbalance and
+   * funding. When nothing lines up the direction is NONE — an honest
+   * "no clean scalp right now, wait for a signal".
+   */
+  async scalpSignal(coinInput: string): Promise<FoxyScalpSignal | null> {
+    const coin = normalizeCoinName(coinInput).replace(/USDT$/i, '').toUpperCase();
+    const candles = await this.fetchOkxCandles(coin, '5m', 120).catch(() => null);
+    if (!candles || candles.length < 40) return null;
+
+    const closes = candles.map((c) => c.close);
+    const highs = candles.map((c) => c.high);
+    const lows = candles.map((c) => c.low);
+    const price = closes[closes.length - 1] ?? 0;
+    if (!Number.isFinite(price) || price <= 0) return null;
+
+    const emaFast = computeEma(closes, 9);
+    const emaSlow = computeEma(closes, 21);
+    const rsi = computeRsi(closes, 14);
+    const atr = computeAtr(highs, lows, closes, 14);
+
+    // Reuse the board's live sources; both degrade to neutral on failure.
+    const [ob, deriv] = await Promise.all([
+      this.compoundOrderBook(coin).catch(() => null),
+      this.derivativesByCoin(coin).catch(() => null),
+    ]);
+    const obImb = orderBookImbalance(ob); // −1 (asks) … +1 (bids)
+    const funding = deriv?.funding?.rate ?? null;
+
+    // Confluence score — positive leans long, negative leans short.
+    let score = 0;
+    const reasons: string[] = [];
+    let trend: 'up' | 'down' | 'flat' = 'flat';
+    if (emaFast != null && emaSlow != null) {
+      if (emaFast > emaSlow && price > emaFast) {
+        trend = 'up';
+        score += 2;
+        reasons.push("Kısa vade trend yukarı — fiyat EMA9 ve EMA21'in üstünde");
+      } else if (emaFast < emaSlow && price < emaFast) {
+        trend = 'down';
+        score -= 2;
+        reasons.push("Kısa vade trend aşağı — fiyat EMA9 ve EMA21'in altında");
+      }
+    }
+    if (rsi != null) {
+      if (rsi >= 55 && rsi < 72) {
+        score += 1;
+        if (trend !== 'down') reasons.push(`RSI ${rsi} — momentum yukarı, henüz aşırı alım değil`);
+      } else if (rsi <= 45 && rsi > 28) {
+        score -= 1;
+        if (trend !== 'up') reasons.push(`RSI ${rsi} — momentum aşağı, henüz aşırı satım değil`);
+      } else if (rsi >= 72) {
+        score -= 0.5; // overbought → fade long conviction
+        reasons.push(`RSI ${rsi} — aşırı alımda, yukarısı riskli`);
+      } else if (rsi <= 28) {
+        score += 0.5;
+        reasons.push(`RSI ${rsi} — aşırı satımda, tepki gelebilir`);
+      }
+    }
+    if (obImb != null && Math.abs(obImb) > 0.15) {
+      if (obImb > 0) {
+        score += 1;
+        reasons.push(`Deftere alış baskısı ağır (~%${Math.round((0.5 + obImb / 2) * 100)} alış)`);
+      } else {
+        score -= 1;
+        reasons.push(`Deftere satış baskısı ağır (~%${Math.round((0.5 - obImb / 2) * 100)} satış)`);
+      }
+    }
+    if (funding != null) {
+      if (funding > 0.0005 && score > 0)
+        reasons.push('Funding pozitif — long taraf kalabalık, stopa sıkı uy');
+      else if (funding < -0.0005 && score < 0)
+        reasons.push('Funding negatif — short taraf kalabalık, stopa sıkı uy');
+    }
+
+    const generated_at = new Date().toISOString();
+    const meta = {
+      rsi,
+      ema_fast: emaFast == null ? null : roundPrice(emaFast, price),
+      ema_slow: emaSlow == null ? null : roundPrice(emaSlow, price),
+      atr: atr == null ? null : roundPrice(atr, price),
+      trend,
+      ob_imbalance: obImb == null ? null : Math.round(obImb * 100) / 100,
+    };
+
+    const direction: 'LONG' | 'SHORT' | 'NONE' =
+      atr != null && atr > 0 && score >= 2 ? 'LONG'
+      : atr != null && atr > 0 && score <= -2 ? 'SHORT'
+      : 'NONE';
+
+    if (direction === 'NONE' || atr == null) {
+      return {
+        coin,
+        direction: 'NONE',
+        timeframe: '5-15 dk',
+        price: roundPrice(price, price),
+        entry: null,
+        entry_zone: null,
+        stop: null,
+        targets: [],
+        risk_per_unit: null,
+        rr: null,
+        confidence: Math.min(40, Math.round(Math.abs(score) * 15)),
+        headline: 'Şu an net bir scalp sinyali yok — sinyal bekle',
+        reasons: reasons.length ? reasons : ['Sinyaller karışık; yön verecek konfluans yok'],
+        invalidation: "EMA9/EMA21 net ayrışıp fiyat bir tarafa kaçarsa yeni sinyal doğar",
+        generated_at,
+        meta,
+      };
+    }
+
+    const long = direction === 'LONG';
+    const half = Math.max(atr * 0.1, price * 0.0005);
+    const entry = price;
+    const entry_zone: [number, number] = [
+      roundPrice(entry - half, price),
+      roundPrice(entry + half, price),
+    ];
+    const swingLow = Math.min(...lows.slice(-12));
+    const swingHigh = Math.max(...highs.slice(-12));
+    const stopRaw = long
+      ? Math.min(entry - atr * 1.2, swingLow - atr * 0.1)
+      : Math.max(entry + atr * 1.2, swingHigh + atr * 0.1);
+    const stop = roundPrice(stopRaw, price);
+    const risk = Math.abs(entry - stop);
+    const targets: FoxyScalpTarget[] = [1, 1.6, 2.6].map((m) => {
+      const tp = long ? entry + risk * m : entry - risk * m;
+      return {
+        price: roundPrice(tp, price),
+        r: m,
+        pct: Math.round(((tp - entry) / entry) * 10000) / 100,
+      };
+    });
+    const rr = targets.length ? targets[targets.length - 1]!.r : null;
+    const confidence = Math.min(92, 45 + Math.round(Math.abs(score) * 11));
+    const dirTr = long ? 'LONG (al)' : 'SHORT (sat)';
+
+    return {
+      coin,
+      direction,
+      timeframe: '5-15 dk',
+      price: roundPrice(price, price),
+      entry: roundPrice(entry, price),
+      entry_zone,
+      stop,
+      targets,
+      risk_per_unit: roundPrice(risk, price),
+      rr,
+      confidence,
+      headline: `${coin} ${dirTr} · giriş ${fmtNum(entry, price)} · stop ${fmtNum(stop, price)} · ilk hedef ${fmtNum(targets[0]!.price, price)}`,
+      reasons: reasons.slice(0, 4),
+      invalidation: long
+        ? `Fiyat ${fmtNum(stop, price)} altına 5dk kapanış yaparsa setup geçersiz — çık`
+        : `Fiyat ${fmtNum(stop, price)} üstüne 5dk kapanış yaparsa setup geçersiz — çık`,
+      generated_at,
+      meta,
+    };
+  }
+
+  /** OKX candles → oldest-first OHLC rows. `bar` is an OKX interval. */
+  private async fetchOkxCandles(
+    coin: string,
+    bar: string,
+    limit: number,
+  ): Promise<Array<{ ts: number; open: number; high: number; low: number; close: number }>> {
+    const json = await fetchJson<{ data?: string[][] }>(
+      `https://www.okx.com/api/v5/market/candles?instId=${encodeURIComponent(`${coin}-USDT`)}&bar=${encodeURIComponent(bar)}&limit=${limit}`,
+    );
+    const rows = json.data ?? [];
+    // OKX returns newest-first; reverse to chronological order.
+    return rows
+      .map((r) => ({
+        ts: Number(r[0]),
+        open: Number(r[1]),
+        high: Number(r[2]),
+        low: Number(r[3]),
+        close: Number(r[4]),
+      }))
+      .filter((c) => Number.isFinite(c.close) && c.close > 0)
+      .reverse();
   }
 
   private async buildOrderBook(coinInput: string): Promise<FoxyOrderBook | null> {
@@ -1804,6 +2057,70 @@ function computeRsi(closes: number[], period: number): number | null {
   if (losses === 0) return 100;
   const rs = gains / losses;
   return Math.round((100 - 100 / (1 + rs)) * 10) / 10;
+}
+
+/** Exponential moving average — returns the latest value (or null). */
+function computeEma(values: number[], period: number): number | null {
+  if (values.length < period) return null;
+  const k = 2 / (period + 1);
+  // Seed with the SMA of the first `period` values.
+  let ema = values.slice(0, period).reduce((a, b) => a + b, 0) / period;
+  for (let i = period; i < values.length; i++) {
+    ema = (values[i] ?? ema) * k + ema * (1 - k);
+  }
+  return ema;
+}
+
+/** Wilder's ATR over OHLC — returns the latest value (or null). */
+function computeAtr(
+  highs: number[],
+  lows: number[],
+  closes: number[],
+  period: number,
+): number | null {
+  const n = closes.length;
+  if (n < period + 1) return null;
+  const trs: number[] = [];
+  for (let i = 1; i < n; i++) {
+    const h = highs[i] ?? 0;
+    const l = lows[i] ?? 0;
+    const pc = closes[i - 1] ?? 0;
+    trs.push(Math.max(h - l, Math.abs(h - pc), Math.abs(l - pc)));
+  }
+  if (trs.length < period) return null;
+  let atr = trs.slice(0, period).reduce((a, b) => a + b, 0) / period;
+  for (let i = period; i < trs.length; i++) {
+    atr = (atr * (period - 1) + (trs[i] ?? atr)) / period;
+  }
+  return atr;
+}
+
+/**
+ * Order-book pressure over the top levels: (Σbids − Σasks) ÷ (Σbids +
+ * Σasks), in −1 … +1. Positive = more resting bid size (buyers), which
+ * leans the scalp long. Uses the top 15 aggregated levels a side.
+ */
+function orderBookImbalance(ob: FoxyOrderBook | null): number | null {
+  if (!ob) return null;
+  const bidSz = ob.bids.slice(0, 15).reduce((a, l) => a + (l.sz || 0), 0);
+  const askSz = ob.asks.slice(0, 15).reduce((a, l) => a + (l.sz || 0), 0);
+  const tot = bidSz + askSz;
+  if (tot <= 0) return null;
+  return (bidSz - askSz) / tot;
+}
+
+/** Round a price to a sane number of decimals for its magnitude. */
+function roundPrice(value: number, ref: number): number {
+  if (!Number.isFinite(value)) return 0;
+  const a = Math.abs(ref);
+  const dp = a >= 1000 ? 2 : a >= 100 ? 3 : a >= 1 ? 4 : a >= 0.01 ? 5 : 7;
+  const p = Math.pow(10, dp);
+  return Math.round(value * p) / p;
+}
+
+/** Price → compact display string (used only inside headline/reason text). */
+function fmtNum(value: number, ref: number): string {
+  return String(roundPrice(value, ref));
 }
 
 function clampPct(n: unknown): number {

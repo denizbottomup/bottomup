@@ -8,6 +8,7 @@ import {
   type FoxyOverview,
   type FoxyPositioning,
   type FoxyQueryReply,
+  type FoxyScalpSignal,
   type FoxySetupsByCoin,
   type FoxyVerdict,
   type FoxyWhales,
@@ -46,6 +47,19 @@ export class FoxyController {
     @Param('coin') coin: string,
   ): Promise<FoxySetupsByCoin> {
     return this.foxy.setupsByCoin(coin);
+  }
+
+  /**
+   * `/me/foxy/scalp/:coin` — Foxy's own 5-15 min scalp signal
+   * (direction + entry/stop/TP levels) for the asset. Cheap and
+   * side-effect-free, so the board can poll it to keep the levels
+   * live as price moves. Does NOT consume the weekly query quota.
+   */
+  @Get('/me/foxy/scalp/:coin')
+  async scalpSignal(
+    @Param('coin') coin: string,
+  ): Promise<FoxyScalpSignal | null> {
+    return this.foxy.scalpSignal(coin);
   }
 
   /**
