@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type ReactNode } from 'react';
 import type { CoinMatch } from '@/lib/coin-extract';
+import { LiveChartPanel } from './live-chart';
 import type {
   FoxyAnalysis,
   FoxyAssetMarket,
@@ -44,6 +45,8 @@ export function FoxyBoard({
   getIdToken,
 }: Props) {
   const v = verdictTheme(analysis.verdict);
+  // One live signal for both the card and the chart's level-lines.
+  const liveSignal = useLiveScalpSignal(signal, coin, getIdToken);
 
   return (
     <div className="mx-auto flex max-w-[920px] flex-col gap-3.5 tabular-nums">
@@ -98,7 +101,9 @@ export function FoxyBoard({
         ) : null}
       </section>
 
-      <ScalpSignalPanel signal={signal} coin={coin} getIdToken={getIdToken} />
+      <ScalpSignalPanel signal={liveSignal} />
+
+      <LiveChartPanel coin={coin} signal={liveSignal} />
 
       <MetricGrid derivatives={derivatives} whales={whales} />
 
@@ -416,18 +421,16 @@ function ObRow({
 
 /* ─────────────────────── scalp signal ───────────────────────── */
 
-function ScalpSignalPanel({
-  signal: seed,
-  coin,
-  getIdToken,
-}: {
-  signal: FoxyScalpSignal | null;
-  coin: CoinMatch;
-  getIdToken: () => Promise<string | null>;
-}) {
-  // The query seeds the first signal; then we poll the authed scalp
-  // endpoint so the levels track price. Candles are 5m, so a calm ~25s
-  // cadence keeps it fresh without spinning the CPU or the quota.
+/**
+ * Live scalp signal, lifted to board level so the signal card AND the
+ * chart's level-lines share one source. The query seeds the first
+ * frame; then we poll the authed scalp endpoint every ~25s.
+ */
+function useLiveScalpSignal(
+  seed: FoxyScalpSignal | null,
+  coin: CoinMatch,
+  getIdToken: () => Promise<string | null>,
+): FoxyScalpSignal | null {
   const [signal, setSignal] = useState<FoxyScalpSignal | null>(seed);
   useEffect(() => setSignal(seed), [seed]);
   useEffect(() => {
@@ -457,7 +460,10 @@ function ScalpSignalPanel({
       if (timer) clearTimeout(timer);
     };
   }, [coin.symbol, getIdToken]);
+  return signal;
+}
 
+function ScalpSignalPanel({ signal }: { signal: FoxyScalpSignal | null }) {
   if (!signal) return null; // no candles for this coin → hide entirely
 
   const none = signal.direction === 'NONE';
