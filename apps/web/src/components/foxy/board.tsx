@@ -817,7 +817,14 @@ function flowMeta(flow: FoxyWhaleTransfer['flow']) {
 }
 
 function fmtPrice(n: number): string {
-  const d = n >= 1000 ? 0 : n >= 1 ? 2 : 4;
+  const a = Math.abs(n);
+  // Micro-caps get 4 significant digits — a fixed 4 decimals renders
+  // SHIB/PEPE/SATS as a useless "$0.0000".
+  const d =
+    a >= 1000 ? 0
+    : a >= 1 ? 2
+    : a > 0 ? Math.max(4, Math.ceil(-Math.log10(a)) + 3)
+    : 2;
   return `$${n.toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d })}`;
 }
 
