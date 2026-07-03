@@ -7,6 +7,7 @@ import type {
   FoxyAssetMarket,
   FoxyDerivatives,
   FoxyOrderBook,
+  FoxyScalpSignal,
   FoxySetupsByCoin,
   FoxyVerdict,
   FoxyWhaleTransfer,
@@ -21,6 +22,8 @@ interface Props {
   whales: FoxyWhales | null;
   setups: FoxySetupsByCoin | null;
   orderbook: FoxyOrderBook | null;
+  signal: FoxyScalpSignal | null;
+  getIdToken: () => Promise<string | null>;
 }
 
 /**
@@ -37,6 +40,8 @@ export function FoxyBoard({
   whales,
   setups,
   orderbook,
+  signal,
+  getIdToken,
 }: Props) {
   const v = verdictTheme(analysis.verdict);
 
@@ -92,6 +97,8 @@ export function FoxyBoard({
           </div>
         ) : null}
       </section>
+
+      <ScalpSignalPanel signal={signal} coin={coin} getIdToken={getIdToken} />
 
       <MetricGrid derivatives={derivatives} whales={whales} />
 
@@ -407,6 +414,187 @@ function ObRow({
   );
 }
 
+/* ─────────────────────── scalp signal ───────────────────────── */
+
+function ScalpSignalPanel({
+  signal: seed,
+  coin,
+  getIdToken,
+}: {
+  signal: FoxyScalpSignal | null;
+  coin: CoinMatch;
+  getIdToken: () => Promise<string | null>;
+}) {
+  // The query seeds the first signal; then we poll the authed scalp
+  // endpoint so the levels track price. Candles are 5m, so a calm ~25s
+  // cadence keeps it fresh without spinning the CPU or the quota.
+  const [signal, setSignal] = useState<FoxyScalpSignal | null>(seed);
+  useEffect(() => setSignal(seed), [seed]);
+  useEffect(() => {
+    let alive = true;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const loop = async () => {
+      try {
+        const token = await getIdToken();
+        if (token) {
+          const res = await fetch(
+            `${API_BASE}/me/foxy/scalp/${encodeURIComponent(coin.symbol)}`,
+            { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' },
+          );
+          if (res.ok) {
+            const json = (await res.json()) as FoxyScalpSignal | null;
+            if (alive && json) setSignal(json);
+          }
+        }
+      } catch {
+        // transient — keep the last good signal
+      }
+      if (alive) timer = setTimeout(() => void loop(), 25000);
+    };
+    timer = setTimeout(() => void loop(), 25000);
+    return () => {
+      alive = false;
+      if (timer) clearTimeout(timer);
+    };
+  }, [coin.symbol, getIdToken]);
+
+  if (!signal) return null; // no candles for this coin → hide entirely
+
+  const none = signal.direction === 'NONE';
+  const long = signal.direction === 'LONG';
+  const accent = none ? 'bg-slate-300' : long ? 'bg-emerald-500' : 'bg-rose-500';
+  const badge = none
+    ? 'bg-slate-100 text-slate-500'
+    : long
+      ? 'bg-emerald-500 text-white'
+      : 'bg-rose-500 text-white';
+  const dirLabel = none ? 'İŞLEM YOK' : long ? 'LONG' : 'SHORT';
+
+  const entryPct =
+    signal.entry != null && signal.stop != null && signal.entry !== 0
+      ? ((signal.stop - signal.entry) / signal.entry) * 100
+      : null;
+
+  return (
+    <section className="relative overflow-hidden rounded-[20px] border border-slate-200 bg-white p-5 shadow-[0_2px_6px_rgba(16,24,40,.06),0_12px_32px_rgba(16,24,40,.08)]">
+      <span className={`absolute inset-y-0 left-0 w-[5px] ${accent}`} />
+
+      <div className="flex flex-wrap items-center gap-2.5">
+        <span className="text-[16px]">🦊</span>
+        <span className="text-[11px] font-extrabold uppercase tracking-[0.07em] text-slate-400">
+          Scalp sinyali
+        </span>
+        <span className={`rounded-lg px-3 py-1 text-[15px] font-black leading-none ${badge}`}>
+          {dirLabel}
+        </span>
+        <span className="rounded-md bg-slate-100 px-2 py-1 text-[11px] font-bold text-slate-500">
+          {signal.timeframe}
+        </span>
+        {!none ? (
+          <span className="ml-auto flex items-center gap-1.5 text-[11px] font-bold text-slate-400">
+            <span className="relative flex size-1.5">
+              <span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+              <span className="relative inline-flex size-1.5 rounded-full bg-emerald-500" />
+            </span>
+            Güven %{signal.confidence}
+          </span>
+        ) : (
+          <span className="ml-auto text-[11px] font-bold text-slate-300">Foxy üretti</span>
+        )}
+      </div>
+
+      <p className="mt-3 text-[15px] font-bold leading-snug text-slate-900">
+        {signal.headline}
+      </p>
+
+      {!none && signal.entry != null && signal.stop != null ? (
+        <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-5">
+          <LevelTile
+            label="Giriş"
+            value={fmtPrice(signal.entry)}
+            sub={
+              signal.entry_zone
+                ? `${fmtPrice(signal.entry_zone[0])} – ${fmtPrice(signal.entry_zone[1])}`
+                : 'piyasa'
+            }
+            tone="neutral"
+          />
+          <LevelTile
+            label="Stop"
+            value={fmtPrice(signal.stop)}
+            sub={entryPct != null ? `${signedPct(entryPct)} · 1R` : '1R risk'}
+            tone="stop"
+          />
+          {signal.targets.map((t, i) => (
+            <LevelTile
+              key={i}
+              label={`TP${i + 1}`}
+              value={fmtPrice(t.price)}
+              sub={`${signedPct(t.pct)} · ${t.r}R`}
+              tone="tp"
+            />
+          ))}
+        </div>
+      ) : null}
+
+      {signal.reasons.length > 0 ? (
+        <ul className="mt-4 grid gap-2">
+          {signal.reasons.map((r, i) => (
+            <li
+              key={i}
+              className="flex gap-2.5 text-[13.5px] font-medium leading-snug text-slate-600"
+            >
+              <span className={`mt-[7px] inline-block size-[6px] shrink-0 rounded-full ${accent}`} />
+              <span>{r}</span>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+
+      <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 rounded-xl bg-slate-50 px-4 py-3 text-[12.5px] font-medium leading-snug text-slate-600">
+        <span>
+          <span className="font-bold text-slate-900">Geçersiz olur:</span>{' '}
+          {signal.invalidation}
+        </span>
+      </div>
+
+      <p className="mt-2.5 text-[10.5px] font-medium text-slate-300">
+        Foxy&apos;nin ürettiği algoritmik seviyeler (OKX 5dk mumları) · yatırım tavsiyesi değil
+      </p>
+    </section>
+  );
+}
+
+function LevelTile({
+  label,
+  value,
+  sub,
+  tone,
+}: {
+  label: string;
+  value: string;
+  sub: string;
+  tone: 'neutral' | 'stop' | 'tp';
+}) {
+  const box =
+    tone === 'stop'
+      ? 'border-rose-100 bg-rose-50'
+      : tone === 'tp'
+        ? 'border-emerald-100 bg-emerald-50'
+        : 'border-slate-200 bg-slate-50';
+  const val =
+    tone === 'stop' ? 'text-rose-600' : tone === 'tp' ? 'text-emerald-600' : 'text-slate-900';
+  const lbl =
+    tone === 'stop' ? 'text-rose-400' : tone === 'tp' ? 'text-emerald-500' : 'text-slate-400';
+  return (
+    <div className={`rounded-xl border ${box} px-3 py-2.5`}>
+      <div className={`text-[10px] font-extrabold uppercase tracking-[0.06em] ${lbl}`}>{label}</div>
+      <div className={`mt-1 text-[15px] font-black leading-none ${val}`}>{value}</div>
+      <div className="mt-1 text-[10.5px] font-semibold text-slate-400">{sub}</div>
+    </div>
+  );
+}
+
 /* ───────────────────────── whale feed ───────────────────────── */
 
 function WhaleFeedPanel({ whales }: { whales: FoxyWhales | null }) {
@@ -635,6 +823,11 @@ function fmtPrice(n: number): string {
 
 function fmtPriceOrDash(n: number | null): string {
   return n == null ? '—' : fmtPrice(n);
+}
+
+function signedPct(n: number): string {
+  const s = n >= 0 ? '+' : '';
+  return `${s}${n.toFixed(2)}%`;
 }
 
 function fmtUsd(n: number): string {

@@ -41,6 +41,38 @@ export interface FoxyOrderBook {
   ts: number;
 }
 
+export interface FoxyScalpTarget {
+  price: number;
+  r: number;
+  pct: number;
+}
+
+export interface FoxyScalpSignal {
+  coin: string;
+  direction: 'LONG' | 'SHORT' | 'NONE';
+  timeframe: string;
+  price: number;
+  entry: number | null;
+  entry_zone: [number, number] | null;
+  stop: number | null;
+  targets: FoxyScalpTarget[];
+  risk_per_unit: number | null;
+  rr: number | null;
+  confidence: number;
+  headline: string;
+  reasons: string[];
+  invalidation: string;
+  generated_at: string;
+  meta: {
+    rsi: number | null;
+    ema_fast: number | null;
+    ema_slow: number | null;
+    atr: number | null;
+    trend: 'up' | 'down' | 'flat';
+    ob_imbalance: number | null;
+  };
+}
+
 export interface FoxyQuotaState {
   used: number;
   limit: number;
@@ -60,6 +92,7 @@ export interface FoxyQueryReply {
   whales?: FoxyWhales | null;
   setups?: FoxySetupsByCoin | null;
   orderbook?: FoxyOrderBook | null;
+  signal?: FoxyScalpSignal | null;
   quota: FoxyQuotaState;
   entitlement: {
     tier: 'free' | 'trial' | 'premium';

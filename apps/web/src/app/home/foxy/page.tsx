@@ -12,6 +12,7 @@ import {
   type FoxyHistoryEntry,
   type FoxyOrderBook,
   type FoxyQueryReply,
+  type FoxyScalpSignal,
   type FoxySetupsByCoin,
   type FoxyWhales,
 } from '@/components/foxy/types';
@@ -27,6 +28,7 @@ interface BoardData {
   whales: FoxyWhales | null;
   setups: FoxySetupsByCoin | null;
   orderbook: FoxyOrderBook | null;
+  signal: FoxyScalpSignal | null;
 }
 
 /**
@@ -117,6 +119,7 @@ export default function FoxyPage() {
         whales: reply?.whales ?? null,
         setups: reply?.setups ?? null,
         orderbook: reply?.orderbook ?? null,
+        signal: reply?.signal ?? null,
       });
 
       const entry: FoxyHistoryEntry = {
@@ -189,6 +192,8 @@ export default function FoxyPage() {
             whales={board?.whales ?? null}
             setups={board?.setups ?? null}
             orderbook={board?.orderbook ?? null}
+            signal={board?.signal ?? null}
+            getIdToken={getIdToken}
           />
         ) : loading ? (
           <div className="mx-auto max-w-[920px]">
