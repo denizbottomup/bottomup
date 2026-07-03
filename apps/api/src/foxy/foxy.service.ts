@@ -1065,6 +1065,7 @@ export class FoxyService implements OnModuleInit {
           setups,
           derivatives,
           whales,
+          signal,
         )
       : foxyOfflineAnalysis();
 
@@ -1709,6 +1710,7 @@ export class FoxyService implements OnModuleInit {
     setups: FoxySetupsByCoin | null,
     derivatives: FoxyDerivatives | null,
     whales: FoxyWhales | null,
+    signal: FoxyScalpSignal | null,
   ): Promise<FoxyAnalysis> {
     if (!this.client) return foxyOfflineAnalysis();
 
@@ -1734,6 +1736,23 @@ export class FoxyService implements OnModuleInit {
                 flow: t.flow,
                 ts: t.ts,
               })),
+            }
+          : null,
+        // Foxy's own deterministic scalp signal (EMA/RSI/ATR/order-book
+        // confluence). The verdict must not contradict the signal card
+        // rendered right below it — if the engine says LONG while the
+        // verdict says BEKLE, explain the divergence explicitly (e.g.
+        // "kısa vade momentum long ama büyük resim belirsiz").
+        foxy_scalp_signal: signal
+          ? {
+              direction: signal.direction,
+              timeframe: signal.timeframe,
+              entry: signal.entry,
+              stop: signal.stop,
+              targets: signal.targets,
+              confidence: signal.confidence,
+              reasons: signal.reasons,
+              meta: signal.meta,
             }
           : null,
         // Community sentiment from BottomUp traders. Each entry carries
@@ -1764,12 +1783,20 @@ export class FoxyService implements OnModuleInit {
       2,
     );
 
-    const res = await this.client.messages.create({
-      // Sonnet for verdict synthesis — Haiku tends to recite metrics
-      // ("OI: -4.5%") instead of explaining them ("long-capitulation
-      // sürüyor"). Sonnet writes the desk-analyst voice this UI needs.
-      model: 'claude-sonnet-4-5',
-      max_tokens: 1400,
+    // Fable 5 for verdict synthesis — the strongest desk-analyst voice
+    // and cross-signal reasoning (scalp signal vs whales vs positioning).
+    // Fable specifics: thinking is always on (no `thinking` param — an
+    // explicit config 400s), so max_tokens must cover thinking + text;
+    // `effort: medium` keeps the interactive board snappy; and safety
+    // classifiers can decline with stop_reason "refusal", so we declare
+    // a server-side fallback to Opus 4.8 — a declined request is re-run
+    // on the fallback model inside the same call.
+    const res = await this.client.beta.messages.create({
+      model: 'claude-fable-5',
+      max_tokens: 8000,
+      output_config: { effort: 'medium' },
+      betas: ['server-side-fallback-2026-06-01'],
+      fallbacks: [{ model: 'claude-opus-4-8' }],
       system: FOXY_QUERY_SYSTEM_PROMPT,
       messages: [
         {
@@ -1777,7 +1804,7 @@ export class FoxyService implements OnModuleInit {
           content: [
             `Kullanıcı sorusu: ${prompt}`,
             '',
-            'Bağlam (BottomUp setupları, türev verileri, balina hareketleri):',
+            'Bağlam (Foxy scalp sinyali, BottomUp setupları, türev verileri, balina hareketleri):',
             context,
             '',
             'Yukarıdaki bağlamı kullanarak istenen JSON formatında yanıt ver.',
@@ -1785,6 +1812,10 @@ export class FoxyService implements OnModuleInit {
         },
       ],
     });
+
+    // Whole chain refused (Fable AND the Opus fallback) — degrade to the
+    // offline analysis instead of reading an empty content array.
+    if (res.stop_reason === 'refusal') return foxyOfflineAnalysis();
 
     const block = res.content.find((c) => c.type === 'text');
     if (!block || block.type !== 'text') return foxyOfflineAnalysis();
