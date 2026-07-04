@@ -139,6 +139,12 @@ export interface FoxyAnalysis {
   /** Single PLAIN-Turkish sentence describing what would flip the call
    *  ("ne zaman fikrim değişir"). May be empty for BEKLE. */
   invalidation: string;
+  /**
+   * Directional lean, REQUIRED even on BEKLE — "hangi tarafa yatkın".
+   * BEKLE without a bias taught the model to hide behind neutrality;
+   * the UI renders this as an "Eğilim" chip next to the verdict.
+   */
+  bias: 'up' | 'down' | 'neutral';
 }
 
 export interface FoxyQueryReply {
@@ -262,6 +268,19 @@ export interface FoxyZone {
   factors: FoxyZoneFactor[];
 }
 
+/** Per-timeframe price-action snapshot — trend regime + momentum. */
+export interface FoxyTfTrend {
+  tf: string;
+  /** EMA alignment: up (price above 20/50), down (below), else range. */
+  regime: 'up' | 'down' | 'range';
+  rsi14: number | null;
+  above_ema20: boolean | null;
+  above_ema50: boolean | null;
+  above_ema200: boolean | null;
+  /** % move over the last 20 bars of this timeframe. */
+  change20_pct: number | null;
+}
+
 /**
  * Multi-timeframe confluence map: order blocks + fair value gaps +
  * the most-used EMAs (20/50/200) across 1W/1D/4H/15m/5m, overlaid
@@ -272,6 +291,8 @@ export interface FoxyConfluence {
   price: number;
   /** Strongest zones, demand and supply mixed — sort/filter client-side. */
   zones: FoxyZone[];
+  /** Price-action summary per timeframe (largest first). */
+  trend: FoxyTfTrend[];
   ts: number;
 }
 
@@ -1199,6 +1220,7 @@ export class FoxyService implements OnModuleInit {
           whales,
           signal,
           zones,
+          orderbook,
         ).catch((err) => {
           this.log.warn(
             { err: (err as Error).message, coin: coinNorm },
@@ -1938,6 +1960,7 @@ export class FoxyService implements OnModuleInit {
       raw.push({ low: l, high: h, factor });
     };
 
+    const trend: FoxyTfTrend[] = [];
     for (let k = 0; k < TFS.length; k++) {
       const { tf, weight } = TFS[k]!;
       const candles = candleSets[k] ?? [];
@@ -1949,8 +1972,10 @@ export class FoxyService implements OnModuleInit {
       if (!atr || atr <= 0) continue;
 
       // EMAs — the most-used dynamic S/R levels. Thin band (±0.1%).
-      for (const p of [20, 50, 200]) {
+      const emas: Record<number, number | null> = { 20: null, 50: null, 200: null };
+      for (const p of [20, 50, 200] as const) {
         const v = computeEma(closes, p);
+        emas[p] = v;
         if (v != null && v > 0) {
           push(v * 0.999, v * 1.001, {
             kind: 'ema',
@@ -1960,6 +1985,29 @@ export class FoxyService implements OnModuleInit {
           });
         }
       }
+
+      // Price-action snapshot for this timeframe — feeds the verdict so
+      // it reasons over the actual trend structure, not just a 24h %.
+      const last = closes[closes.length - 1] ?? 0;
+      const ago20 = closes[closes.length - 21] ?? null;
+      const above = (v: number | null | undefined): boolean | null =>
+        v != null && v > 0 ? last > v : null;
+      const a20 = above(emas[20]);
+      const a50 = above(emas[50]);
+      const regime: FoxyTfTrend['regime'] =
+        a20 === true && a50 === true ? 'up' : a20 === false && a50 === false ? 'down' : 'range';
+      trend.push({
+        tf,
+        regime,
+        rsi14: computeRsi(closes, 14),
+        above_ema20: a20,
+        above_ema50: a50,
+        above_ema200: above(emas[200]),
+        change20_pct:
+          ago20 != null && ago20 > 0
+            ? Math.round(((last - ago20) / ago20) * 10000) / 100
+            : null,
+      });
 
       for (const ob of findOrderBlocks(candles, atr)) {
         push(ob.low, ob.high, {
@@ -1993,7 +2041,7 @@ export class FoxyService implements OnModuleInit {
     }
 
     if (raw.length === 0) {
-      return { coin: symbol, price: roundPrice(price, price), zones: [], ts: Date.now() };
+      return { coin: symbol, price: roundPrice(price, price), zones: [], trend, ts: Date.now() };
     }
 
     // Cluster overlapping bands (0.2% glue) and score by Σ weights.
@@ -2053,6 +2101,7 @@ export class FoxyService implements OnModuleInit {
       coin: symbol,
       price: roundPrice(price, price),
       zones: [...demand, ...supply],
+      trend,
       ts: Date.now(),
     };
   }
@@ -2311,6 +2360,7 @@ export class FoxyService implements OnModuleInit {
     whales: FoxyWhales | null,
     signal: FoxyScalpSignal | null,
     zones: FoxyConfluence | null,
+    orderbook: FoxyOrderBook | null,
   ): Promise<FoxyAnalysis> {
     if (!this.client) return foxyOfflineAnalysis();
 
@@ -2353,6 +2403,19 @@ export class FoxyService implements OnModuleInit {
               confidence: signal.confidence,
               reasons: signal.reasons,
               meta: signal.meta,
+            }
+          : null,
+        // Multi-timeframe price action — trend regime, EMA alignment,
+        // RSI and 20-bar momentum per timeframe. THIS is the primary
+        // direction evidence; the 24h % in `market` is just a headline.
+        price_action: zones?.trend ?? null,
+        // Live aggregated order book: resting-size imbalance over the
+        // top levels (−1…+1, positive = bid-heavy) and the spread.
+        order_book: orderbook
+          ? {
+              imbalance: orderBookImbalance(orderbook),
+              spread_pct: Math.round(orderbook.spread_pct * 1000) / 1000,
+              sources: orderbook.sources,
             }
           : null,
         // Foxy's multi-timeframe confluence map (OB + FVG + EMA +
@@ -3231,6 +3294,13 @@ const FOXY_QUERY_SYSTEM_PROMPT = [
   '     kullanıcıya girilecek/beklenecek bir fiyat önerirken BU bantlardan',
   '     birini referans al ("geri çekilme gelirse $X–$Y bandı mantıklı" gibi) —',
   '     kafadan yuvarlak sayı uydurma. Skoru yüksek ve fiyata yakın bant önce.',
+  '  7. price_action (YÖN İÇİN BİRİNCİL KANIT): her zaman diliminde (1W/1D/4H/',
+  '     15m/5m) trend rejimi (up/down/range = fiyat EMA20+50 üstünde/altında/',
+  '     karışık), RSI ve son 20 mumun % değişimi. Yön tahmini BURADAN başlar:',
+  '     1D+4H rejimi büyük resmi, 15m+5m momentumu verir. market bloğundaki',
+  '     24s %si sadece manşettir — trend yapısı budur.',
+  '  8. order_book: beş borsanın toplam defterinde bekleyen emir dengesizliği',
+  '     (−1…+1, artı = alıcı tarafı ağır) ve makas. Anlık baskıyı gösterir.',
   '',
   'KATMANLAMA KURALI (çok önemli): Senin verdict\'in POZİSYON görüşüdür (saatler/',
   'günler); foxy_scalp_signal ise 5-15 dakikalık momentum. İkisi farklı ufuklar —',
@@ -3255,6 +3325,7 @@ const FOXY_QUERY_SYSTEM_PROMPT = [
   'ÇIKTI FORMATI — sadece geçerli JSON döndür, başka hiçbir şey yazma:',
   '{',
   '  "verdict": "AL" | "SAT" | "BEKLE",',
+  '  "bias": "up" | "down" | "neutral",',
   '  "headline": "tek cümle, düz Türkçe, max 100 karakter — jargon YOK",',
   '  "takeaway": "kullanıcıya net seslenen 2-3 cümle: ne yapsın + neden",',
   '  "reasons": ["bullet 1", "bullet 2", "bullet 3", ...],',
@@ -3273,10 +3344,19 @@ const FOXY_QUERY_SYSTEM_PROMPT = [
   '  • CEX inflow/whale       → "büyük cüzdanların borsaya para sokması/çekmesi"',
   'Sayılar KALSIN (% ve $) — sadece terimlerin adı gitsin.',
   '',
-  'Verdict seçim kuralı:',
-  '  • AL → alıcı baskısı baskın, yukarı yön daha olası',
-  '  • SAT → satıcı baskısı baskın; kullanıcı elinde tutuyorsa "kârını al / dur"',
-  '  • BEKLE → veri çelişkili veya yetersiz; net taraf yok',
+  'Verdict seçim kuralı — BEKLE SENİN VARSAYILANIN DEĞİL. Karar çerçeven:',
+  '  1. Önce price_action\'dan büyük resmi oku: 1D ve 4H rejimi aynı yöndeyse',
+  '     güçlü bir eğilim var demektir. 15m/5m aynı yönü teyit ediyorsa ve',
+  '     order_book dengesizliği + duvarlar o tarafı destekliyorsa → AL ya da',
+  '     SAT de. Kanıt hizalıyken BEKLE demek korkaklıktır, analiz değil.',
+  '  2. AL → 1D/4H yukarı + kısa vade teyit + defter/derivatives çelişmiyor.',
+  '  3. SAT → tersi; kullanıcı elinde tutuyorsa "kârını al / azalt" dilini kullan.',
+  '  4. BEKLE → SADECE gerçek çelişki varsa (ör. trend yukarı ama borsalara',
+  '     büyük satış girişi var) ya da veri eksikse. BEKLE dediğinde bile:',
+  '     • "bias" alanında yönünü söyle (up/down) — kanıtın toplamı hangi tarafa',
+  '       yatıksa o. "neutral" sadece kanıt GERÇEKTEN 50/50 ise kullanılır.',
+  '     • invalidation\'da hangi tetikleyicinin yönü netleştireceğini yaz.',
+  '  5. bias, verdict\'le tutarlı olmalı: AL → up, SAT → down; BEKLE → serbest.',
   '',
   'takeaway kuralları (EN KRİTİK ALAN):',
   '  1. Doğrudan kullanıcıya seslen: "Şu fiyattan alma.", "Kârını almayı düşün.",',
@@ -3362,6 +3442,7 @@ function parseFoxyAnalysis(raw: string): FoxyAnalysis {
       takeaway: '',
       reasons: [],
       invalidation: '',
+      bias: 'neutral',
     };
   }
 
@@ -3375,6 +3456,7 @@ function parseFoxyAnalysis(raw: string): FoxyAnalysis {
       takeaway: '',
       reasons: [],
       invalidation: '',
+      bias: 'neutral',
     };
   }
 
@@ -3395,7 +3477,18 @@ function parseFoxyAnalysis(raw: string): FoxyAnalysis {
 
   const invalidation = String(obj.invalidation ?? '').trim();
 
-  return { verdict, headline, takeaway, reasons, invalidation };
+  const biasRaw = String(obj.bias ?? '').toLowerCase().trim();
+  // Verdict pins the bias; the model's own field only decides BEKLE.
+  const bias: FoxyAnalysis['bias'] =
+    verdict === 'AL'
+      ? 'up'
+      : verdict === 'SAT'
+        ? 'down'
+        : biasRaw === 'up' || biasRaw === 'down'
+          ? biasRaw
+          : 'neutral';
+
+  return { verdict, headline, takeaway, reasons, invalidation, bias };
 }
 
 /** Shown when ANTHROPIC_API_KEY is not configured. Keeps the UI
@@ -3407,5 +3500,6 @@ function foxyOfflineAnalysis(): FoxyAnalysis {
     takeaway: '',
     reasons: [],
     invalidation: '',
+    bias: 'neutral',
   };
 }
