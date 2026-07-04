@@ -199,6 +199,45 @@ export interface FoxyOrderBook {
   ts: number;
 }
 
+/** One price band in the depth profile. */
+export interface FoxyDepthBucket {
+  px_low: number;
+  px_high: number;
+  px_mid: number;
+  /** Resting size in base units, summed across venues. */
+  size: number;
+  /** Approx USD value of the resting size. */
+  usd: number;
+  /** usd ÷ the side's uniform per-bucket share — 1.0 is "average". */
+  strength: number;
+  /** True when this band holds a disproportionate pile (≥3× share). */
+  is_wall: boolean;
+}
+
+/**
+ * Where resting bids/asks concentrate around the mid — the "walls"
+ * view. Built from DEEP books (hundreds of levels per venue), unlike
+ * the ladder's top-8, and bucketed into equal % bands.
+ */
+export interface FoxyDepthProfile {
+  coin: string;
+  inst_id: string;
+  sources: string[];
+  mid: number;
+  /** Band coverage on each side, e.g. 2.5 (= ±2.5%). */
+  range_pct: number;
+  buckets_per_side: number;
+  /** Sorted nearest-to-mid first (descending price for bids). */
+  bids: FoxyDepthBucket[];
+  /** Sorted nearest-to-mid first (ascending price for asks). */
+  asks: FoxyDepthBucket[];
+  /** Nearest wall below the mid (buyers defending) — null if none. */
+  support_wall: FoxyDepthBucket | null;
+  /** Nearest wall above the mid (sellers capping) — null if none. */
+  resistance_wall: FoxyDepthBucket | null;
+  ts: number;
+}
+
 /** One take-profit level on a scalp signal. */
 export interface FoxyScalpTarget {
   /** Price for this take-profit. */
@@ -1550,6 +1589,148 @@ export class FoxyService implements OnModuleInit {
   }
 
   /**
+   * Depth profile ("duvar haritası") — where resting orders concentrate
+   * around the mid. The ladder shows the top of the book; this pulls
+   * DEEP books (hundreds of levels per venue), buckets them into equal
+   * % bands within ±RANGE, and flags the disproportionate piles as
+   * walls. Public + cached (~2.5s) so the panel can poll.
+   */
+  async depthProfile(coinInput: string): Promise<FoxyDepthProfile | null> {
+    const key = normalizeCoinName(coinInput);
+    const cached = depthCache.get(key);
+    if (cached && Date.now() - cached.at < DEPTH_TTL_MS) return cached.value;
+    const value = await this.buildDepthProfile(coinInput);
+    depthCache.set(key, { at: Date.now(), value });
+    return value;
+  }
+
+  private async buildDepthProfile(coinInput: string): Promise<FoxyDepthProfile | null> {
+    const symbol = normalizeCoinName(coinInput).replace(/USDT$/i, '');
+    const pair = `${symbol}-USDT`;
+    const sym = `${symbol}USDT`;
+    const TIMEOUT = 4000;
+    const RANGE = 0.025; // ±2.5% around mid
+    const BUCKETS = 18; // per side → each band ≈ 0.14%
+
+    const jget = async (url: string): Promise<unknown> => {
+      try {
+        const res = await fetch(url, { signal: AbortSignal.timeout(TIMEOUT) });
+        if (!res.ok) return null;
+        return await res.json();
+      } catch {
+        return null;
+      }
+    };
+    const okxGet = async (): Promise<{ asks: string[][]; bids: string[][] } | null> => {
+      try {
+        const d = await okxClient.publicGet<
+          Array<{ asks: string[][]; bids: string[][] }>
+        >(`/api/v5/market/books?instId=${pair}&sz=400`);
+        return Array.isArray(d) ? d[0] ?? null : null;
+      } catch {
+        return null;
+      }
+    };
+    const num = (rows: unknown): Array<[number, number]> =>
+      Array.isArray(rows)
+        ? (rows as unknown[][])
+            .map((r): [number, number] => [Number(r[0]), Number(r[1])])
+            .filter((l) => Number.isFinite(l[0]) && Number.isFinite(l[1]) && l[1] > 0)
+        : [];
+
+    const [okx, binance, bybit, bitget, coinbase] = await Promise.all([
+      okxGet(),
+      jget(`https://api.binance.com/api/v3/depth?symbol=${sym}&limit=500`),
+      jget(`https://api.bybit.com/v5/market/orderbook?category=spot&symbol=${sym}&limit=200`),
+      jget(`https://api.bitget.com/api/v2/spot/market/orderbook?symbol=${sym}&limit=150`),
+      jget(`https://api.exchange.coinbase.com/products/${pair}/book?level=2`),
+    ]);
+
+    const bn = binance as { asks?: unknown; bids?: unknown } | null;
+    const bb = bybit as { result?: { a?: unknown; b?: unknown } } | null;
+    const bg = bitget as { data?: { asks?: unknown; bids?: unknown } } | null;
+    const cb = coinbase as { asks?: unknown; bids?: unknown } | null;
+
+    const raws: Array<{
+      name: string;
+      asks: Array<[number, number]>;
+      bids: Array<[number, number]>;
+    }> = [];
+    if (okx) raws.push({ name: 'OKX', asks: num(okx.asks), bids: num(okx.bids) });
+    if (bn?.asks) raws.push({ name: 'Binance', asks: num(bn.asks), bids: num(bn.bids) });
+    if (bb?.result?.a) raws.push({ name: 'Bybit', asks: num(bb.result.a), bids: num(bb.result.b) });
+    if (bg?.data?.asks) raws.push({ name: 'Bitget', asks: num(bg.data.asks), bids: num(bg.data.bids) });
+    if (cb?.asks) raws.push({ name: 'Coinbase', asks: num(cb.asks), bids: num(cb.bids) });
+    if (raws.length === 0) return null;
+
+    const allBidPx = raws.flatMap((r) => r.bids.map((l) => l[0] as number));
+    const allAskPx = raws.flatMap((r) => r.asks.map((l) => l[0] as number));
+    if (!allBidPx.length || !allAskPx.length) return null;
+    const mid = (Math.max(...allBidPx) + Math.min(...allAskPx)) / 2;
+    if (!Number.isFinite(mid) || mid <= 0) return null;
+
+    const bandWidth = (mid * RANGE) / BUCKETS;
+    const bidSize = new Array<number>(BUCKETS).fill(0);
+    const askSize = new Array<number>(BUCKETS).fill(0);
+    for (const r of raws) {
+      for (const [px, sz] of r.bids) {
+        const idx = Math.floor((mid - px) / bandWidth);
+        if (idx >= 0 && idx < BUCKETS) bidSize[idx] = (bidSize[idx] ?? 0) + sz;
+      }
+      for (const [px, sz] of r.asks) {
+        const idx = Math.floor((px - mid) / bandWidth);
+        if (idx >= 0 && idx < BUCKETS) askSize[idx] = (askSize[idx] ?? 0) + sz;
+      }
+    }
+
+    const mkSide = (sizes: number[], side: 'bid' | 'ask'): FoxyDepthBucket[] => {
+      const buckets = sizes.map((size, i) => {
+        const off = i * bandWidth;
+        const pxNear = side === 'bid' ? mid - off : mid + off;
+        const pxFar = side === 'bid' ? mid - off - bandWidth : mid + off + bandWidth;
+        const pxLow = Math.min(pxNear, pxFar);
+        const pxHigh = Math.max(pxNear, pxFar);
+        const pxMid = (pxLow + pxHigh) / 2;
+        return {
+          px_low: roundPrice(pxLow, mid),
+          px_high: roundPrice(pxHigh, mid),
+          px_mid: roundPrice(pxMid, mid),
+          size: Math.round(size * 1000) / 1000,
+          usd: Math.round(size * pxMid),
+          strength: 0,
+          is_wall: false,
+        };
+      });
+      const total = buckets.reduce((a, b) => a + b.usd, 0);
+      const share = total > 0 ? total / BUCKETS : 0;
+      for (const b of buckets) {
+        b.strength = share > 0 ? Math.round((b.usd / share) * 10) / 10 : 0;
+        // 3× the uniform share = a pile that visibly sticks out of the
+        // profile. (A flat book has every bucket at strength 1.0.)
+        b.is_wall = share > 0 && b.usd >= share * 3;
+      }
+      return buckets;
+    };
+
+    const bids = mkSide(bidSize, 'bid');
+    const asks = mkSide(askSize, 'ask');
+    const value: FoxyDepthProfile = {
+      coin: symbol,
+      inst_id: pair,
+      sources: raws.map((r) => r.name),
+      mid: roundPrice(mid, mid),
+      range_pct: RANGE * 100,
+      buckets_per_side: BUCKETS,
+      bids,
+      asks,
+      support_wall: bids.find((b) => b.is_wall) ?? null,
+      resistance_wall: asks.find((b) => b.is_wall) ?? null,
+      ts: Date.now(),
+    };
+    return value;
+  }
+
+  /**
    * Auto-generated market briefing across BTC + ETH. Shared response
    * cached server-side for 5 min so the page is cheap to load even
    * under traffic — no Foxy quota consumed. Phase 1 covers BTC and
@@ -2370,6 +2551,14 @@ const orderbookCache = new Map<
   { at: number; value: FoxyOrderBook | null }
 >();
 const ORDERBOOK_TTL_MS = 900;
+
+/** Depth-profile cache — five deep-book fetches per build, so polling
+ *  viewers must share one snapshot. */
+const depthCache = new Map<
+  string,
+  { at: number; value: FoxyDepthProfile | null }
+>();
+const DEPTH_TTL_MS = 2500;
 
 /** Candle cache for the board's live chart — same rationale as the
  *  order-book cache: many polling viewers share one OKX fetch. */

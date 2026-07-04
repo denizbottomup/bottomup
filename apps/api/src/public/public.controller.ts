@@ -104,6 +104,19 @@ export class PublicController {
   }
 
   /**
+   * Depth profile ("duvar haritası") — where resting bids/asks pile up
+   * within ±2.5% of the mid, aggregated from deep books across five
+   * venues, with disproportionate bands flagged as walls. Public +
+   * server-cached (~2.5s) so the panel can poll it.
+   */
+  @Get('/depth/:coin')
+  depth(
+    @Param('coin') coin: string,
+  ): ReturnType<FoxyService['depthProfile']> {
+    return this.foxy.depthProfile(coin);
+  }
+
+  /**
    * Public analyst directory — name, image, pre-aggregated stats and
    * the trader's referral code. Powers `bottomup.app/analyst` (and
    * `bupcore.ai/analyst` while the page is in lab). All fields are
