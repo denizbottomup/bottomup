@@ -117,6 +117,19 @@ export class PublicController {
   }
 
   /**
+   * Confluence zones ("en doğru bölgeler") — order blocks, unfilled
+   * FVGs and EMA20/50/200 across 1W/1D/4H/15m/5m, overlaid with the
+   * live depth walls and clustered into scored buy/sell bands. Public
+   * + server-cached (~45s); inputs move on candle scale.
+   */
+  @Get('/zones/:coin')
+  zones(
+    @Param('coin') coin: string,
+  ): ReturnType<FoxyService['confluenceZones']> {
+    return this.foxy.confluenceZones(coin);
+  }
+
+  /**
    * Public analyst directory — name, image, pre-aggregated stats and
    * the trader's referral code. Powers `bottomup.app/analyst` (and
    * `bupcore.ai/analyst` while the page is in lab). All fields are

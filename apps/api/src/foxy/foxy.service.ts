@@ -238,6 +238,43 @@ export interface FoxyDepthProfile {
   ts: number;
 }
 
+/** One technical factor contributing to a confluence zone. */
+export interface FoxyZoneFactor {
+  kind: 'order_block' | 'fvg' | 'ema' | 'wall';
+  /** Timeframe the factor came from ('1W','1D','4H','15m','5m') or 'defter'. */
+  tf: string;
+  /** Human chip text, e.g. "1D OB", "4H FVG", "EMA200 1D", "DUVAR $1.8M". */
+  detail: string;
+  weight: number;
+}
+
+/** A price band where independent technical evidence stacks up. */
+export interface FoxyZone {
+  low: number;
+  high: number;
+  mid: number;
+  /** demand = buy interest below price; supply = sell interest above. */
+  side: 'demand' | 'supply';
+  /** Σ factor weights — higher = more independent evidence. */
+  score: number;
+  /** Signed % distance of the zone mid from the current price. */
+  dist_pct: number;
+  factors: FoxyZoneFactor[];
+}
+
+/**
+ * Multi-timeframe confluence map: order blocks + fair value gaps +
+ * the most-used EMAs (20/50/200) across 1W/1D/4H/15m/5m, overlaid
+ * with the live depth walls, clustered into scored buy/sell zones.
+ */
+export interface FoxyConfluence {
+  coin: string;
+  price: number;
+  /** Strongest zones, demand and supply mixed — sort/filter client-side. */
+  zones: FoxyZone[];
+  ts: number;
+}
+
 /** One take-profit level on a scalp signal. */
 export interface FoxyScalpTarget {
   /** Price for this take-profit. */
@@ -1764,6 +1801,191 @@ export class FoxyService implements OnModuleInit {
   }
 
   /**
+   * Confluence zones — the "en doğru bölgeler" engine. Pulls candles
+   * for 1W/1D/4H/15m/5m, extracts order blocks, unfilled fair value
+   * gaps and the most-used EMAs (20/50/200) from each, overlays the
+   * live depth walls, and clusters everything into scored buy/sell
+   * bands. Higher timeframes weigh more (1W×5 … 5m×1); a zone only
+   * publishes when at least two independent factors stack (or one
+   * very heavy one). Cached ~45s — the inputs move on candle scale.
+   */
+  async confluenceZones(coinInput: string): Promise<FoxyConfluence | null> {
+    const key = normalizeCoinName(coinInput);
+    const cached = zonesCache.get(key);
+    if (cached && Date.now() - cached.at < ZONES_TTL_MS) return cached.value;
+    const value = await this.buildConfluence(coinInput);
+    zonesCache.set(key, { at: Date.now(), value });
+    return value;
+  }
+
+  private async buildConfluence(coinInput: string): Promise<FoxyConfluence | null> {
+    const symbol = normalizeCoinName(coinInput).replace(/USDT$/i, '');
+    const TFS: Array<{ tf: string; bar: string; limit: number; weight: number }> = [
+      { tf: '1W', bar: '1W', limit: 80, weight: 5 },
+      { tf: '1D', bar: '1D', limit: 150, weight: 4 },
+      { tf: '4H', bar: '4H', limit: 180, weight: 3 },
+      { tf: '15m', bar: '15m', limit: 200, weight: 2 },
+      { tf: '5m', bar: '5m', limit: 200, weight: 1 },
+    ];
+
+    const [candleSets, depth] = await Promise.all([
+      Promise.all(
+        TFS.map((t) =>
+          this.fetchOkxCandles(symbol, t.bar, t.limit).catch(
+            () => [] as Array<{ ts: number; open: number; high: number; low: number; close: number }>,
+          ),
+        ),
+      ),
+      this.depthProfile(coinInput).catch(() => null),
+    ]);
+
+    const m5 = candleSets[TFS.length - 1] ?? [];
+    const price = m5.length ? m5[m5.length - 1]!.close : depth?.mid ?? 0;
+    if (!Number.isFinite(price) || price <= 0) return null;
+
+    interface RawZone {
+      low: number;
+      high: number;
+      factor: FoxyZoneFactor;
+    }
+    const raw: RawZone[] = [];
+    // Individual factor bands wider than this swallow everything when
+    // clustering — clamp around their own mid.
+    const MAX_W = price * 0.015;
+    const clamp = (low: number, high: number): [number, number] => {
+      if (high - low <= MAX_W) return [low, high];
+      const mid = (low + high) / 2;
+      return [mid - MAX_W / 2, mid + MAX_W / 2];
+    };
+    const push = (low: number, high: number, factor: FoxyZoneFactor) => {
+      if (!Number.isFinite(low) || !Number.isFinite(high) || high <= 0) return;
+      const [l, h] = clamp(Math.min(low, high), Math.max(low, high));
+      // Only zones near the action matter: ±12% of spot.
+      const mid = (l + h) / 2;
+      if (Math.abs(mid - price) / price > 0.12) return;
+      raw.push({ low: l, high: h, factor });
+    };
+
+    for (let k = 0; k < TFS.length; k++) {
+      const { tf, weight } = TFS[k]!;
+      const candles = candleSets[k] ?? [];
+      if (candles.length < 30) continue;
+      const closes = candles.map((c) => c.close);
+      const highs = candles.map((c) => c.high);
+      const lows = candles.map((c) => c.low);
+      const atr = computeAtr(highs, lows, closes, 14);
+      if (!atr || atr <= 0) continue;
+
+      // EMAs — the most-used dynamic S/R levels. Thin band (±0.1%).
+      for (const p of [20, 50, 200]) {
+        const v = computeEma(closes, p);
+        if (v != null && v > 0) {
+          push(v * 0.999, v * 1.001, {
+            kind: 'ema',
+            tf,
+            detail: `EMA${p} ${tf}`,
+            weight,
+          });
+        }
+      }
+
+      for (const ob of findOrderBlocks(candles, atr)) {
+        push(ob.low, ob.high, {
+          kind: 'order_block',
+          tf,
+          detail: `${tf} OB`,
+          weight: weight * 1.2, // OBs are the strongest PA evidence
+        });
+      }
+      for (const gap of findFairValueGaps(candles)) {
+        push(gap.low, gap.high, {
+          kind: 'fvg',
+          tf,
+          detail: `${tf} FVG`,
+          weight,
+        });
+      }
+    }
+
+    // Depth walls — live resting liquidity stacked on the technical map.
+    if (depth) {
+      for (const b of [...depth.bids, ...depth.asks]) {
+        if (!b.is_wall) continue;
+        push(b.px_low, b.px_high, {
+          kind: 'wall',
+          tf: 'defter',
+          detail: `DUVAR $${(b.usd / 1e6).toFixed(1)}M`,
+          weight: 2.5,
+        });
+      }
+    }
+
+    if (raw.length === 0) {
+      return { coin: symbol, price: roundPrice(price, price), zones: [], ts: Date.now() };
+    }
+
+    // Cluster overlapping bands (0.2% glue) and score by Σ weights.
+    // A width cap stops chain-merging: without it, everything hugging
+    // the spot price (5m/15m EMAs by definition sit there) fused into
+    // one giant "we are here" band with a monster score.
+    raw.sort((a, b) => a.low - b.low);
+    const GLUE = price * 0.002;
+    const MAX_CLUSTER_W = price * 0.012;
+    const clusters: Array<{ low: number; high: number; factors: FoxyZoneFactor[] }> = [];
+    for (const z of raw) {
+      const cur = clusters[clusters.length - 1];
+      if (
+        cur &&
+        z.low <= cur.high + GLUE &&
+        Math.max(cur.high, z.high) - Math.min(cur.low, z.low) <= MAX_CLUSTER_W
+      ) {
+        cur.high = Math.max(cur.high, z.high);
+        cur.low = Math.min(cur.low, z.low);
+        cur.factors.push(z.factor);
+      } else {
+        clusters.push({ low: z.low, high: z.high, factors: [z.factor] });
+      }
+    }
+
+    const zones: FoxyZone[] = clusters
+      .map((c) => {
+        const mid = (c.low + c.high) / 2;
+        const score = Math.round(c.factors.reduce((a, f) => a + f.weight, 0) * 10) / 10;
+        return {
+          low: roundPrice(c.low, price),
+          high: roundPrice(c.high, price),
+          mid: roundPrice(mid, price),
+          side: (mid < price ? 'demand' : 'supply') as FoxyZone['side'],
+          score,
+          dist_pct: Math.round(((mid - price) / price) * 10000) / 100,
+          factors: c.factors.sort((a, b) => b.weight - a.weight),
+        };
+      })
+      // A zone needs real confluence: ≥2 independent factors, or one
+      // factor heavy enough to matter alone (1W/1D order block).
+      .filter((z) => z.factors.length >= 2 || z.score >= 4.5)
+      // The band containing the current price is "we are here", not a
+      // level to place orders at — drop it.
+      .filter((z) => !(z.low - price * 0.001 <= price && price <= z.high + price * 0.001));
+
+    const demand = zones
+      .filter((z) => z.side === 'demand')
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 3);
+    const supply = zones
+      .filter((z) => z.side === 'supply')
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 3);
+
+    return {
+      coin: symbol,
+      price: roundPrice(price, price),
+      zones: [...demand, ...supply],
+      ts: Date.now(),
+    };
+  }
+
+  /**
    * Auto-generated market briefing across BTC + ETH. Shared response
    * cached server-side for 5 min so the page is cheap to load even
    * under traffic — no Foxy quota consumed. Phase 1 covers BTC and
@@ -2453,6 +2675,95 @@ function computeAtr(
   return atr;
 }
 
+type OhlcRow = { ts: number; open: number; high: number; low: number; close: number };
+
+/**
+ * Order blocks (price-action / SMC): the last opposite-direction candle
+ * right before an impulsive move — the footprint of the aggressive
+ * player whose leftover orders tend to defend that band on a retest.
+ * Detection: a 3-candle move ≥1.5×ATR marks an impulse; the OB is the
+ * last counter-candle's BODY at the impulse origin. Only unmitigated
+ * blocks survive (price hasn't closed through the far side since), and
+ * only the freshest 2 per direction are returned.
+ */
+function findOrderBlocks(
+  candles: OhlcRow[],
+  atr: number,
+): Array<{ low: number; high: number; dir: 'demand' | 'supply' }> {
+  const out: Array<{ low: number; high: number; dir: 'demand' | 'supply'; idx: number }> = [];
+  const n = candles.length;
+  for (let i = 1; i < n - 3; i++) {
+    const move = (candles[i + 3]?.close ?? 0) - (candles[i]?.close ?? 0);
+    if (Math.abs(move) < atr * 1.5) continue;
+    const wantBearishCandle = move > 0; // demand OB = last red candle before an up-impulse
+    const pick = [i, i - 1].find((j) => {
+      const c = candles[j];
+      if (!c) return false;
+      return wantBearishCandle ? c.close < c.open : c.close > c.open;
+    });
+    if (pick == null) continue;
+    const c = candles[pick]!;
+    out.push({
+      low: Math.min(c.open, c.close),
+      high: Math.max(c.open, c.close),
+      dir: move > 0 ? 'demand' : 'supply',
+      idx: pick,
+    });
+  }
+  // Unmitigated only: no later CLOSE beyond the far side of the block.
+  const fresh = out.filter((z) => {
+    for (let j = z.idx + 4; j < n; j++) {
+      const close = candles[j]?.close ?? 0;
+      if (z.dir === 'demand' && close < z.low) return false;
+      if (z.dir === 'supply' && close > z.high) return false;
+    }
+    return true;
+  });
+  const lastPer = (dir: 'demand' | 'supply') =>
+    fresh.filter((z) => z.dir === dir).slice(-2);
+  return [...lastPer('demand'), ...lastPer('supply')].map(({ low, high, dir }) => ({
+    low,
+    high,
+    dir,
+  }));
+}
+
+/**
+ * Fair value gaps (imbalances): a 3-candle window where candle 1's
+ * high never overlaps candle 3's low (bullish gap) or vice versa —
+ * price skipped the band without trading it, and tends to revisit.
+ * Only unfilled gaps are returned (price hasn't traded back through),
+ * freshest 3 per direction.
+ */
+function findFairValueGaps(
+  candles: OhlcRow[],
+): Array<{ low: number; high: number; dir: 'demand' | 'supply' }> {
+  const out: Array<{ low: number; high: number; dir: 'demand' | 'supply'; idx: number }> = [];
+  const n = candles.length;
+  for (let i = 0; i < n - 2; i++) {
+    const a = candles[i]!;
+    const c = candles[i + 2]!;
+    if (a.high < c.low) out.push({ low: a.high, high: c.low, dir: 'demand', idx: i });
+    else if (a.low > c.high) out.push({ low: c.high, high: a.low, dir: 'supply', idx: i });
+  }
+  const fresh = out.filter((z) => {
+    for (let j = z.idx + 3; j < n; j++) {
+      const cd = candles[j]!;
+      // Fully filled when price trades through the entire gap.
+      if (z.dir === 'demand' && cd.low <= z.low) return false;
+      if (z.dir === 'supply' && cd.high >= z.high) return false;
+    }
+    return true;
+  });
+  const lastPer = (dir: 'demand' | 'supply') =>
+    fresh.filter((z) => z.dir === dir).slice(-3);
+  return [...lastPer('demand'), ...lastPer('supply')].map(({ low, high, dir }) => ({
+    low,
+    high,
+    dir,
+  }));
+}
+
 /**
  * Order-book pressure over the top levels: (Σbids − Σasks) ÷ (Σbids +
  * Σasks), in −1 … +1. Positive = more resting bid size (buyers), which
@@ -2584,6 +2895,14 @@ const orderbookCache = new Map<
   { at: number; value: FoxyOrderBook | null }
 >();
 const ORDERBOOK_TTL_MS = 900;
+
+/** Confluence-zone cache — five candle fetches + a depth build per
+ *  snapshot; inputs move on candle scale, so 45s is plenty fresh. */
+const zonesCache = new Map<
+  string,
+  { at: number; value: FoxyConfluence | null }
+>();
+const ZONES_TTL_MS = 45_000;
 
 /** Depth-profile cache — five deep-book fetches per build, so polling
  *  viewers must share one snapshot. */
