@@ -219,3 +219,30 @@ export interface FoxyDepthProfile {
   resistance_wall: FoxyDepthBucket | null;
   ts: number;
 }
+
+/** One technical factor contributing to a confluence zone. */
+export interface FoxyZoneFactor {
+  kind: 'order_block' | 'fvg' | 'ema' | 'wall';
+  tf: string;
+  detail: string;
+  weight: number;
+}
+
+/** A price band where independent technical evidence stacks up. */
+export interface FoxyZone {
+  low: number;
+  high: number;
+  mid: number;
+  side: 'demand' | 'supply';
+  score: number;
+  dist_pct: number;
+  factors: FoxyZoneFactor[];
+}
+
+/** Multi-timeframe confluence map (OB + FVG + EMA + walls). */
+export interface FoxyConfluence {
+  coin: string;
+  price: number;
+  zones: FoxyZone[];
+  ts: number;
+}
