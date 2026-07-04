@@ -124,7 +124,8 @@ export function DepthWallsPanel({ coin }: { coin: CoinMatch }) {
 
           <div className="border-t border-slate-100 px-[18px] py-2 text-[10.5px] font-semibold text-slate-400">
             Bekleyen emirler — {depth.sources.join(' + ')} defterlerinin
-            toplamı. DUVAR = o banttaki para, ortalama bandın en az 3 katı.
+            toplamı. DUVAR = o banttaki para, tipik bandın en az 3 katı.
+            Band genişliği borsaların gerçek defter derinliğine göre uyarlanır.
           </div>
         </>
       ) : (
