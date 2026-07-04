@@ -60,7 +60,10 @@ export function useRadarAlerts(): RadarAlertsApi {
         ...init,
         headers: {
           Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
+          // Only claim JSON when we actually send a body — Fastify
+          // 400'ler "Body cannot be empty" on bodyless DELETE/POST
+          // that carry a json content-type.
+          ...(init.body ? { 'Content-Type': 'application/json' } : {}),
           ...(init.headers as Record<string, string> | undefined),
         },
         cache: 'no-store',
