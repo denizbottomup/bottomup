@@ -562,7 +562,11 @@ export class FoxyService implements OnModuleInit {
     // that no longer mean anything ("bu işlemlerin hiçbiri güncel
     // değil"). We reconcile against the live price and drop the dead
     // ones so the panel only ever shows tradeable setups.
-    const live = await this.fetchMarket24h(`${coinName}USDT`).catch(() => null);
+    // NOTE: coinName is already pair-formatted ("SOLUSDT") — appending
+    // another USDT produced "SOLUSDTUSDT", both venues returned null and
+    // the guard silently never fired (May setups kept rendering $97
+    // entries with SOL at $81).
+    const live = await this.fetchMarket24h(coinName).catch(() => null);
     const price = live?.price ?? null;
     const isStale = (
       position: 'long' | 'short' | null,
@@ -1548,10 +1552,14 @@ export class FoxyService implements OnModuleInit {
    * never surfaced from the OKX universe).
    */
   private async fetchMarket24h(symbol: string): Promise<FoxyAssetMarket | null> {
-    const base = symbol.replace(/USDT$/i, '').replace(/[-_/]/g, '');
+    // Strip ALL trailing USDT repetitions — callers pass a mix of bare
+    // ("SOL"), pair ("SOLUSDT") and, historically, double-suffixed
+    // ("SOLUSDTUSDT") symbols; a single strip left the last of those
+    // unresolvable on both venues.
+    const base = symbol.replace(/(USDT)+$/i, '').replace(/[-_/]/g, '');
     const okx = await this.fetchMarketOkx(base).catch(() => null);
     if (okx) return okx;
-    return this.fetchMarketBinance(symbol).catch(() => null);
+    return this.fetchMarketBinance(`${base}USDT`).catch(() => null);
   }
 
   /** OKX spot 24h ticker for `<base>-USDT`. */
