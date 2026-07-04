@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import type { CoinMatch } from '@/lib/coin-extract';
 import { LiveChartPanel } from './live-chart';
+import { DepthWallsPanel } from './depth-walls';
 import type {
   FoxyAnalysis,
   FoxyAssetMarket,
@@ -158,6 +159,8 @@ export function FoxyBoard({
         <OrderBookPanel orderbook={orderbook} coin={coin} />
         <WhaleFeedPanel live={liveWhales} />
       </div>
+
+      <DepthWallsPanel coin={coin} />
 
       <TradersPanel setups={setups} coin={coin} />
     </div>

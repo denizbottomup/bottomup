@@ -190,3 +190,32 @@ export interface FoxyHistoryEntry {
   verdict: FoxyVerdict;
   at: number;
 }
+
+/** One price band in the depth profile ("duvar haritası"). */
+export interface FoxyDepthBucket {
+  px_low: number;
+  px_high: number;
+  px_mid: number;
+  size: number;
+  usd: number;
+  /** usd ÷ the side's uniform per-bucket share — 1.0 is "average". */
+  strength: number;
+  is_wall: boolean;
+}
+
+/** Where resting bids/asks concentrate around the mid. */
+export interface FoxyDepthProfile {
+  coin: string;
+  inst_id: string;
+  sources: string[];
+  mid: number;
+  range_pct: number;
+  buckets_per_side: number;
+  /** Nearest-to-mid first (descending price). */
+  bids: FoxyDepthBucket[];
+  /** Nearest-to-mid first (ascending price). */
+  asks: FoxyDepthBucket[];
+  support_wall: FoxyDepthBucket | null;
+  resistance_wall: FoxyDepthBucket | null;
+  ts: number;
+}
