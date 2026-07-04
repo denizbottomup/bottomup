@@ -79,7 +79,7 @@ export function ZonesPanel({ state }: { state: ConfluenceState }) {
           En doğru alım / satım bölgeleri
         </span>
         <span className="rounded-md bg-slate-100 px-2 py-0.5 text-[10.5px] font-bold text-slate-500">
-          1W · 1D · 4H · 15d · 5d + duvarlar
+          1W · 1D · 4H · 1s · 15d · 5d + duvarlar
         </span>
         <span className="ml-auto flex items-center gap-1.5 text-[10.5px] font-bold text-slate-400">
           <span className="relative flex size-1.5">
