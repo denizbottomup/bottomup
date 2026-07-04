@@ -280,3 +280,21 @@ export interface FoxyRadar {
   universe: string[];
   ts: number;
 }
+
+/** GET /me/foxy/radar/alerts — follows + delivery-channel state. */
+export interface FoxyRadarAlerts {
+  follows: string[];
+  cooldown_minutes: number;
+  webpush: {
+    enabled: boolean;
+    public_key: string | null;
+    /** Endpoints registered for this user (any browser/device). */
+    endpoints: string[];
+  };
+  telegram: {
+    /** Server has a bot token configured at all. */
+    configured: boolean;
+    bot: string | null;
+    linked: boolean;
+  };
+}

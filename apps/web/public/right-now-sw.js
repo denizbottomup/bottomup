@@ -1,12 +1,14 @@
 /**
- * Right Now Web Push service worker.
+ * bupcore Web Push service worker (shared).
  *
- * Listens for push events from the bottomup API and surfaces a native
- * notification for combined-direction flips. Click handler focuses the
- * /home/right-now tab if it's already open, otherwise opens it fresh.
+ * Historically registered for Right Now combined-direction flips; the
+ * Foxy radar alerts reuse the SAME registration + push subscription,
+ * so this one file handles both payload types:
+ *   - `right_now_flip` → /home/right-now
+ *   - `foxy_radar`     → /home/foxy?coin=<COIN>
  *
- * Scope is the whole site; lives at /right-now-sw.js so the registration
- * call from the page can reach it without a custom worker config.
+ * The filename stays /right-now-sw.js because existing subscribers'
+ * registrations point at this URL — renaming would orphan them.
  */
 self.addEventListener('install', (event) => {
   // Activate immediately so a deploy reaches existing subscribers
@@ -26,28 +28,46 @@ self.addEventListener('push', (event) => {
   } catch {
     return;
   }
-  if (data.type !== 'right_now_flip') return;
-  const title = data.title || `${data.coin}: ${data.to}`;
-  const body =
-    data.message ||
-    `Kombine yön ${data.from} → ${data.to}. Güven %${Math.round(
-      (data.confidence || 0) * 100,
-    )}.`;
+
+  let title;
+  let body;
+  let tag;
+  let url;
+
+  if (data.type === 'right_now_flip') {
+    title = data.title || `${data.coin}: ${data.to}`;
+    body =
+      data.message ||
+      `Kombine yön ${data.from} → ${data.to}. Güven %${Math.round(
+        (data.confidence || 0) * 100,
+      )}.`;
+    tag = `right-now-${data.coin}`;
+    url = '/home/right-now';
+  } else if (data.type === 'foxy_radar') {
+    title = data.title || `${data.coin}: ${data.direction}`;
+    body = data.message || 'Takip ettiğin coinde yeni bir sinyal var.';
+    tag = `foxy-radar-${data.coin}`;
+    url = data.url || '/home/foxy';
+  } else {
+    return;
+  }
+
   event.waitUntil(
     self.registration.showNotification(title, {
       body,
       icon: '/icon-192.png',
       badge: '/icon-192.png',
-      tag: `right-now-${data.coin}`,
+      tag,
       renotify: true,
-      data: { url: '/home/right-now' },
+      data: { url },
     }),
   );
 });
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const target = (event.notification.data && event.notification.data.url) || '/home/right-now';
+  const target = (event.notification.data && event.notification.data.url) || '/home';
+  const targetPath = target.split('?')[0];
   event.waitUntil(
     (async () => {
       const allClients = await self.clients.matchAll({
@@ -55,8 +75,18 @@ self.addEventListener('notificationclick', (event) => {
         includeUncontrolled: true,
       });
       for (const client of allClients) {
-        if (client.url.includes('/home/right-now')) {
-          client.focus();
+        if (client.url.includes(targetPath)) {
+          // Same page already open — bring it forward and let it pick
+          // up the query (e.g. ?coin=) via navigate when supported.
+          if ('navigate' in client && target.includes('?')) {
+            try {
+              await client.navigate(target);
+            } catch {
+              // cross-origin/detached client — focusing is still better
+              // than opening a duplicate tab.
+            }
+          }
+          await client.focus();
           return;
         }
       }

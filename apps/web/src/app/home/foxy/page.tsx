@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { extractCoin, coinFromSymbol, type CoinMatch } from '@/lib/coin-extract';
 import { useAuth } from '@/lib/auth-context';
 import { FoxyPromptPanel } from '@/components/foxy/prompt-panel';
@@ -49,6 +49,24 @@ export default function FoxyPage() {
   const [error, setError] = useState<string | null>(null);
   const [history, setHistory] = useState<FoxyHistoryEntry[]>([]);
   const [activeHistoryId, setActiveHistoryId] = useState<string | null>(null);
+  const deepLinkDone = useRef(false);
+
+  // Radar bildirimleri /home/foxy?coin=ETH ile açılır — oturum hazır
+  // olur olmaz o coin için analizi kendiliğinden başlat. (URLSearchParams
+  // yerine window.location: useSearchParams Suspense sınırı istiyor,
+  // client-only bir sayfada gereksiz tören.)
+  useEffect(() => {
+    if (!user || deepLinkDone.current) return;
+    const coinParam = new URLSearchParams(window.location.search).get('coin');
+    if (!coinParam) {
+      deepLinkDone.current = true;
+      return;
+    }
+    deepLinkDone.current = true;
+    window.history.replaceState(null, '', '/home/foxy');
+    handleRadarPick(coinParam.toUpperCase());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
 
   async function runQuery(text: string, match: CoinMatch | null) {
     if (!user) {
