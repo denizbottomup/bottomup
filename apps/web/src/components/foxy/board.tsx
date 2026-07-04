@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import type { CoinMatch } from '@/lib/coin-extract';
 import { LiveChartPanel } from './live-chart';
 import type {
@@ -47,6 +47,19 @@ export function FoxyBoard({
   const v = verdictTheme(analysis.verdict);
   // One live signal for both the card and the chart's level-lines.
   const liveSignal = useLiveScalpSignal(signal, coin, getIdToken);
+  const liveWhales = useLiveWhales(whales, coin, getIdToken);
+  // The verdict is a snapshot of query time; the scalp signal keeps
+  // updating live. Surface both facts so the layering reads as
+  // intentional — a timestamp on the verdict, a live short-term chip
+  // next to it, and an explicit notice when the signal has flipped
+  // direction since the analysis was written.
+  const askedAtRef = useRef(new Date());
+  const askedAt = askedAtRef.current;
+  const signalFlipped =
+    signal != null &&
+    liveSignal != null &&
+    signal.direction !== 'NONE' &&
+    liveSignal.direction !== signal.direction;
 
   return (
     <div className="mx-auto flex max-w-[920px] flex-col gap-3.5 tabular-nums">
@@ -63,10 +76,40 @@ export function FoxyBoard({
           >
             {analysis.verdict}
           </span>
-          <h2 className="text-[19px] font-bold leading-tight tracking-tight text-slate-900">
+          <h2 className="min-w-0 flex-1 text-[19px] font-bold leading-tight tracking-tight text-slate-900">
             {analysis.headline}
           </h2>
+          <div className="flex shrink-0 flex-col items-end gap-1">
+            <span className="text-[10.5px] font-bold uppercase tracking-[0.05em] text-slate-400">
+              Pozisyon görüşü ·{' '}
+              {askedAt.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
+            </span>
+            {liveSignal && liveSignal.direction !== 'NONE' ? (
+              <span
+                className={`rounded-md px-2 py-0.5 text-[10.5px] font-extrabold ${
+                  liveSignal.direction === 'LONG'
+                    ? 'bg-emerald-50 text-emerald-600'
+                    : 'bg-rose-50 text-rose-600'
+                }`}
+              >
+                Kısa vade şu an: {liveSignal.direction}
+              </span>
+            ) : null}
+          </div>
         </div>
+
+        {signalFlipped ? (
+          <div className="mt-3 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-[12.5px] font-semibold leading-snug text-amber-800">
+            <span className="mt-px">⚠️</span>
+            <span>
+              Kısa vade sinyali bu analizden sonra yön değiştirdi (
+              {signal.direction === 'NONE' ? 'İZLE' : signal.direction} →{' '}
+              {liveSignal.direction === 'NONE' ? 'İZLE' : liveSignal.direction}).
+              Yukarıdaki metin sorgu anının fotoğrafı — güncel seviyeler
+              aşağıdaki scalp kartında.
+            </span>
+          </div>
+        ) : null}
 
         {analysis.takeaway ? (
           <div className={`mt-4 flex gap-3 rounded-2xl ${v.softBg} ${v.softBorder} border p-4`}>
@@ -105,11 +148,15 @@ export function FoxyBoard({
 
       <LiveChartPanel coin={coin} signal={liveSignal} />
 
-      <MetricGrid derivatives={derivatives} whales={whales} />
+      <MetricGrid
+        derivatives={derivatives}
+        whales={liveWhales.whales}
+        whaleThreshold={liveWhales.threshold}
+      />
 
       <div className="grid gap-3.5 md:grid-cols-[1fr_1.25fr]">
         <OrderBookPanel orderbook={orderbook} coin={coin} />
-        <WhaleFeedPanel whales={whales} coin={coin} getIdToken={getIdToken} />
+        <WhaleFeedPanel live={liveWhales} />
       </div>
 
       <TradersPanel setups={setups} coin={coin} />
@@ -166,9 +213,11 @@ function Header({ coin, market }: { coin: CoinMatch; market: FoxyAssetMarket | n
 function MetricGrid({
   derivatives,
   whales,
+  whaleThreshold = '1M$+',
 }: {
   derivatives: FoxyDerivatives | null;
   whales: FoxyWhales | null;
+  whaleThreshold?: '1M$+' | '250K$+';
 }) {
   const tiles: ReactNode[] = [];
 
@@ -219,10 +268,10 @@ function MetricGrid({
         </div>
         <Meaning>
           {!hasFlow
-            ? 'Son 24 saatte 1M$+ giriş/çıkış yok. Büyük para kenarda bekliyor.'
+            ? `Son 24 saatte ${whaleThreshold} giriş/çıkış yok. Büyük para kenarda bekliyor.`
             : net > 0
-              ? 'Net borsaya giriş ağır basıyor — satış baskısı riski.'
-              : 'Net borsadan çıkış ağır basıyor — tutma eğilimi.'}
+              ? `Net borsaya giriş ağır basıyor (${whaleThreshold} transferler) — satış baskısı riski.`
+              : `Net borsadan çıkış ağır basıyor (${whaleThreshold} transferler) — tutma eğilimi.`}
         </Meaning>
       </Tile>,
     );
@@ -603,36 +652,63 @@ function LevelTile({
 
 /* ───────────────────────── whale feed ───────────────────────── */
 
-function WhaleFeedPanel({
-  whales: seed,
-  coin,
-  getIdToken,
-}: {
+interface LiveWhales {
   whales: FoxyWhales | null;
-  coin: CoinMatch;
-  getIdToken: () => Promise<string | null>;
-}) {
-  // The query seeds the first frame; then we poll the authed whales
-  // endpoint so new Arkham transfers surface while the board is open.
-  // On-chain 1M$+ transfers arrive on minute scales (and Arkham has
-  // rate limits), so a ~45s cadence is genuinely live without burning
-  // the API key.
-  const [whales, setWhales] = useState<FoxyWhales | null>(seed);
-  useEffect(() => setWhales(seed), [seed]);
+  threshold: '1M$+' | '250K$+';
+  checkedAt: Date | null;
+}
+
+/**
+ * Live Arkham feed, lifted to board level so the metric tile and the
+ * wallet-movements panel read one source. The query seeds the first
+ * frame; then we poll the authed whales endpoint. On-chain transfers
+ * arrive on minute scales (and Arkham is rate-limited), so a ~45s
+ * cadence is genuinely live without burning the API key. When the
+ * default 1M$+ threshold comes back empty we drop to 250K$+ so there
+ * is usually a real flow to watch (the badge shows which).
+ */
+function useLiveWhales(
+  seed: FoxyWhales | null,
+  coin: CoinMatch,
+  getIdToken: () => Promise<string | null>,
+): LiveWhales {
+  const [state, setState] = useState<LiveWhales>({
+    whales: seed,
+    threshold: '1M$+',
+    checkedAt: null,
+  });
+  useEffect(
+    () => setState({ whales: seed, threshold: '1M$+', checkedAt: null }),
+    [seed],
+  );
+
   useEffect(() => {
     let alive = true;
     let timer: ReturnType<typeof setTimeout> | null = null;
+    const fetchWhales = async (token: string, minUsd?: number) => {
+      const qs = minUsd ? `?min_usd=${minUsd}` : '';
+      const res = await fetch(
+        `${API_BASE}/me/foxy/whales/${encodeURIComponent(coin.symbol)}${qs}`,
+        { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' },
+      );
+      if (!res.ok) return null;
+      return (await res.json()) as FoxyWhales | null;
+    };
     const loop = async () => {
       try {
         const token = await getIdToken();
         if (token) {
-          const res = await fetch(
-            `${API_BASE}/me/foxy/whales/${encodeURIComponent(coin.symbol)}`,
-            { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' },
-          );
-          if (res.ok) {
-            const json = (await res.json()) as FoxyWhales | null;
-            if (alive && json) setWhales(json);
+          let json = await fetchWhales(token);
+          let threshold: '1M$+' | '250K$+' = '1M$+';
+          if (json && json.transfers.length === 0) {
+            const lower = await fetchWhales(token, 250_000);
+            if (lower && lower.transfers.length > 0) {
+              json = lower;
+              threshold = '250K$+';
+            }
+          }
+          if (alive && json) {
+            setState({ whales: json, threshold, checkedAt: new Date() });
           }
         }
       } catch {
@@ -640,33 +716,81 @@ function WhaleFeedPanel({
       }
       if (alive) timer = setTimeout(() => void loop(), 45000);
     };
-    timer = setTimeout(() => void loop(), 45000);
+    // First live pass right away (the seed may be minutes old by the
+    // time the user reads the panel), then the 45s cadence.
+    void loop();
     return () => {
       alive = false;
       if (timer) clearTimeout(timer);
     };
   }, [coin.symbol, getIdToken]);
 
+  return state;
+}
+
+function WhaleFeedPanel({
+  live,
+}: {
+  live: LiveWhales;
+}) {
+  const { whales, threshold, checkedAt } = live;
+  const [, forceTick] = useState(0);
+  const knownIdsRef = useRef<Set<string>>(
+    new Set((whales?.transfers ?? []).map((t) => t.id)),
+  );
+
+  // Re-render every 10s so "Xdk önce" row ages and the scan ticker stay
+  // honest between polls.
+  useEffect(() => {
+    const t = setInterval(() => forceTick((n) => n + 1), 10000);
+    return () => clearInterval(t);
+  }, []);
+
   const transfers = whales?.transfers ?? [];
+  const newIds = new Set(
+    transfers.filter((t) => !knownIdsRef.current.has(t.id)).map((t) => t.id),
+  );
+  // Absorb after computing, so a row flashes for exactly one poll cycle.
+  for (const t of transfers) knownIdsRef.current.add(t.id);
+
   return (
-    <Panel title="Cüzdan hareketleri" right={<Live>Arkham · 1M$+ · 24s</Live>}>
+    <Panel
+      title="Cüzdan hareketleri"
+      right={
+        <span className="flex items-center gap-2">
+          <Live>
+            Arkham · {threshold} · 24s
+          </Live>
+          <span className="text-[10px] font-bold text-slate-300">
+            {checkedAt ? `tarama ${fmtAgo(checkedAt.getTime())}` : ''}
+          </span>
+        </span>
+      }
+    >
       {transfers.length > 0 ? (
         <div className="flex flex-col">
           {transfers.slice(0, 5).map((t) => (
-            <WhaleRow key={t.id} t={t} />
+            <WhaleRow key={t.id} t={t} fresh={newIds.has(t.id)} />
           ))}
         </div>
       ) : (
-        <Empty>Son 24 saatte 1M$ üstü büyük cüzdan hareketi yok.</Empty>
+        <Empty>
+          Son 24 saatte 250K$ üstü cüzdan hareketi yok — panel 45 sn&apos;de
+          bir Arkham&apos;ı tarıyor.
+        </Empty>
       )}
     </Panel>
   );
 }
 
-function WhaleRow({ t }: { t: FoxyWhaleTransfer }) {
+function WhaleRow({ t, fresh = false }: { t: FoxyWhaleTransfer; fresh?: boolean }) {
   const meta = flowMeta(t.flow);
   return (
-    <div className="flex items-center gap-3 border-t border-slate-100 px-[18px] py-3 first:border-t-0">
+    <div
+      className={`flex items-center gap-3 border-t border-slate-100 px-[18px] py-3 transition-colors duration-1000 first:border-t-0 ${
+        fresh ? 'bg-amber-50' : 'bg-transparent'
+      }`}
+    >
       <div className={`grid size-[34px] shrink-0 place-items-center rounded-[9px] text-[16px] ${meta.icBg} ${meta.icFg}`}>
         {meta.icon}
       </div>
@@ -675,7 +799,8 @@ function WhaleRow({ t }: { t: FoxyWhaleTransfer }) {
           {shortName(t.from.name)} → {shortName(t.to.name)}
         </div>
         <div className="mt-0.5 text-[11.5px] font-medium text-slate-400">
-          {fmtTime(t.ts)} · {fmtUnit(t.unit_value)} {t.token_symbol} · {meta.label}
+          <span className="font-bold text-slate-500">{fmtAgo(t.ts)}</span> ·{' '}
+          {fmtUnit(t.unit_value)} {t.token_symbol} · {meta.label}
         </div>
       </div>
       <div className="text-right">
@@ -910,6 +1035,18 @@ function fmtTime(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return '';
   return d.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+}
+
+function fmtAgo(value: string | number): string {
+  const ts = new Date(value).getTime();
+  const diff = Date.now() - ts;
+  if (!Number.isFinite(diff) || diff < 0) return '';
+  const min = Math.floor(diff / 60_000);
+  if (min < 1) return 'az önce';
+  if (min < 60) return `${min} dk önce`;
+  const hours = Math.floor(min / 60);
+  if (hours < 24) return `${hours} sa önce`;
+  return `${Math.floor(hours / 24)} gün önce`;
 }
 
 function fmtDay(value: string | Date | null | undefined): string {
