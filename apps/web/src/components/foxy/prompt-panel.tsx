@@ -1,6 +1,7 @@
 'use client';
 
 import { type FormEvent } from 'react';
+import { useAuth } from '@/lib/auth-context';
 import type { FoxyHistoryEntry, FoxyVerdict } from './types';
 
 const SUGGESTIONS = [
@@ -134,7 +135,32 @@ export function FoxyPromptPanel({
           </div>
         )}
       </div>
+
+      <PanelFooter />
     </aside>
+  );
+}
+
+/**
+ * Oturum çubuğu — /home kabuğunda sidebar yok (tek prompt yüzeyi),
+ * bu yüzden çıkış buradan verilir. signOut sonrası HomeLayout'un
+ * auth guard'ı /signin'e yönlendirir; ekstra router çağrısı gerekmez.
+ */
+function PanelFooter() {
+  const { user, signOut } = useAuth();
+  return (
+    <div className="flex items-center justify-between gap-3 border-t border-slate-100 px-5 py-3">
+      <span className="min-w-0 truncate text-[11px] font-medium text-slate-400">
+        {user?.email ?? user?.displayName ?? ''}
+      </span>
+      <button
+        type="button"
+        onClick={() => void signOut()}
+        className="shrink-0 rounded-lg border border-slate-200 px-3 py-1.5 text-[11px] font-bold text-slate-500 transition hover:border-slate-300 hover:text-slate-900"
+      >
+        çıkış yap
+      </button>
+    </div>
   );
 }
 
