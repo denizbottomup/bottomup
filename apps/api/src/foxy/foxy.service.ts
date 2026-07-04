@@ -283,7 +283,7 @@ export interface FoxyTfTrend {
 
 /**
  * Multi-timeframe confluence map: order blocks + fair value gaps +
- * the most-used EMAs (20/50/200) across 1W/1D/4H/15m/5m, overlaid
+ * the most-used EMAs (20/50/200) across 1W/1D/4H/1H/15m/5m, overlaid
  * with the live depth walls, clustered into scored buy/sell zones.
  */
 export interface FoxyConfluence {
@@ -1885,7 +1885,7 @@ export class FoxyService implements OnModuleInit {
 
   /**
    * Confluence zones — the "en doğru bölgeler" engine. Pulls candles
-   * for 1W/1D/4H/15m/5m, extracts order blocks, unfilled fair value
+   * for 1W/1D/4H/1H/15m/5m, extracts order blocks, unfilled fair value
    * gaps and the most-used EMAs (20/50/200) from each, overlays the
    * live depth walls, and clusters everything into scored buy/sell
    * bands. Higher timeframes weigh more (1W×5 … 5m×1); a zone only
@@ -1918,6 +1918,7 @@ export class FoxyService implements OnModuleInit {
       { tf: '1W', bar: '1W', limit: 80, weight: 5 },
       { tf: '1D', bar: '1D', limit: 150, weight: 4 },
       { tf: '4H', bar: '4H', limit: 180, weight: 3 },
+      { tf: '1H', bar: '1H', limit: 200, weight: 2.5 },
       { tf: '15m', bar: '15m', limit: 200, weight: 2 },
       { tf: '5m', bar: '5m', limit: 200, weight: 1 },
     ];
@@ -3295,9 +3296,10 @@ const FOXY_QUERY_SYSTEM_PROMPT = [
   '     birini referans al ("geri çekilme gelirse $X–$Y bandı mantıklı" gibi) —',
   '     kafadan yuvarlak sayı uydurma. Skoru yüksek ve fiyata yakın bant önce.',
   '  7. price_action (YÖN İÇİN BİRİNCİL KANIT): her zaman diliminde (1W/1D/4H/',
-  '     15m/5m) trend rejimi (up/down/range = fiyat EMA20+50 üstünde/altında/',
+  '     1H/15m/5m) trend rejimi (up/down/range = fiyat EMA20+50 üstünde/altında/',
   '     karışık), RSI ve son 20 mumun % değişimi. Yön tahmini BURADAN başlar:',
-  '     1D+4H rejimi büyük resmi, 15m+5m momentumu verir. market bloğundaki',
+  '     1D+4H rejimi büyük resmi, 1H köprüyü, 15m+5m momentumu verir. market',
+  '     bloğundaki',
   '     24s %si sadece manşettir — trend yapısı budur.',
   '  8. order_book: beş borsanın toplam defterinde bekleyen emir dengesizliği',
   '     (−1…+1, artı = alıcı tarafı ağır) ve makas. Anlık baskıyı gösterir.',
@@ -3346,7 +3348,7 @@ const FOXY_QUERY_SYSTEM_PROMPT = [
   '',
   'Verdict seçim kuralı — BEKLE SENİN VARSAYILANIN DEĞİL. Karar çerçeven:',
   '  1. Önce price_action\'dan büyük resmi oku: 1D ve 4H rejimi aynı yöndeyse',
-  '     güçlü bir eğilim var demektir. 15m/5m aynı yönü teyit ediyorsa ve',
+  '     güçlü bir eğilim var demektir. 1H köprü + 15m/5m aynı yönü teyit ediyorsa ve',
   '     order_book dengesizliği + duvarlar o tarafı destekliyorsa → AL ya da',
   '     SAT de. Kanıt hizalıyken BEKLE demek korkaklıktır, analiz değil.',
   '  2. AL → 1D/4H yukarı + kısa vade teyit + defter/derivatives çelişmiyor.',
