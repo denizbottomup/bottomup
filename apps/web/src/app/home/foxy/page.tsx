@@ -50,7 +50,16 @@ export default function FoxyPage() {
   const [activeHistoryId, setActiveHistoryId] = useState<string | null>(null);
 
   async function runQuery(text: string, match: CoinMatch | null) {
-    if (!user) return;
+    if (!user) {
+      // The Firebase session can drop mid-visit (revoked/expired refresh
+      // token). A silent return here looked EXACTLY like an infinite
+      // loading state — cleared input, disabled button, no feedback —
+      // and cost hours of backend debugging. Say it out loud instead.
+      setError(
+        'Oturumun düşmüş — sayfayı yenileyip tekrar giriş yap, sorgu ondan sonra çalışır.',
+      );
+      return;
+    }
     setLoading(true);
     setError(null);
 
