@@ -34,6 +34,12 @@ export class PublicController {
     private readonly foxy: FoxyService,
   ) {}
 
+  /** Deploy liveness probe — the build marker tells which commit serves. */
+  @Get('/ping')
+  ping(): { ok: boolean; build: string } {
+    return { ok: true, build: 'b-2026-07-04-a' };
+  }
+
   @Get('/landing')
   landing(
     @Query('locale') locale?: string,
