@@ -1326,9 +1326,16 @@ export class FoxyService implements OnModuleInit {
       : Math.max(entry + atr * 1.2, swingHigh + atr * 0.1);
     const stop = roundPrice(stopRaw, price);
     const risk = Math.abs(entry - stop);
-    if (risk <= 0 || stop === roundPrice(entry, price)) {
-      // Degenerate levels (stop collapsed onto entry — dust-priced coin
-      // or zero ATR). Refuse to publish a signal whose 1R is zero.
+    // Trade-viability gate. In a volatility squeeze ATR collapses and
+    // the mechanically-derived levels get microscopic — an ETH short
+    // with a 0.15% 1R needs a ~90% hit rate just to break even after
+    // round-trip taker fees (~0.10%) + spread, and the stop sits inside
+    // a single 5m candle's wick so noise stop-outs are near-certain.
+    // A real scalper doesn't trade a squeeze; neither do we. Floor:
+    // 1R must be at least 0.30% of price (≈2.5× round-trip cost).
+    const MIN_RISK_PCT = 0.003;
+    if (risk <= 0 || stop === roundPrice(entry, price) || risk < price * MIN_RISK_PCT) {
+      const riskPct = price > 0 ? (risk / price) * 100 : 0;
       return {
         coin,
         direction: 'NONE',
@@ -1341,8 +1348,14 @@ export class FoxyService implements OnModuleInit {
         risk_per_unit: null,
         rr: null,
         confidence: 0,
-        headline: 'Bu coinde sağlıklı seviye üretilemiyor — işlem önerilmez',
-        reasons: ['Fiyat hareket aralığı seviye çizemeyecek kadar dar'],
+        headline: 'Oynaklık çok düşük — işlem maliyeti olası kârı yer, işlem önerilmez',
+        reasons: [
+          riskPct > 0
+            ? `Stop mesafesi sadece %${riskPct.toFixed(2)} — komisyon + makas (~%0.12 gidiş-dönüş) bu darlıkta kârın çoğunu götürür`
+            : 'Fiyat hareket aralığı seviye çizemeyecek kadar dar',
+          'Bu kadar dar stop tek bir 5 dakikalık mumun fitiliyle gider — gürültüyle stop olma ihtimali çok yüksek',
+          'Fiyat sıkışmada; kırılım gelip oynaklık artınca sinyal tekrar açılır',
+        ],
         invalidation: '',
         generated_at,
         meta,
