@@ -88,6 +88,18 @@ export function FoxyBoard({
               Pozisyon görüşü ·{' '}
               {askedAt.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
             </span>
+            {analysis.verdict === 'BEKLE' &&
+            (analysis.bias === 'up' || analysis.bias === 'down') ? (
+              <span
+                className={`rounded-md px-2 py-0.5 text-[10.5px] font-extrabold ${
+                  analysis.bias === 'up'
+                    ? 'bg-emerald-50 text-emerald-600'
+                    : 'bg-rose-50 text-rose-600'
+                }`}
+              >
+                Eğilim: {analysis.bias === 'up' ? 'YUKARI' : 'AŞAĞI'}
+              </span>
+            ) : null}
             {liveSignal && liveSignal.direction !== 'NONE' ? (
               <span
                 className={`rounded-md px-2 py-0.5 text-[10.5px] font-extrabold ${

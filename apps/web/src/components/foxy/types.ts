@@ -14,6 +14,9 @@ export interface FoxyAnalysis {
   takeaway?: string;
   reasons: string[];
   invalidation: string;
+  /** Directional lean — required even on BEKLE ("hangi tarafa yatkın").
+   *  Optional here so older responses don't break the UI. */
+  bias?: 'up' | 'down' | 'neutral';
 }
 
 export interface FoxyAssetMarket {
@@ -239,10 +242,23 @@ export interface FoxyZone {
   factors: FoxyZoneFactor[];
 }
 
+/** Per-timeframe price-action snapshot. */
+export interface FoxyTfTrend {
+  tf: string;
+  regime: 'up' | 'down' | 'range';
+  rsi14: number | null;
+  above_ema20: boolean | null;
+  above_ema50: boolean | null;
+  above_ema200: boolean | null;
+  change20_pct: number | null;
+}
+
 /** Multi-timeframe confluence map (OB + FVG + EMA + walls). */
 export interface FoxyConfluence {
   coin: string;
   price: number;
   zones: FoxyZone[];
+  /** Optional — older backends don't send it. */
+  trend?: FoxyTfTrend[];
   ts: number;
 }
