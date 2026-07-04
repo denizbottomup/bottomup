@@ -1865,9 +1865,20 @@ export class FoxyService implements OnModuleInit {
     const key = normalizeCoinName(coinInput);
     const cached = zonesCache.get(key);
     if (cached && Date.now() - cached.at < ZONES_TTL_MS) return cached.value;
-    const value = await this.buildConfluence(coinInput);
-    zonesCache.set(key, { at: Date.now(), value });
-    return value;
+    // In-flight dedupe: the query flow triggers this concurrently (once
+    // directly, once via scalpSignal) — without sharing the build, both
+    // fire 5 candle fetches + a deep-book build at the same instant and
+    // double the burst against OKX.
+    const inflight = zonesInFlight.get(key);
+    if (inflight) return inflight;
+    const build = this.buildConfluence(coinInput)
+      .then((value) => {
+        zonesCache.set(key, { at: Date.now(), value });
+        return value;
+      })
+      .finally(() => zonesInFlight.delete(key));
+    zonesInFlight.set(key, build);
+    return build;
   }
 
   private async buildConfluence(coinInput: string): Promise<FoxyConfluence | null> {
@@ -2679,7 +2690,14 @@ function buildPrompt(setup: SetupRow, market: MarketSnapshot | null): string {
 }
 
 async function fetchJson<T>(url: string): Promise<T> {
-  const res = await fetch(url, { headers: { accept: 'application/json' } });
+  // Hard timeout: without it a single stalled venue connection hangs
+  // every Promise.all that awaits it (the /me/foxy/query hang was a
+  // stuck upstream socket with no abort). 8s turns a stall into a
+  // caught error the callers already degrade on.
+  const res = await fetch(url, {
+    headers: { accept: 'application/json' },
+    signal: AbortSignal.timeout(8000),
+  });
   if (!res.ok) throw new Error(`${url} → HTTP ${res.status}`);
   return (await res.json()) as T;
 }
@@ -2969,6 +2987,8 @@ const zonesCache = new Map<
   { at: number; value: FoxyConfluence | null }
 >();
 const ZONES_TTL_MS = 45_000;
+/** Concurrent zone builds for the same coin share one promise. */
+const zonesInFlight = new Map<string, Promise<FoxyConfluence | null>>();
 
 /** Depth-profile cache — five deep-book fetches per build, so polling
  *  viewers must share one snapshot. */
