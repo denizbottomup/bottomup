@@ -1609,8 +1609,14 @@ export class FoxyService implements OnModuleInit {
     const pair = `${symbol}-USDT`;
     const sym = `${symbol}USDT`;
     const TIMEOUT = 4000;
-    const RANGE = 0.025; // ±2.5% around mid
-    const BUCKETS = 18; // per side → each band ≈ 0.14%
+    // Band ceiling — the ACTUAL band adapts to how deep the venues'
+    // books really reach (measured live: BTC spot books span only
+    // ±0.1–0.3% even at 400–1000 levels). A fixed ±2.5% band left the
+    // outer 90% of buckets empty-for-lack-of-data and made the nearest
+    // bucket a permanent fake "wall".
+    const RANGE_MAX = 0.025;
+    const RANGE_MIN = 0.001;
+    const BUCKETS = 18; // per side
 
     const jget = async (url: string): Promise<unknown> => {
       try {
@@ -1669,7 +1675,31 @@ export class FoxyService implements OnModuleInit {
     const mid = (Math.max(...allBidPx) + Math.min(...allAskPx)) / 2;
     if (!Number.isFinite(mid) || mid <= 0) return null;
 
-    const bandWidth = (mid * RANGE) / BUCKETS;
+    // Adaptive band: use the median venue's actual reach per side so
+    // the profile only covers price ranges the data genuinely covers.
+    // (Median, not min/max — one shallow venue shouldn't clip the band,
+    // one deep venue shouldn't stretch it into single-venue territory.)
+    const median = (xs: number[]): number => {
+      if (!xs.length) return 0;
+      const s = [...xs].sort((a, b) => a - b);
+      return s[Math.floor(s.length / 2)]!;
+    };
+    const bidReach = median(
+      raws
+        .filter((r) => r.bids.length >= 10)
+        .map((r) => (mid - Math.min(...r.bids.map((l) => l[0] as number))) / mid),
+    );
+    const askReach = median(
+      raws
+        .filter((r) => r.asks.length >= 10)
+        .map((r) => (Math.max(...r.asks.map((l) => l[0] as number)) - mid) / mid),
+    );
+    const range = Math.max(
+      RANGE_MIN,
+      Math.min(RANGE_MAX, Math.min(bidReach || RANGE_MAX, askReach || RANGE_MAX)),
+    );
+
+    const bandWidth = (mid * range) / BUCKETS;
     const bidSize = new Array<number>(BUCKETS).fill(0);
     const askSize = new Array<number>(BUCKETS).fill(0);
     for (const r of raws) {
@@ -1701,13 +1731,16 @@ export class FoxyService implements OnModuleInit {
           is_wall: false,
         };
       });
+      // Wall baseline = the side's MEDIAN non-empty bucket, not the
+      // mean: books naturally pile up near the mid, so a mean-based
+      // threshold flags the nearest bucket forever. A wall is a pile
+      // ≥3× the typical band AND a meaningful share of the side.
+      const nonzero = buckets.filter((b) => b.usd > 0).map((b) => b.usd);
+      const base = median(nonzero);
       const total = buckets.reduce((a, b) => a + b.usd, 0);
-      const share = total > 0 ? total / BUCKETS : 0;
       for (const b of buckets) {
-        b.strength = share > 0 ? Math.round((b.usd / share) * 10) / 10 : 0;
-        // 3× the uniform share = a pile that visibly sticks out of the
-        // profile. (A flat book has every bucket at strength 1.0.)
-        b.is_wall = share > 0 && b.usd >= share * 3;
+        b.strength = base > 0 ? Math.round((b.usd / base) * 10) / 10 : 0;
+        b.is_wall = base > 0 && b.usd >= base * 3 && b.usd >= total * 0.1;
       }
       return buckets;
     };
@@ -1719,7 +1752,7 @@ export class FoxyService implements OnModuleInit {
       inst_id: pair,
       sources: raws.map((r) => r.name),
       mid: roundPrice(mid, mid),
-      range_pct: RANGE * 100,
+      range_pct: Math.round(range * 100 * 100) / 100,
       buckets_per_side: BUCKETS,
       bids,
       asks,
