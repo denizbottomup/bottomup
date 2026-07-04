@@ -798,7 +798,10 @@ export class FoxyService implements OnModuleInit {
     url.searchParams.set('timeLast', `${hours}h`);
     url.searchParams.set('sortKey', 'usd');
     url.searchParams.set('sortDir', 'desc');
-    url.searchParams.set('limit', String(limit));
+    // Over-fetch: one on-chain transaction often shows up as several
+    // legs (a $129M Uniswap arb cycle is 4 rows of the same amount),
+    // and after per-tx dedup below we still want `limit` real rows.
+    url.searchParams.set('limit', String(Math.min(100, limit * 5)));
 
     const res = await fetch(url, {
       headers: { 'API-Key': apiKey, accept: 'application/json' },
@@ -823,10 +826,8 @@ export class FoxyService implements OnModuleInit {
       transfers?: Array<Record<string, unknown>>;
     };
 
-    const transfers: FoxyWhaleTransfer[] = [];
-    let cexIn = 0;
-    let cexOut = 0;
-    let between = 0;
+    // Parse every leg first; grouping happens below.
+    const legs: FoxyWhaleTransfer[] = [];
     for (const t of json.transfers ?? []) {
       const fromAddr = t.fromAddress as Record<string, unknown> | undefined;
       const toAddr = t.toAddress as Record<string, unknown> | undefined;
@@ -839,17 +840,10 @@ export class FoxyService implements OnModuleInit {
       const usd = Number(t.historicalUSD ?? 0);
 
       let flow: FoxyWhaleTransfer['flow'] = 'between';
-      if (toIsCex && !fromIsCex) {
-        flow = 'cex_in';
-        cexIn += usd;
-      } else if (fromIsCex && !toIsCex) {
-        flow = 'cex_out';
-        cexOut += usd;
-      } else {
-        between += usd;
-      }
+      if (toIsCex && !fromIsCex) flow = 'cex_in';
+      else if (fromIsCex && !toIsCex) flow = 'cex_out';
 
-      transfers.push({
+      legs.push({
         id: String(t.id ?? `${t.transactionHash}-${t.tokenSymbol}`),
         ts: String(t.blockTimestamp ?? ''),
         chain: String(t.chain ?? ''),
@@ -877,12 +871,63 @@ export class FoxyService implements OnModuleInit {
       });
     }
 
+    // One on-chain transaction, one row. Arkham reports every hop of a
+    // transaction as a separate transfer, so a single Uniswap arb cycle
+    // (WETH contract → router → pool → router → WETH contract) showed
+    // up as four identical "$129.6M whale moves" and quadruple-counted
+    // the flow totals. Group by tx hash, then:
+    //  - if the tx's tokens net out to ~zero per address, it's a swap /
+    //    arb / flash cycle — drop it entirely (no economic transfer);
+    //  - otherwise keep ONE representative leg: a CEX-touching leg if
+    //    any (that's the signal we chart), else the largest leg.
+    const byTx = new Map<string, FoxyWhaleTransfer[]>();
+    for (const leg of legs) {
+      const key = leg.tx_hash || leg.id;
+      const arr = byTx.get(key);
+      if (arr) arr.push(leg);
+      else byTx.set(key, [leg]);
+    }
+
+    const transfers: FoxyWhaleTransfer[] = [];
+    let cexIn = 0;
+    let cexOut = 0;
+    let between = 0;
+    for (const group of byTx.values()) {
+      let pick: FoxyWhaleTransfer;
+      if (group.length === 1) {
+        pick = group[0]!;
+      } else {
+        // Net token movement per address across the tx's legs.
+        const net = new Map<string, number>();
+        let maxLeg = 0;
+        for (const leg of group) {
+          maxLeg = Math.max(maxLeg, leg.unit_value);
+          if (leg.from.address)
+            net.set(leg.from.address, (net.get(leg.from.address) ?? 0) - leg.unit_value);
+          if (leg.to.address)
+            net.set(leg.to.address, (net.get(leg.to.address) ?? 0) + leg.unit_value);
+        }
+        const maxNet = Math.max(0, ...[...net.values()].map(Math.abs));
+        // Everything returned to where it started → cycle, not a transfer.
+        if (maxLeg > 0 && maxNet < maxLeg * 0.15) continue;
+        pick =
+          group.find((l) => l.flow !== 'between') ??
+          group.reduce((a, b) => (b.usd_value > a.usd_value ? b : a));
+      }
+      transfers.push(pick);
+      if (pick.flow === 'cex_in') cexIn += pick.usd_value;
+      else if (pick.flow === 'cex_out') cexOut += pick.usd_value;
+      else between += pick.usd_value;
+    }
+    transfers.sort((a, b) => b.usd_value - a.usd_value);
+    const capped = transfers.slice(0, limit);
+
     return {
       coin: symbol,
       window_hours: hours,
       min_usd: minUsd,
-      total: Number(json.count ?? transfers.length),
-      transfers,
+      total: capped.length,
+      transfers: capped,
       flows: {
         cex_in_usd: Math.round(cexIn),
         cex_out_usd: Math.round(cexOut),
