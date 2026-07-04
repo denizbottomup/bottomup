@@ -8,14 +8,17 @@ const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE_URL ||
   'https://bottomupapi-production.up.railway.app';
 
+export interface ConfluenceState {
+  data: FoxyConfluence | null;
+  status: 'loading' | 'live' | 'error';
+}
+
 /**
- * "En doğru bölgeler" — multi-timeframe confluence map. Order blocks,
- * unfilled FVGs and EMA20/50/200 from 1W/1D/4H/15m/5m, overlaid with
- * the live depth walls, clustered into scored buy/sell bands. Supply
- * zones render above the price line, demand below — top-down like a
- * chart. Polls ~30s (inputs move on candle scale).
+ * Confluence polling, lifted to board level so the zones panel AND the
+ * live chart's shaded bands read one snapshot. Polls ~30s (inputs move
+ * on candle scale; server caches ~45s).
  */
-export function ZonesPanel({ coin }: { coin: CoinMatch }) {
+export function useConfluence(coin: CoinMatch): ConfluenceState {
   const [data, setData] = useState<FoxyConfluence | null>(null);
   const [status, setStatus] = useState<'loading' | 'live' | 'error'>('loading');
 
@@ -48,6 +51,19 @@ export function ZonesPanel({ coin }: { coin: CoinMatch }) {
       if (timer) clearTimeout(timer);
     };
   }, [coin.symbol]);
+
+  return { data, status };
+}
+
+/**
+ * "En doğru bölgeler" — multi-timeframe confluence map. Order blocks,
+ * unfilled FVGs and EMA20/50/200 from 1W/1D/4H/15m/5m, overlaid with
+ * the live depth walls, clustered into scored buy/sell bands. Supply
+ * zones render above the price line, demand below — top-down like a
+ * chart.
+ */
+export function ZonesPanel({ state }: { state: ConfluenceState }) {
+  const { data, status } = state;
 
   const supply = data
     ? data.zones.filter((z) => z.side === 'supply').sort((a, b) => b.mid - a.mid)

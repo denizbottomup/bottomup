@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import type { CoinMatch } from '@/lib/coin-extract';
 import { LiveChartPanel } from './live-chart';
 import { DepthWallsPanel } from './depth-walls';
-import { ZonesPanel } from './zones-panel';
+import { ZonesPanel, useConfluence } from './zones-panel';
 import type {
   FoxyAnalysis,
   FoxyAssetMarket,
@@ -50,6 +50,8 @@ export function FoxyBoard({
   // One live signal for both the card and the chart's level-lines.
   const liveSignal = useLiveScalpSignal(signal, coin, getIdToken);
   const liveWhales = useLiveWhales(whales, coin, getIdToken);
+  // One confluence snapshot for the zones panel AND the chart's bands.
+  const confluence = useConfluence(coin);
   // The verdict is a snapshot of query time; the scalp signal keeps
   // updating live. Surface both facts so the layering reads as
   // intentional — a timestamp on the verdict, a live short-term chip
@@ -148,7 +150,11 @@ export function FoxyBoard({
 
       <ScalpSignalPanel signal={liveSignal} />
 
-      <LiveChartPanel coin={coin} signal={liveSignal} />
+      <LiveChartPanel
+        coin={coin}
+        signal={liveSignal}
+        zones={confluence.data?.zones ?? null}
+      />
 
       <MetricGrid
         derivatives={derivatives}
@@ -161,7 +167,7 @@ export function FoxyBoard({
         <WhaleFeedPanel live={liveWhales} />
       </div>
 
-      <ZonesPanel coin={coin} />
+      <ZonesPanel state={confluence} />
 
       <DepthWallsPanel coin={coin} />
 

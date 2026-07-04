@@ -8,11 +8,73 @@ import {
   createChart,
   type IChartApi,
   type IPriceLine,
+  type IPrimitivePaneRenderer,
+  type IPrimitivePaneView,
   type ISeriesApi,
+  type ISeriesPrimitive,
+  type SeriesAttachedParameter,
+  type Time,
   type UTCTimestamp,
 } from 'lightweight-charts';
 import type { CoinMatch } from '@/lib/coin-extract';
-import type { FoxyScalpSignal } from './types';
+import type { FoxyScalpSignal, FoxyZone } from './types';
+
+/**
+ * Series primitive that shades the confluence zones as horizontal
+ * bands behind the candles — demand green, supply red. lightweight-
+ * charts has no built-in rectangles, so we draw straight onto the
+ * pane canvas at the series' price coordinates.
+ */
+class ZoneBandsPrimitive implements ISeriesPrimitive<Time> {
+  private zones: FoxyZone[] = [];
+  private param: SeriesAttachedParameter<Time> | null = null;
+
+  attached(param: SeriesAttachedParameter<Time>): void {
+    this.param = param;
+  }
+
+  detached(): void {
+    this.param = null;
+  }
+
+  setZones(zones: FoxyZone[]): void {
+    this.zones = zones;
+    this.param?.requestUpdate();
+  }
+
+  paneViews(): readonly IPrimitivePaneView[] {
+    const param = this.param;
+    const zones = this.zones;
+    const view: IPrimitivePaneView = {
+      zOrder: () => 'bottom',
+      renderer: (): IPrimitivePaneRenderer => ({
+        draw: (target) => {
+          if (!param) return;
+          target.useMediaCoordinateSpace(({ context, mediaSize }) => {
+            for (const z of zones) {
+              const yTop = param.series.priceToCoordinate(z.high);
+              const yBot = param.series.priceToCoordinate(z.low);
+              if (yTop == null || yBot == null) continue;
+              const top = Math.min(yTop, yBot);
+              const h = Math.max(1, Math.abs(yBot - yTop));
+              const demand = z.side === 'demand';
+              context.fillStyle = demand
+                ? 'rgba(16, 185, 129, 0.09)'
+                : 'rgba(244, 63, 94, 0.09)';
+              context.fillRect(0, top, mediaSize.width, h);
+              context.fillStyle = demand
+                ? 'rgba(16, 185, 129, 0.35)'
+                : 'rgba(244, 63, 94, 0.35)';
+              context.fillRect(0, top, mediaSize.width, 1);
+              context.fillRect(0, top + h - 1, mediaSize.width, 1);
+            }
+          });
+        },
+      }),
+    };
+    return [view];
+  }
+}
 
 const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE_URL ||
@@ -44,13 +106,16 @@ const BARS = [
 export function LiveChartPanel({
   coin,
   signal,
+  zones = null,
 }: {
   coin: CoinMatch;
   signal: FoxyScalpSignal | null;
+  zones?: FoxyZone[] | null;
 }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const seriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null);
+  const bandsRef = useRef<ZoneBandsPrimitive | null>(null);
   const priceLinesRef = useRef<IPriceLine[]>([]);
   const lastTsRef = useRef<number>(0);
   const [bar, setBar] = useState<string>('5m');
@@ -92,15 +157,33 @@ export function LiveChartPanel({
       wickUpColor: '#34d399',
       wickDownColor: '#fb7185',
     });
+    const bands = new ZoneBandsPrimitive();
+    series.attachPrimitive(bands);
     chartRef.current = chart;
     seriesRef.current = series;
+    bandsRef.current = bands;
     return () => {
       priceLinesRef.current = [];
       seriesRef.current = null;
       chartRef.current = null;
+      bandsRef.current = null;
       chart.remove();
     };
   }, []);
+
+  // Shade the confluence zones behind the candles. Cap at the 2
+  // strongest per side — more reads as wallpaper, not information.
+  useEffect(() => {
+    const bands = bandsRef.current;
+    if (!bands) return;
+    const zs = zones ?? [];
+    const top = (side: 'demand' | 'supply') =>
+      zs
+        .filter((z) => z.side === side)
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 2);
+    bands.setZones([...top('demand'), ...top('supply')]);
+  }, [zones]);
 
   // Feed candles: full setData on coin/bar change, then live ticks via
   // update() so the viewer's zoom/scroll isn't reset every poll.
