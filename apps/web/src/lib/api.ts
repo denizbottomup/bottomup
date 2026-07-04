@@ -25,8 +25,14 @@ export async function api<T = unknown>(path: string, opts: ApiOpts = {}): Promis
   if (!anonymous) {
     const user = getFirebaseAuth().currentUser;
     if (user) {
-      const token = await user.getIdToken();
-      mergedHeaders.authorization = `Bearer ${token}`;
+      // Bounded — Firebase's silent token refresh can stall in
+      // long-lived tabs, and an unbounded await here hangs the caller
+      // with no request ever leaving the browser.
+      const token = await Promise.race([
+        user.getIdToken(),
+        new Promise<null>((resolve) => setTimeout(() => resolve(null), 8000)),
+      ]).catch(() => null);
+      if (token) mergedHeaders.authorization = `Bearer ${token}`;
     }
   }
 

@@ -30,7 +30,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const value: AuthState = {
     user,
     loading,
-    getIdToken: async () => (user ? user.getIdToken() : null),
+    getIdToken: async () => {
+      if (!user) return null;
+      try {
+        // Firebase's token refresh can stall silently in long-lived
+        // tabs — an unbounded await here froze the Foxy submit with no
+        // network request ever leaving the browser. Bound it; callers
+        // treat null as "session broken, reload the page".
+        return await Promise.race([
+          user.getIdToken(),
+          new Promise<null>((resolve) => setTimeout(() => resolve(null), 8000)),
+        ]);
+      } catch {
+        return null;
+      }
+    },
     signOut: async () => {
       await fbSignOut(getFirebaseAuth());
     },
