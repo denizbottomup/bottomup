@@ -1161,26 +1161,30 @@ export class FoxyService implements OnModuleInit {
     // setups frozen at $81-83K targets while BTC was actually at $77K).
     // Each call independently degrades to null/empty; we still send
     // the prompt to Claude even if some sources are down.
-    const [setups, derivatives, whales, market, orderbook, signal] = await Promise.all([
-      coinNorm
-        ? this.setupsByCoin(coinNorm).catch(() => null)
-        : Promise.resolve(null),
-      coinNorm
-        ? this.derivativesByCoin(coinNorm).catch(() => null)
-        : Promise.resolve(null),
-      coinNorm
-        ? this.whalesByCoin(coinNorm).catch(() => null)
-        : Promise.resolve(null),
-      coinNorm
-        ? this.fetchMarket24h(`${coinNorm}USDT`).catch(() => null)
-        : Promise.resolve(null),
-      coinNorm
-        ? this.compoundOrderBook(coinNorm).catch(() => null)
-        : Promise.resolve(null),
-      coinNorm
-        ? this.scalpSignal(coinNorm).catch(() => null)
-        : Promise.resolve(null),
-    ]);
+    const [setups, derivatives, whales, market, orderbook, signal, zones] =
+      await Promise.all([
+        coinNorm
+          ? this.setupsByCoin(coinNorm).catch(() => null)
+          : Promise.resolve(null),
+        coinNorm
+          ? this.derivativesByCoin(coinNorm).catch(() => null)
+          : Promise.resolve(null),
+        coinNorm
+          ? this.whalesByCoin(coinNorm).catch(() => null)
+          : Promise.resolve(null),
+        coinNorm
+          ? this.fetchMarket24h(`${coinNorm}USDT`).catch(() => null)
+          : Promise.resolve(null),
+        coinNorm
+          ? this.compoundOrderBook(coinNorm).catch(() => null)
+          : Promise.resolve(null),
+        coinNorm
+          ? this.scalpSignal(coinNorm).catch(() => null)
+          : Promise.resolve(null),
+        coinNorm
+          ? this.confluenceZones(coinNorm).catch(() => null)
+          : Promise.resolve(null),
+      ]);
 
     const analysis = this.client
       ? await this.askClaudeForVerdict(
@@ -1191,6 +1195,7 @@ export class FoxyService implements OnModuleInit {
           derivatives,
           whales,
           signal,
+          zones,
         )
       : foxyOfflineAnalysis();
 
@@ -1437,7 +1442,7 @@ export class FoxyService implements OnModuleInit {
         meta,
       };
     }
-    const targets: FoxyScalpTarget[] = [1, 1.6, 2.6].map((m) => {
+    let targets: FoxyScalpTarget[] = [1, 1.6, 2.6].map((m) => {
       const tp = long ? entry + risk * m : entry - risk * m;
       return {
         price: roundPrice(tp, price),
@@ -1445,6 +1450,52 @@ export class FoxyService implements OnModuleInit {
         pct: Math.round(((tp - entry) / entry) * 10000) / 100,
       };
     });
+
+    // Zone-aware targets: if a strong opposing confluence zone sits in
+    // the trade's path, price tends to stall there — asking for a TP
+    // beyond it is wishful. Clip extended targets to just in front of
+    // the zone edge (never below ~1R, so TP1's economics stay intact).
+    // confluenceZones is cached 45s, so this poll stays cheap.
+    const zonesData = await this.confluenceZones(coin).catch(() => null);
+    if (zonesData) {
+      const opposing = zonesData.zones
+        .filter((z) =>
+          long ? z.side === 'supply' && z.low > entry : z.side === 'demand' && z.high < entry,
+        )
+        .sort((a, b) => (long ? a.low - b.low : b.high - a.high))[0];
+      if (opposing) {
+        const edge = long ? opposing.low * 0.9995 : opposing.high * 1.0005;
+        const edgeFarEnough = long ? edge >= entry + risk : edge <= entry - risk;
+        let clipped = false;
+        if (edgeFarEnough) {
+          for (const t of targets) {
+            const beyond = long ? t.price > edge : t.price < edge;
+            if (t.r > 1 && beyond) {
+              t.price = roundPrice(edge, price);
+              t.r = Math.round((Math.abs(t.price - entry) / risk) * 10) / 10;
+              t.pct = Math.round(((t.price - entry) / entry) * 10000) / 100;
+              clipped = true;
+            }
+          }
+        }
+        if (clipped) {
+          // Collapsed duplicates (TP2 and TP3 both hitting the edge)
+          // render as one level.
+          const seen = new Set<number>();
+          targets = targets.filter((t) => {
+            if (seen.has(t.price)) return false;
+            seen.add(t.price);
+            return true;
+          });
+          reasons.push(
+            `${long ? 'Üstte güçlü satış' : 'Altta güçlü alım'} bölgesi var (${fmtNum(
+              long ? opposing.low : opposing.high,
+              price,
+            )}) — hedefler bölgenin önüne çekildi`,
+          );
+        }
+      }
+    }
     const rr = targets.length ? targets[targets.length - 1]!.r : null;
     const confidence = Math.min(92, 45 + Math.round(Math.abs(score) * 11));
     const dirTr = long ? 'LONG (al)' : 'SHORT (sat)';
@@ -1462,7 +1513,8 @@ export class FoxyService implements OnModuleInit {
       rr,
       confidence,
       headline: `${coin} ${dirTr} · giriş ${fmtNum(entry, price)} · stop ${fmtNum(stop, price)} · ilk hedef ${fmtNum(targets[0]!.price, price)}`,
-      reasons: reasons.slice(0, 4),
+      // 5, not 4 — the zone-clip note (pushed last) must survive the cap.
+      reasons: reasons.slice(0, 5),
       invalidation: long
         ? `Fiyat ${fmtNum(stop, price)} altına 5dk kapanış yaparsa setup geçersiz — çık`
         : `Fiyat ${fmtNum(stop, price)} üstüne 5dk kapanış yaparsa setup geçersiz — çık`,
@@ -2238,6 +2290,7 @@ export class FoxyService implements OnModuleInit {
     derivatives: FoxyDerivatives | null,
     whales: FoxyWhales | null,
     signal: FoxyScalpSignal | null,
+    zones: FoxyConfluence | null,
   ): Promise<FoxyAnalysis> {
     if (!this.client) return foxyOfflineAnalysis();
 
@@ -2281,6 +2334,19 @@ export class FoxyService implements OnModuleInit {
               reasons: signal.reasons,
               meta: signal.meta,
             }
+          : null,
+        // Foxy's multi-timeframe confluence map (OB + FVG + EMA +
+        // walls). When the verdict suggests a level to enter or wait
+        // for, it must reference THESE bands — not an invented number.
+        confluence_zones: zones
+          ? zones.zones.map((z) => ({
+              side: z.side,
+              low: z.low,
+              high: z.high,
+              score: z.score,
+              dist_pct: z.dist_pct,
+              evidence: z.factors.map((f) => f.detail),
+            }))
           : null,
         // Community sentiment from BottomUp traders. Each entry carries
         // its age so a setup opened weeks ago (with price targets that
@@ -3121,6 +3187,13 @@ const FOXY_QUERY_SYSTEM_PROMPT = [
   '  5. foxy_scalp_signal: Foxy\'nin KENDİ deterministik 5-15 dakikalık scalp',
   '     sinyali (trend + momentum + defter baskısından hesaplanır). Kullanıcı bunu',
   '     senin verdiğin kararın HEMEN ALTINDA ayrı bir kart olarak görür.',
+  '  6. confluence_zones: Foxy\'nin çoklu zaman dilimi teknik haritası — emir',
+  '     blokları, doldurulmamış fiyat boşlukları, EMA 20/50/200 ve defterdeki',
+  '     duvarların çakıştığı puanlanmış alım/satım bantları (kullanıcı bunları',
+  '     board\'da "En doğru bölgeler" paneli olarak görür). SEVİYE KURALI:',
+  '     kullanıcıya girilecek/beklenecek bir fiyat önerirken BU bantlardan',
+  '     birini referans al ("geri çekilme gelirse $X–$Y bandı mantıklı" gibi) —',
+  '     kafadan yuvarlak sayı uydurma. Skoru yüksek ve fiyata yakın bant önce.',
   '',
   'KATMANLAMA KURALI (çok önemli): Senin verdict\'in POZİSYON görüşüdür (saatler/',
   'günler); foxy_scalp_signal ise 5-15 dakikalık momentum. İkisi farklı ufuklar —',
