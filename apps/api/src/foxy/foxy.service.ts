@@ -1186,6 +1186,9 @@ export class FoxyService implements OnModuleInit {
           : Promise.resolve(null),
       ]);
 
+    // AI failure must not take the board down — every other panel is
+    // live data the user can trade on. Degrade to the offline analysis
+    // and log why.
     const analysis = this.client
       ? await this.askClaudeForVerdict(
           prompt,
@@ -1196,7 +1199,13 @@ export class FoxyService implements OnModuleInit {
           whales,
           signal,
           zones,
-        )
+        ).catch((err) => {
+          this.log.warn(
+            { err: (err as Error).message, coin: coinNorm },
+            'foxy verdict failed — serving offline analysis',
+          );
+          return foxyOfflineAnalysis();
+        })
       : foxyOfflineAnalysis();
 
     // Log the query last — only successful, non-rate-limited calls
@@ -2395,27 +2404,35 @@ export class FoxyService implements OnModuleInit {
     // classifiers can decline with stop_reason "refusal", so we declare
     // a server-side fallback to Opus 4.8 — a declined request is re-run
     // on the fallback model inside the same call.
-    const res = await this.client.beta.messages.create({
-      model: 'claude-fable-5',
-      max_tokens: 8000,
-      output_config: { effort: 'medium' },
-      betas: ['server-side-fallback-2026-06-01'],
-      fallbacks: [{ model: 'claude-opus-4-8' }],
-      system: FOXY_QUERY_SYSTEM_PROMPT,
-      messages: [
-        {
-          role: 'user',
-          content: [
-            `Kullanıcı sorusu: ${prompt}`,
-            '',
-            'Bağlam (Foxy scalp sinyali, BottomUp setupları, türev verileri, balina hareketleri):',
-            context,
-            '',
-            'Yukarıdaki bağlamı kullanarak istenen JSON formatında yanıt ver.',
-          ].join('\n'),
-        },
-      ],
-    });
+    const res = await this.client.beta.messages.create(
+      {
+        model: 'claude-fable-5',
+        max_tokens: 8000,
+        output_config: { effort: 'medium' },
+        betas: ['server-side-fallback-2026-06-01'],
+        fallbacks: [{ model: 'claude-opus-4-8' }],
+        system: FOXY_QUERY_SYSTEM_PROMPT,
+        messages: [
+          {
+            role: 'user',
+            content: [
+              `Kullanıcı sorusu: ${prompt}`,
+              '',
+              'Bağlam (Foxy scalp sinyali, BottomUp setupları, türev verileri, balina hareketleri):',
+              context,
+              '',
+              'Yukarıdaki bağlamı kullanarak istenen JSON formatında yanıt ver.',
+            ].join('\n'),
+          },
+        ],
+      },
+      // Hard latency budget: without it the SDK waits up to 10 min per
+      // attempt with 2 retries — an Anthropic slowdown froze the whole
+      // query with the user staring at a spinner. One attempt, 60s;
+      // the caller degrades to the offline analysis on failure and the
+      // board still renders every live panel.
+      { timeout: 60_000, maxRetries: 1 },
+    );
 
     // Whole chain refused (Fable AND the Opus fallback) — degrade to the
     // offline analysis instead of reading an empty content array.
