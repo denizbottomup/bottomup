@@ -2157,79 +2157,8 @@ export class FoxyService implements OnModuleInit {
     await Promise.all(
       universe.map(async (coin) => {
         try {
-          const candles = await this.fetchOkxCandles(coin, '5m', 60);
-          if (candles.length < 45) return;
-          const closes = candles.map((c) => c.close);
-          const price = closes[closes.length - 1]!;
-          const ago15 = closes[closes.length - 4] ?? price;
-          const change15 =
-            ago15 > 0 ? Math.round(((price - ago15) / ago15) * 10000) / 100 : 0;
-
-          // Candle-only scalp direction at bar index i (inclusive).
-          const dirAt = (i: number): 'LONG' | 'SHORT' | 'NONE' => {
-            const cs = closes.slice(0, i + 1);
-            const e9 = computeEma(cs, 9);
-            const e21 = computeEma(cs, 21);
-            const r = computeRsi(cs, 14);
-            if (e9 == null || e21 == null || r == null) return 'NONE';
-            const px = cs[cs.length - 1]!;
-            let score = 0;
-            if (e9 > e21 && px > e9) score += 2;
-            else if (e9 < e21 && px < e9) score -= 2;
-            if (r >= 55 && r < 72) score += 1;
-            else if (r <= 45 && r > 28) score -= 1;
-            else if (r >= 72) score -= 0.5;
-            else if (r <= 28) score += 0.5;
-            return score >= 2 ? 'LONG' : score <= -2 ? 'SHORT' : 'NONE';
-          };
-
-          const last = candles.length - 1;
-          const now = dirAt(last);
-
-          // Breakout: last close beyond the previous 20 bars' range on
-          // ≥2× average volume — the "it's happening NOW" case.
-          const prev20 = candles.slice(last - 20, last);
-          const hi20 = Math.max(...prev20.map((c) => c.high));
-          const lo20 = Math.min(...prev20.map((c) => c.low));
-          const avgVol =
-            prev20.reduce((a, c) => a + c.vol, 0) / Math.max(1, prev20.length);
-          const volMult =
-            avgVol > 0
-              ? Math.round((candles[last]!.vol / avgVol) * 10) / 10
-              : null;
-          if (volMult != null && volMult >= 2) {
-            if (price > hi20) {
-              items.push({
-                coin, price, direction: 'LONG', kind: 'breakout',
-                bars_ago: 0, change_15m_pct: change15, vol_mult: volMult,
-              });
-              return;
-            }
-            if (price < lo20) {
-              items.push({
-                coin, price, direction: 'SHORT', kind: 'breakout',
-                bars_ago: 0, change_15m_pct: change15, vol_mult: volMult,
-              });
-              return;
-            }
-          }
-
-          // Fresh flip: the signal turned LONG/SHORT within the last 3
-          // closed bars (≤15 minutes ago — the ETH window).
-          if (now === 'NONE') return;
-          let barsAgo = -1;
-          for (let back = 0; back <= 3; back++) {
-            if (dirAt(last - back) !== now) {
-              barsAgo = back - 1;
-              break;
-            }
-          }
-          if (barsAgo >= 0) {
-            items.push({
-              coin, price, direction: now, kind: 'flip',
-              bars_ago: barsAgo, change_15m_pct: change15, vol_mult: null,
-            });
-          }
+          const item = await this.scanRadarCoin(coin);
+          if (item) items.push(item);
         } catch {
           // one coin failing must not empty the radar
         }
@@ -2249,6 +2178,85 @@ export class FoxyService implements OnModuleInit {
     };
     radarCache = { at: Date.now(), value };
     return value;
+  }
+
+  /**
+   * Single-coin radar scan — the per-coin body of `radar()`, exposed
+   * so the alert loop (RadarAlertsService) can also scan followed
+   * coins that fell out of the top-volume universe. Returns null when
+   * the coin has no fresh flip/breakout right now.
+   */
+  async scanRadarCoin(coin: string): Promise<FoxyRadarItem | null> {
+    const candles = await this.fetchOkxCandles(coin, '5m', 60);
+    if (candles.length < 45) return null;
+    const closes = candles.map((c) => c.close);
+    const price = closes[closes.length - 1]!;
+    const ago15 = closes[closes.length - 4] ?? price;
+    const change15 =
+      ago15 > 0 ? Math.round(((price - ago15) / ago15) * 10000) / 100 : 0;
+
+    // Candle-only scalp direction at bar index i (inclusive).
+    const dirAt = (i: number): 'LONG' | 'SHORT' | 'NONE' => {
+      const cs = closes.slice(0, i + 1);
+      const e9 = computeEma(cs, 9);
+      const e21 = computeEma(cs, 21);
+      const r = computeRsi(cs, 14);
+      if (e9 == null || e21 == null || r == null) return 'NONE';
+      const px = cs[cs.length - 1]!;
+      let score = 0;
+      if (e9 > e21 && px > e9) score += 2;
+      else if (e9 < e21 && px < e9) score -= 2;
+      if (r >= 55 && r < 72) score += 1;
+      else if (r <= 45 && r > 28) score -= 1;
+      else if (r >= 72) score -= 0.5;
+      else if (r <= 28) score += 0.5;
+      return score >= 2 ? 'LONG' : score <= -2 ? 'SHORT' : 'NONE';
+    };
+
+    const last = candles.length - 1;
+    const now = dirAt(last);
+
+    // Breakout: last close beyond the previous 20 bars' range on
+    // ≥2× average volume — the "it's happening NOW" case.
+    const prev20 = candles.slice(last - 20, last);
+    const hi20 = Math.max(...prev20.map((c) => c.high));
+    const lo20 = Math.min(...prev20.map((c) => c.low));
+    const avgVol =
+      prev20.reduce((a, c) => a + c.vol, 0) / Math.max(1, prev20.length);
+    const volMult =
+      avgVol > 0 ? Math.round((candles[last]!.vol / avgVol) * 10) / 10 : null;
+    if (volMult != null && volMult >= 2) {
+      if (price > hi20) {
+        return {
+          coin, price, direction: 'LONG', kind: 'breakout',
+          bars_ago: 0, change_15m_pct: change15, vol_mult: volMult,
+        };
+      }
+      if (price < lo20) {
+        return {
+          coin, price, direction: 'SHORT', kind: 'breakout',
+          bars_ago: 0, change_15m_pct: change15, vol_mult: volMult,
+        };
+      }
+    }
+
+    // Fresh flip: the signal turned LONG/SHORT within the last 3
+    // closed bars (≤15 minutes ago — the ETH window).
+    if (now === 'NONE') return null;
+    let barsAgo = -1;
+    for (let back = 0; back <= 3; back++) {
+      if (dirAt(last - back) !== now) {
+        barsAgo = back - 1;
+        break;
+      }
+    }
+    if (barsAgo >= 0) {
+      return {
+        coin, price, direction: now, kind: 'flip',
+        bars_ago: barsAgo, change_15m_pct: change15, vol_mult: null,
+      };
+    }
+    return null;
   }
 
   /** Top-volume USDT spot coins on OKX (stables excluded), cached 10m. */
