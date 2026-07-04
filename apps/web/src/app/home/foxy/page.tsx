@@ -5,6 +5,7 @@ import { extractCoin, coinFromSymbol, type CoinMatch } from '@/lib/coin-extract'
 import { useAuth } from '@/lib/auth-context';
 import { FoxyPromptPanel } from '@/components/foxy/prompt-panel';
 import { FoxyBoard } from '@/components/foxy/board';
+import { RadarStrip } from '@/components/foxy/radar-strip';
 import {
   type FoxyAnalysis,
   type FoxyAssetMarket,
@@ -165,6 +166,19 @@ export default function FoxyPage() {
     void runQuery(text, match);
   }
 
+  function handleRadarPick(coinSymbol: string) {
+    if (loading) return;
+    const text = `${coinSymbol} analiz`;
+    const match = extractCoin(text);
+    setError(null);
+    setPrompt('');
+    setCoin(match);
+    setAnalysis(null);
+    setBoard(null);
+    setActiveHistoryId(null);
+    void runQuery(text, match);
+  }
+
   function handlePickHistory(entry: FoxyHistoryEntry) {
     // Re-run the same prompt — cheaper than persisting the full payload
     // and keeps history-from-history coherent with backend state.
@@ -209,27 +223,30 @@ export default function FoxyPage() {
             <VerdictSkeleton />
           </div>
         ) : (
-          <EmptyState />
+          <EmptyState onRadarPick={handleRadarPick} />
         )}
       </main>
     </div>
   );
 }
 
-function EmptyState() {
+function EmptyState({ onRadarPick }: { onRadarPick: (coin: string) => void }) {
   return (
-    <div className="mx-auto flex h-full max-w-md flex-col items-center justify-center text-center">
-      <div className="text-[11px] font-bold uppercase tracking-[0.12em] text-slate-400">
-        Foxy AI
+    <div className="mx-auto flex h-full max-w-[680px] flex-col items-center justify-center gap-10">
+      <div className="max-w-md text-center">
+        <div className="text-[11px] font-bold uppercase tracking-[0.12em] text-slate-400">
+          Foxy AI
+        </div>
+        <h1 className="mt-3 text-3xl font-extrabold tracking-tight text-slate-900">
+          Bir coin sor.
+        </h1>
+        <p className="mt-2 text-sm font-medium text-slate-500">
+          Sol panelden istediğin coin&apos;i sor — Foxy net bir AL / SAT / BEKLE
+          çağrısı verir, altında fiyat, türev verisi, canlı tahta, cüzdan
+          hareketleri ve trader pozisyonlarını gösterir.
+        </p>
       </div>
-      <h1 className="mt-3 text-3xl font-extrabold tracking-tight text-slate-900">
-        Bir coin sor.
-      </h1>
-      <p className="mt-2 text-sm font-medium text-slate-500">
-        Sol panelden istediğin coin&apos;i sor — Foxy net bir AL / SAT / BEKLE
-        çağrısı verir, altında fiyat, türev verisi, canlı tahta, cüzdan
-        hareketleri ve trader pozisyonlarını gösterir.
-      </p>
+      <RadarStrip onPick={onRadarPick} />
     </div>
   );
 }

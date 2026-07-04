@@ -262,3 +262,21 @@ export interface FoxyConfluence {
   trend?: FoxyTfTrend[];
   ts: number;
 }
+
+/** One coin the opportunity radar flagged. */
+export interface FoxyRadarItem {
+  coin: string;
+  price: number;
+  direction: 'LONG' | 'SHORT';
+  kind: 'flip' | 'breakout';
+  bars_ago: number;
+  change_15m_pct: number;
+  vol_mult: number | null;
+}
+
+/** Opportunity radar payload. */
+export interface FoxyRadar {
+  items: FoxyRadarItem[];
+  universe: string[];
+  ts: number;
+}
