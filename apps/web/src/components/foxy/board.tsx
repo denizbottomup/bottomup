@@ -606,12 +606,14 @@ function ScalpSignalPanel({ signal }: { signal: FoxyScalpSignal | null }) {
         </ul>
       ) : null}
 
-      <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 rounded-xl bg-slate-50 px-4 py-3 text-[12.5px] font-medium leading-snug text-slate-600">
-        <span>
-          <span className="font-bold text-slate-900">Geçersiz olur:</span>{' '}
-          {signal.invalidation}
-        </span>
-      </div>
+      {signal.invalidation ? (
+        <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 rounded-xl bg-slate-50 px-4 py-3 text-[12.5px] font-medium leading-snug text-slate-600">
+          <span>
+            <span className="font-bold text-slate-900">Geçersiz olur:</span>{' '}
+            {signal.invalidation}
+          </span>
+        </div>
+      ) : null}
 
       <p className="mt-2.5 text-[10.5px] font-medium text-slate-300">
         Foxy&apos;nin ürettiği algoritmik seviyeler (OKX 5dk mumları) · yatırım tavsiyesi değil
