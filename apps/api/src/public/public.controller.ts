@@ -136,6 +136,17 @@ export class PublicController {
   }
 
   /**
+   * Opportunity radar — fresh 5m signal flips and volume breakouts
+   * across the highest-volume OKX coins, scanned server-side so users
+   * see chances WITHOUT having to query the right coin at the right
+   * minute. Cached ~60s.
+   */
+  @Get('/radar')
+  radar(): ReturnType<FoxyService['radar']> {
+    return this.foxy.radar();
+  }
+
+  /**
    * Public analyst directory — name, image, pre-aggregated stats and
    * the trader's referral code. Powers `bottomup.app/analyst` (and
    * `bupcore.ai/analyst` while the page is in lab). All fields are
