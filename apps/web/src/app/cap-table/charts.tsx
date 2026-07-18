@@ -66,7 +66,7 @@ export function OwnershipChart({ segments }: { segments: OwnershipSegment[] }) {
             onMouseLeave={() => setHover(null)}
           >
             {s.share >= 0.08 ? (
-              <span className="pointer-events-none select-none text-[10px] font-mono font-bold text-black/70">
+              <span className="pointer-events-none hidden select-none text-[10px] font-mono font-bold text-black/70 md:inline">
                 {pctLabel(s.share)}
               </span>
             ) : null}

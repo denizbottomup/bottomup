@@ -172,7 +172,9 @@ export default function CapTablePage() {
             hint={`${usd(investorTotalUsd)} across ${sortedTxs.length} checks`}
           >
             <div className="px-5 py-4">
-              <CapitalRaisedChart points={raisePoints} />
+              <div className="min-w-[560px]">
+                <CapitalRaisedChart points={raisePoints} />
+              </div>
             </div>
           </Card>
 
@@ -340,7 +342,7 @@ export default function CapTablePage() {
           </Card>
 
           <Card title="Transaction history" hint={`${sortedTxs.length} checks`}>
-            <table className="w-full text-sm">
+            <table className="w-full whitespace-nowrap text-sm">
               <thead>
                 <tr className="text-left text-[10px] uppercase tracking-wider text-zinc-500">
                   <th className="px-5 py-2 font-medium">Date</th>
@@ -427,7 +429,7 @@ export default function CapTablePage() {
             title="Investor exit outcomes"
             hint="Value of each current stake if sold in that round, after cumulative dilution"
           >
-            <table className="w-full text-sm">
+            <table className="w-full whitespace-nowrap text-sm">
               <thead>
                 <tr className="text-left text-[10px] uppercase tracking-wider text-zinc-500">
                   <th className="px-5 py-2 font-medium">Investor</th>
@@ -514,6 +516,7 @@ export default function CapTablePage() {
 
           <Card title="Quarterly revenue" hint="$k · subscription + trading commissions">
             <div className="px-5 py-4">
+              <div className="min-w-[560px]">
               <StackedColumnsChart
                 columns={quarterlyActuals.map((q) => ({
                   label: q.quarter,
@@ -525,11 +528,12 @@ export default function CapTablePage() {
                   { name: 'Trading commissions', color: '#7C5CFF' },
                 ]}
               />
+              </div>
             </div>
           </Card>
 
           <Card title="Quarterly KPIs">
-            <table className="w-full text-sm">
+            <table className="w-full whitespace-nowrap text-sm">
               <thead>
                 <tr className="text-left text-[10px] uppercase tracking-wider text-zinc-500">
                   <th className="px-5 py-2 font-medium">Metric</th>
@@ -608,6 +612,7 @@ export default function CapTablePage() {
 
           <Card title="Revenue & EBITDA" hint="$k · FY24A–FY31B">
             <div className="px-5 py-4">
+              <div className="min-w-[560px]">
               <RevenueEbitdaChart
                 points={annualPnl.map((y) => ({
                   label: y.year,
@@ -616,6 +621,7 @@ export default function CapTablePage() {
                   ebitda: y.ebitda,
                 }))}
               />
+              </div>
             </div>
           </Card>
 
@@ -663,6 +669,7 @@ export default function CapTablePage() {
 
           <Card title="Revenue mix" hint="Share of total revenue per year">
             <div className="px-5 py-4">
+              <div className="min-w-[560px]">
               <StackedColumnsChart
                 percentMode
                 columns={annualPnl.map((y) => ({
@@ -676,11 +683,13 @@ export default function CapTablePage() {
                   { name: 'In-app purchases', color: '#1FA576' },
                 ]}
               />
+              </div>
             </div>
           </Card>
 
           <Card title="User base" hint="Total registered users, year end">
             <div className="px-5 py-4">
+              <div className="min-w-[560px]">
               <UsersChart
                 points={annualPnl.map((y) => ({
                   label: y.year,
@@ -688,6 +697,7 @@ export default function CapTablePage() {
                   kind: y.kind,
                 }))}
               />
+              </div>
             </div>
           </Card>
 
