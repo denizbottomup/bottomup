@@ -53,10 +53,10 @@ function NumberField({
   return (
     <label className="block">
       <div className="flex items-baseline justify-between gap-2">
-        <span className="text-[10px] uppercase tracking-wider text-fg-dim">
+        <span className="text-[10px] uppercase tracking-wider text-zinc-500">
           {label}
         </span>
-        {hint ? <span className="text-[10px] text-fg-dim">{hint}</span> : null}
+        {hint ? <span className="text-[10px] text-zinc-500">{hint}</span> : null}
       </div>
       <div className="mt-1 flex items-center gap-3">
         <input
@@ -66,7 +66,7 @@ function NumberField({
           step={step}
           value={Math.min(max, Math.max(min, value))}
           onChange={(e) => onChange(Number(e.target.value))}
-          className="h-1 flex-1 cursor-pointer appearance-none rounded-full bg-white/10 accent-brand"
+          className="h-1 flex-1 cursor-pointer appearance-none rounded-full bg-zinc-200 accent-brand"
         />
         <input
           type="number"
@@ -74,10 +74,10 @@ function NumberField({
           step={step}
           value={value}
           onChange={(e) => onChange(Number(e.target.value) || 0)}
-          className="w-32 rounded-lg border border-border bg-bg px-2 py-1.5 text-right font-mono text-sm text-fg outline-none focus:border-brand/60"
+          className="w-32 rounded-lg border border-zinc-200 bg-zinc-50 px-2 py-1.5 text-right font-mono text-sm text-zinc-900 outline-none focus:border-brand/60"
         />
       </div>
-      <div className="mt-1 text-right font-mono text-xs text-fg-muted">
+      <div className="mt-1 text-right font-mono text-xs text-zinc-600">
         {fmtUsd(value)}
       </div>
     </label>
@@ -144,8 +144,8 @@ export function InvestorSimulator() {
               onClick={() => setExit(p.valuation)}
               className={`rounded-full border px-3 py-1 text-[11px] transition ${
                 exit === p.valuation
-                  ? 'border-brand/60 bg-brand/10 text-brand'
-                  : 'border-white/10 text-fg-muted hover:border-white/25 hover:text-fg'
+                  ? 'border-brand-dark/60 bg-brand/10 text-brand-dark'
+                  : 'border-zinc-300 text-zinc-600 hover:border-zinc-400 hover:text-zinc-900'
               }`}
             >
               {p.label} · {fmtUsd(p.valuation)}
@@ -154,54 +154,54 @@ export function InvestorSimulator() {
         </div>
       </div>
 
-      <div className="flex flex-col justify-center gap-3 rounded-xl border border-border bg-bg p-4">
+      <div className="flex flex-col justify-center gap-3 rounded-xl border border-zinc-200 bg-zinc-50 p-4">
         {r ? (
           <>
             <div className="flex items-baseline justify-between">
-              <span className="text-sm text-fg-muted">Ownership at entry</span>
+              <span className="text-sm text-zinc-600">Ownership at entry</span>
               <span className="font-mono font-bold">
                 {(r.stake * 100).toFixed(3)}%
               </span>
             </div>
             <div className="flex items-baseline justify-between">
-              <span className="text-sm text-fg-muted">
+              <span className="text-sm text-zinc-600">
                 Value at exit (no dilution)
               </span>
               <span className="font-mono font-bold">
                 {fmtUsd(r.gross)}{' '}
-                <span className="text-fg-dim">
+                <span className="text-zinc-500">
                   ({r.grossMultiple.toFixed(1)}×)
                 </span>
               </span>
             </div>
             <div className="flex items-baseline justify-between">
-              <span className="text-sm text-fg-muted">
+              <span className="text-sm text-zinc-600">
                 After planned rounds dilute you to{' '}
                 {(r.stake * r.retention * 100).toFixed(3)}%
               </span>
-              <span className="font-mono font-bold text-brand">
+              <span className="font-mono font-bold text-brand-dark">
                 {fmtUsd(r.diluted)}{' '}
-                <span className="text-fg-dim">
+                <span className="text-zinc-500">
                   ({r.dilutedMultiple.toFixed(1)}×)
                 </span>
               </span>
             </div>
-            <div className="mt-1 border-t border-border pt-3 text-sm leading-relaxed text-fg-muted">
+            <div className="mt-1 border-t border-zinc-200 pt-3 text-sm leading-relaxed text-zinc-600">
               {fmtUsd(investment)} at a {fmtUsd(valuation)} post-money buys{' '}
-              <span className="font-mono text-fg">
+              <span className="font-mono text-zinc-900">
                 {(r.stake * 100).toFixed(3)}%
               </span>
               . If Bottomup exits at {fmtUsd(exit)}, that stake returns{' '}
-              <span className="font-mono text-fg">{fmtUsd(r.diluted)}</span>{' '}
+              <span className="font-mono text-zinc-900">{fmtUsd(r.diluted)}</span>{' '}
               after the planned follow-on rounds — a profit of{' '}
-              <span className="font-mono text-fg">
+              <span className="font-mono text-zinc-900">
                 {fmtUsd(r.dilutedProfit)}
               </span>{' '}
               ({r.dilutedMultiple.toFixed(1)}× your money).
             </div>
           </>
         ) : (
-          <div className="text-sm text-fg-muted">
+          <div className="text-sm text-zinc-600">
             Enter positive amounts to see the outcome.
           </div>
         )}

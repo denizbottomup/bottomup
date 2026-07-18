@@ -4,7 +4,7 @@ import { useMemo, useRef, useState } from 'react';
 
 /**
  * Cap table grafikleri. Palet dataviz validator'dan geçirildi
- * (dark yüzey #14171B): kurucular #E56B1A, ESOP #7C5CFF, yatırımcılar
+ * (açık tema, yüzey #FFFFFF — validator iki modda da geçti): kurucular #E56B1A, ESOP #7C5CFF, yatırımcılar
  * #1FA576 kategorik üçlü; "unallocated" kasıtlı vurgusuz gri (#64748B)
  * — kimlik sınıfı değil, boşluk. Segment araları 2px, doğrudan etiket
  * + legend + tooltip ikincil kodlama olarak var.
@@ -16,8 +16,8 @@ const COLORS = {
   esop: '#7C5CFF',
   investor: '#1FA576',
   unallocated: '#64748B',
-  line: '#FF8A4C',
-  grid: '#23272D',
+  line: '#E56B1A',
+  grid: '#E5E7EB',
   round1: '#E56B1A',
   round2: '#7C5CFF',
 };
@@ -71,15 +71,15 @@ export function OwnershipChart({ segments }: { segments: OwnershipSegment[] }) {
               </span>
             ) : null}
             {hover === i ? (
-              <div className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-2 -translate-x-1/2 whitespace-nowrap rounded-lg border border-border bg-bg-elev px-3 py-1.5 text-xs shadow-lg">
-                <span className="text-fg">{s.label}</span>{' '}
-                <span className="font-mono text-fg-muted">{pctLabel(s.share)}</span>
+              <div className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-2 -translate-x-1/2 whitespace-nowrap rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs shadow-lg">
+                <span className="text-zinc-900">{s.label}</span>{' '}
+                <span className="font-mono text-zinc-600">{pctLabel(s.share)}</span>
               </div>
             ) : null}
           </div>
         ))}
       </div>
-      <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5 text-[11px] text-fg-muted">
+      <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5 text-[11px] text-zinc-600">
         {segments.map((s, i) => (
           <div
             key={s.label}
@@ -193,7 +193,7 @@ export function CapitalRaisedChart({ points }: { points: RaisePoint[] }) {
               y={t.y + 3}
               textAnchor="end"
               fontSize={10}
-              fill="#5A616B"
+              fill="#6B7280"
               fontFamily="monospace"
             >
               {t.v === 0 ? '0' : `$${t.v / 1000}K`}
@@ -207,7 +207,7 @@ export function CapitalRaisedChart({ points }: { points: RaisePoint[] }) {
             y={H - M.bottom + 16}
             textAnchor="middle"
             fontSize={10}
-            fill="#5A616B"
+            fill="#6B7280"
             fontFamily="monospace"
           >
             {t.label}
@@ -224,7 +224,7 @@ export function CapitalRaisedChart({ points }: { points: RaisePoint[] }) {
               cy={d.cy}
               r={hover === d.i ? 5 : 3.5}
               fill={points[d.i]!.round === 1 ? COLORS.round1 : COLORS.round2}
-              stroke="#14171B"
+              stroke="#FFFFFF"
               strokeWidth={2}
             />
             {/* Görünmez geniş hedef — 20px'lik hover alanı. */}
@@ -246,7 +246,7 @@ export function CapitalRaisedChart({ points }: { points: RaisePoint[] }) {
           textAnchor="end"
           fontSize={11}
           fontWeight={700}
-          fill="#E8EAED"
+          fill="#18181B"
           fontFamily="monospace"
         >
           {usdLabel(points[points.length - 1]!.cumulativeUsd)}
@@ -255,15 +255,15 @@ export function CapitalRaisedChart({ points }: { points: RaisePoint[] }) {
 
       {hovered ? (
         <div
-          className="pointer-events-none absolute z-10 rounded-lg border border-border bg-bg-elev px-3 py-2 text-xs shadow-lg"
+          className="pointer-events-none absolute z-10 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs shadow-lg"
           style={{
             left: `${((dots[hover!]!.cx / W) * 100).toFixed(1)}%`,
             top: `${((dots[hover!]!.cy / H) * 100).toFixed(1)}%`,
             transform: 'translate(-50%, -130%)',
           }}
         >
-          <div className="text-fg">{hovered.investor}</div>
-          <div className="font-mono text-fg-muted">
+          <div className="text-zinc-900">{hovered.investor}</div>
+          <div className="font-mono text-zinc-600">
             {new Date(hovered.date).toLocaleDateString('en-US', {
               day: 'numeric',
               month: 'short',
@@ -271,13 +271,13 @@ export function CapitalRaisedChart({ points }: { points: RaisePoint[] }) {
             })}{' '}
             · +{usdLabel(hovered.amountUsd)}
           </div>
-          <div className="font-mono text-fg">
+          <div className="font-mono text-zinc-900">
             Total {usdLabel(hovered.cumulativeUsd)}
           </div>
         </div>
       ) : null}
 
-      <div className="mt-1 flex gap-4 text-[11px] text-fg-muted">
+      <div className="mt-1 flex gap-4 text-[11px] text-zinc-600">
         <span className="flex items-center gap-1.5">
           <span className="h-2 w-2 rounded-full" style={{ backgroundColor: COLORS.round1 }} />
           Round 1 · $3M cap
@@ -343,8 +343,8 @@ export function StackedColumnsChart({
           const y = m.top + innerH - (v / maxY) * innerH;
           return (
             <g key={v}>
-              <line x1={m.left} x2={CW - m.right} y1={y} y2={y} stroke="#23272D" strokeWidth={1} />
-              <text x={m.left - 6} y={y + 3} textAnchor="end" fontSize={10} fill="#5A616B" fontFamily="monospace">
+              <line x1={m.left} x2={CW - m.right} y1={y} y2={y} stroke="#E5E7EB" strokeWidth={1} />
+              <text x={m.left - 6} y={y + 3} textAnchor="end" fontSize={10} fill="#6B7280" fontFamily="monospace">
                 {percentMode ? `${Math.round(v * 100)}%` : fmt(v)}
               </text>
             </g>
@@ -376,7 +376,7 @@ export function StackedColumnsChart({
                 y={CH - m.bottom + 15}
                 textAnchor="middle"
                 fontSize={9.5}
-                fill={c.forecast ? '#5A616B' : '#8B9097'}
+                fill={c.forecast ? '#6B7280' : '#52525B'}
                 fontFamily="monospace"
               >
                 {c.label}
@@ -390,31 +390,31 @@ export function StackedColumnsChart({
 
       {hover !== null ? (
         <div
-          className="pointer-events-none absolute z-10 rounded-lg border border-border bg-bg-elev px-3 py-2 text-xs shadow-lg"
+          className="pointer-events-none absolute z-10 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs shadow-lg"
           style={{
             left: `${(((m.left + slot * hover + slot / 2) / CW) * 100).toFixed(1)}%`,
             top: '8%',
             transform: hover > columns.length / 2 ? 'translate(-100%, 0)' : 'none',
           }}
         >
-          <div className="mb-1 font-bold text-fg">
+          <div className="mb-1 font-bold text-zinc-900">
             {columns[hover]!.label}
             {columns[hover]!.forecast ? ' · forecast' : ''}
           </div>
           {series.map((s, si) => (
-            <div key={s.name} className="flex items-center gap-1.5 font-mono text-fg-muted">
+            <div key={s.name} className="flex items-center gap-1.5 font-mono text-zinc-600">
               <span className="h-2 w-2 rounded-full" style={{ backgroundColor: s.color }} />
               {s.name}: {fmt(columns[hover]!.values[si]!)}
               {percentMode ? ` (${((columns[hover]!.values[si]! / (totals[hover]! || 1)) * 100).toFixed(0)}%)` : ''}
             </div>
           ))}
           {!percentMode ? (
-            <div className="mt-1 font-mono font-bold text-fg">Total: {fmt(totals[hover]!)}</div>
+            <div className="mt-1 font-mono font-bold text-zinc-900">Total: {fmt(totals[hover]!)}</div>
           ) : null}
         </div>
       ) : null}
 
-      <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-fg-muted">
+      <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-zinc-600">
         {series.map((s) => (
           <span key={s.name} className="flex items-center gap-1.5">
             <span className="h-2 w-2 rounded-full" style={{ backgroundColor: s.color }} />
@@ -422,7 +422,7 @@ export function StackedColumnsChart({
           </span>
         ))}
         <span className="flex items-center gap-1.5">
-          <span className="h-2 w-2 rounded-full opacity-50" style={{ backgroundColor: '#8B9097' }} />
+          <span className="h-2 w-2 rounded-full opacity-50" style={{ backgroundColor: '#52525B' }} />
           Faded = forecast/budget
         </span>
       </div>
@@ -462,8 +462,8 @@ export function RevenueEbitdaChart({ points }: { points: AnnualPoint[] }) {
       <svg viewBox={`0 0 ${CW} ${CH}`} className="w-full" role="img">
         {ticks.map((v) => (
           <g key={v}>
-            <line x1={m.left} x2={CW - m.right} y1={y(v)} y2={y(v)} stroke={v === 0 ? '#3A4048' : '#23272D'} strokeWidth={v === 0 ? 1.5 : 1} />
-            <text x={m.left - 6} y={y(v) + 3} textAnchor="end" fontSize={10} fill="#5A616B" fontFamily="monospace">
+            <line x1={m.left} x2={CW - m.right} y1={y(v)} y2={y(v)} stroke={v === 0 ? '#9CA3AF' : '#E5E7EB'} strokeWidth={v === 0 ? 1.5 : 1} />
+            <text x={m.left - 6} y={y(v) + 3} textAnchor="end" fontSize={10} fill="#6B7280" fontFamily="monospace">
               {usdShortLabel(v)}
             </text>
           </g>
@@ -482,7 +482,7 @@ export function RevenueEbitdaChart({ points }: { points: AnnualPoint[] }) {
                 fill="#E56B1A"
                 opacity={p.kind === 'actual' ? 1 : 0.5}
               />
-              <text x={x + barW / 2} y={CH - m.bottom + 15} textAnchor="middle" fontSize={9.5} fill={p.kind === 'actual' ? '#8B9097' : '#5A616B'} fontFamily="monospace">
+              <text x={x + barW / 2} y={CH - m.bottom + 15} textAnchor="middle" fontSize={9.5} fill={p.kind === 'actual' ? '#52525B' : '#6B7280'} fontFamily="monospace">
                 {p.label}
               </text>
               <rect
@@ -512,7 +512,7 @@ export function RevenueEbitdaChart({ points }: { points: AnnualPoint[] }) {
             cy={y(p.ebitda)}
             r={hover === i ? 5 : 3.5}
             fill="#1FA576"
-            stroke="#14171B"
+            stroke="#FFFFFF"
             strokeWidth={2}
           />
         ))}
@@ -520,23 +520,23 @@ export function RevenueEbitdaChart({ points }: { points: AnnualPoint[] }) {
 
       {hover !== null ? (
         <div
-          className="pointer-events-none absolute z-10 rounded-lg border border-border bg-bg-elev px-3 py-2 text-xs shadow-lg"
+          className="pointer-events-none absolute z-10 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs shadow-lg"
           style={{
             left: `${(((m.left + slot * hover + slot / 2) / CW) * 100).toFixed(1)}%`,
             top: '6%',
             transform: hover > points.length / 2 ? 'translate(-100%, 0)' : 'none',
           }}
         >
-          <div className="mb-1 font-bold text-fg">
+          <div className="mb-1 font-bold text-zinc-900">
             {points[hover]!.label}
-            <span className="ml-1 font-normal text-fg-dim">({points[hover]!.kind})</span>
+            <span className="ml-1 font-normal text-zinc-500">({points[hover]!.kind})</span>
           </div>
-          <div className="font-mono text-fg-muted">Revenue: {usdShortLabel(points[hover]!.revenue)}</div>
-          <div className="font-mono text-fg-muted">EBITDA: {usdShortLabel(points[hover]!.ebitda)}</div>
+          <div className="font-mono text-zinc-600">Revenue: {usdShortLabel(points[hover]!.revenue)}</div>
+          <div className="font-mono text-zinc-600">EBITDA: {usdShortLabel(points[hover]!.ebitda)}</div>
         </div>
       ) : null}
 
-      <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-fg-muted">
+      <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-zinc-600">
         <span className="flex items-center gap-1.5">
           <span className="h-2 w-2 rounded-full" style={{ backgroundColor: '#E56B1A' }} />
           Revenue (solid = actual, faded = plan)
@@ -574,8 +574,8 @@ export function UsersChart({
       <svg viewBox={`0 0 ${CW} ${CH}`} className="w-full" role="img">
         {[0, 250_000, 500_000].map((v) => (
           <g key={v}>
-            <line x1={m.left} x2={CW - m.right} y1={y(v)} y2={y(v)} stroke="#23272D" strokeWidth={1} />
-            <text x={m.left - 6} y={y(v) + 3} textAnchor="end" fontSize={10} fill="#5A616B" fontFamily="monospace">
+            <line x1={m.left} x2={CW - m.right} y1={y(v)} y2={y(v)} stroke="#E5E7EB" strokeWidth={1} />
+            <text x={m.left - 6} y={y(v) + 3} textAnchor="end" fontSize={10} fill="#6B7280" fontFamily="monospace">
               {v === 0 ? '0' : `${v / 1000}K`}
             </text>
           </g>
@@ -584,28 +584,28 @@ export function UsersChart({
         <path d={line} fill="none" stroke="#7C5CFF" strokeWidth={2} />
         {points.map((p, i) => (
           <g key={p.label}>
-            <circle cx={x(i)} cy={y(p.value)} r={hover === i ? 5 : 3.5} fill="#7C5CFF" stroke="#14171B" strokeWidth={2} opacity={p.kind === 'actual' ? 1 : 0.6} />
+            <circle cx={x(i)} cy={y(p.value)} r={hover === i ? 5 : 3.5} fill="#7C5CFF" stroke="#FFFFFF" strokeWidth={2} opacity={p.kind === 'actual' ? 1 : 0.6} />
             <circle cx={x(i)} cy={y(p.value)} r={12} fill="transparent" onMouseEnter={() => setHover(i)} onMouseLeave={() => setHover(null)} />
-            <text x={x(i)} y={CH - m.bottom + 15} textAnchor="middle" fontSize={9.5} fill={p.kind === 'actual' ? '#8B9097' : '#5A616B'} fontFamily="monospace">
+            <text x={x(i)} y={CH - m.bottom + 15} textAnchor="middle" fontSize={9.5} fill={p.kind === 'actual' ? '#52525B' : '#6B7280'} fontFamily="monospace">
               {p.label}
             </text>
           </g>
         ))}
-        <text x={x(points.length - 1)} y={y(points[points.length - 1]!.value) - 10} textAnchor="end" fontSize={11} fontWeight={700} fill="#E8EAED" fontFamily="monospace">
+        <text x={x(points.length - 1)} y={y(points[points.length - 1]!.value) - 10} textAnchor="end" fontSize={11} fontWeight={700} fill="#18181B" fontFamily="monospace">
           {(points[points.length - 1]!.value / 1000).toFixed(0)}K users
         </text>
       </svg>
       {hover !== null ? (
         <div
-          className="pointer-events-none absolute z-10 rounded-lg border border-border bg-bg-elev px-3 py-1.5 text-xs shadow-lg"
+          className="pointer-events-none absolute z-10 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs shadow-lg"
           style={{
             left: `${((x(hover) / CW) * 100).toFixed(1)}%`,
             top: '4%',
             transform: hover > points.length / 2 ? 'translate(-100%, 0)' : 'none',
           }}
         >
-          <span className="text-fg">{points[hover]!.label}</span>{' '}
-          <span className="font-mono text-fg-muted">
+          <span className="text-zinc-900">{points[hover]!.label}</span>{' '}
+          <span className="font-mono text-zinc-600">
             {points[hover]!.value.toLocaleString('en-US')} users ({points[hover]!.kind})
           </span>
         </div>

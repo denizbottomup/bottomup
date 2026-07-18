@@ -106,14 +106,23 @@ export default function CapTablePage() {
     };
   });
 
+  const navItems = [
+    { href: '#captable', label: 'Cap table' },
+    { href: '#simulator', label: 'Simulator' },
+    { href: '#actuals', label: 'Actuals' },
+    { href: '#plan', label: '5-Year plan' },
+    { href: '#unit-economics', label: 'Unit economics' },
+    { href: '#funding', label: 'Funding' },
+  ];
+
   return (
-    <div className="flex min-h-screen flex-col">
-      <header className="flex flex-col gap-1 border-b border-border px-4 py-4 md:px-8 md:py-5">
-        <div className="mono-label !text-brand">Bottomup · Investor page</div>
-        <h1 className="mt-1 text-2xl font-extrabold tracking-tight md:text-3xl">
+    <div className="flex min-h-screen flex-col bg-zinc-100 font-medium text-zinc-900">
+      <header className="flex flex-col gap-1 border-b border-zinc-200 bg-white px-4 py-4 md:px-8 md:py-5">
+        <div className="mono-label !text-brand-dark">Bottomup · Investor page</div>
+        <h1 className="mt-1 text-2xl font-black tracking-tight md:text-3xl">
           Financials and Cap Table
         </h1>
-        <p className="max-w-2xl text-sm text-fg-muted">
+        <p className="max-w-2xl text-sm text-zinc-600">
           Ownership, actuals, and the five-year plan in one place. Investor
           stakes are computed on a post-money basis (stake % = investment /
           valuation cap); financials follow the FY24A–FY31B model (AY update,
@@ -121,9 +130,21 @@ export default function CapTablePage() {
         </p>
       </header>
 
-      <div className="flex-1 overflow-y-auto px-4 py-6 md:px-8">
+      <nav className="sticky top-0 z-20 flex gap-2 overflow-x-auto border-b border-zinc-200 bg-white/90 px-4 py-2.5 backdrop-blur md:px-8">
+        {navItems.map((n) => (
+          <a
+            key={n.href}
+            href={n.href}
+            className="whitespace-nowrap rounded-full border border-zinc-300 bg-white px-3.5 py-1.5 text-xs font-bold text-zinc-700 transition hover:border-brand-dark hover:text-brand-dark"
+          >
+            {n.label}
+          </a>
+        ))}
+      </nav>
+
+      <div className="flex-1 px-4 py-6 md:px-8">
         <div className="mx-auto flex max-w-4xl flex-col gap-6">
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+          <div id="captable" className="grid scroll-mt-16 grid-cols-2 gap-3 md:grid-cols-4">
             <StatTile label="Total invested" value={usd(investorTotalUsd)} />
             <StatTile label="Founders (net)" value={pct(foundersOnlyNet)} />
             <StatTile label="ESOP (net)" value={pct(esopNet)} />
@@ -154,7 +175,7 @@ export default function CapTablePage() {
           >
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-[10px] uppercase tracking-wider text-fg-dim">
+                <tr className="text-left text-[10px] uppercase tracking-wider text-zinc-500">
                   <th className="px-5 py-2 font-medium">Shareholder</th>
                   <th className="px-5 py-2 text-right font-medium">Initial</th>
                   <th className="px-5 py-2 text-right font-medium">Net after dilution</th>
@@ -162,16 +183,16 @@ export default function CapTablePage() {
               </thead>
               <tbody>
                 {founders.map((f) => (
-                  <tr key={f.name} className="border-t border-border">
+                  <tr key={f.name} className="border-t border-zinc-200">
                     <td className="px-5 py-2.5">
                       {f.name}
                       {f.pool ? (
-                        <span className="ml-2 rounded-full border border-white/10 px-2 py-0.5 text-[10px] uppercase tracking-wider text-fg-dim">
+                        <span className="ml-2 rounded-full border border-zinc-300 px-2 py-0.5 text-[10px] uppercase tracking-wider text-zinc-500">
                           Pool
                         </span>
                       ) : null}
                     </td>
-                    <td className="px-5 py-2.5 text-right font-mono text-fg-muted">
+                    <td className="px-5 py-2.5 text-right font-mono text-zinc-600">
                       {pct(f.share)}
                     </td>
                     <td className="px-5 py-2.5 text-right font-mono">
@@ -179,14 +200,14 @@ export default function CapTablePage() {
                     </td>
                   </tr>
                 ))}
-                <tr className="border-t border-border">
-                  <td className="px-5 py-2.5 text-fg-muted">Investors</td>
-                  <td className="px-5 py-2.5 text-right font-mono text-fg-dim">—</td>
-                  <td className="px-5 py-2.5 text-right font-mono text-fg-muted">
+                <tr className="border-t border-zinc-200">
+                  <td className="px-5 py-2.5 text-zinc-600">Investors</td>
+                  <td className="px-5 py-2.5 text-right font-mono text-zinc-500">—</td>
+                  <td className="px-5 py-2.5 text-right font-mono text-zinc-600">
                     {pct(investorShare)}
                   </td>
                 </tr>
-                <tr className="border-t border-border font-bold">
+                <tr className="border-t border-zinc-200 font-bold">
                   <td className="px-5 py-2.5">Total</td>
                   <td className="px-5 py-2.5 text-right font-mono">
                     {pct(founderInitialTotal)}
@@ -205,7 +226,7 @@ export default function CapTablePage() {
           >
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-[10px] uppercase tracking-wider text-fg-dim">
+                <tr className="text-left text-[10px] uppercase tracking-wider text-zinc-500">
                   <th className="px-5 py-2 font-medium">Investor</th>
                   <th className="px-5 py-2 text-right font-medium">Round 1</th>
                   <th className="px-5 py-2 text-right font-medium">Round 2</th>
@@ -215,12 +236,12 @@ export default function CapTablePage() {
               </thead>
               <tbody>
                 {investors.map((r) => (
-                  <tr key={r.name} className="border-t border-border">
+                  <tr key={r.name} className="border-t border-zinc-200">
                     <td className="px-5 py-2.5">{r.name}</td>
-                    <td className="px-5 py-2.5 text-right font-mono text-fg-muted">
+                    <td className="px-5 py-2.5 text-right font-mono text-zinc-600">
                       {r.round1Usd ? usd(r.round1Usd) : '—'}
                     </td>
-                    <td className="px-5 py-2.5 text-right font-mono text-fg-muted">
+                    <td className="px-5 py-2.5 text-right font-mono text-zinc-600">
                       {r.round2Usd ? usd(r.round2Usd) : '—'}
                     </td>
                     <td className="px-5 py-2.5 text-right font-mono">
@@ -231,7 +252,7 @@ export default function CapTablePage() {
                     </td>
                   </tr>
                 ))}
-                <tr className="border-t border-border font-bold">
+                <tr className="border-t border-zinc-200 font-bold">
                   <td className="px-5 py-2.5">Total</td>
                   <td className="px-5 py-2.5 text-right font-mono">
                     {usd(round1Usd)}
@@ -265,18 +286,18 @@ export default function CapTablePage() {
                       alt={p.displayName}
                       width={72}
                       height={72}
-                      className="h-[72px] w-[72px] shrink-0 rounded-xl border border-border object-cover"
+                      className="h-[72px] w-[72px] shrink-0 rounded-xl border border-zinc-200 object-cover"
                     />
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-baseline gap-x-2">
                         <span className="font-bold">{p.displayName}</span>
                         {inv ? (
-                          <span className="font-mono text-[11px] text-fg-dim">
+                          <span className="font-mono text-[11px] text-zinc-500">
                             {usd(inv.totalUsd)} · {pct(inv.share)}
                           </span>
                         ) : null}
                       </div>
-                      <p className="mt-1 text-[13px] leading-relaxed text-fg-muted">
+                      <p className="mt-1 text-[13px] leading-relaxed text-zinc-600">
                         {p.bio}
                       </p>
                       <div className="mt-1.5 flex gap-3 text-[11px]">
@@ -285,7 +306,7 @@ export default function CapTablePage() {
                             href={p.linkedinUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-brand hover:underline"
+                            className="text-brand-dark hover:underline"
                           >
                             LinkedIn ↗
                           </a>
@@ -294,7 +315,7 @@ export default function CapTablePage() {
                           href={p.sourceUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-fg-dim hover:text-fg hover:underline"
+                          className="text-zinc-500 hover:text-zinc-900 hover:underline"
                         >
                           GBA profile ↗
                         </a>
@@ -304,7 +325,7 @@ export default function CapTablePage() {
                 );
               })}
             </div>
-            <p className="border-t border-border px-5 py-3 text-[11px] text-fg-dim">
+            <p className="border-t border-zinc-200 px-5 py-3 text-[11px] text-zinc-500">
               Bios condensed from Galata Business Angels member pages (Jul
               2026). Remaining investors are private individuals without public
               profiles.
@@ -314,7 +335,7 @@ export default function CapTablePage() {
           <Card title="Transaction history" hint={`${sortedTxs.length} checks`}>
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-[10px] uppercase tracking-wider text-fg-dim">
+                <tr className="text-left text-[10px] uppercase tracking-wider text-zinc-500">
                   <th className="px-5 py-2 font-medium">Date</th>
                   <th className="px-5 py-2 font-medium">Investor</th>
                   <th className="px-5 py-2 text-right font-medium">Amount</th>
@@ -324,15 +345,15 @@ export default function CapTablePage() {
               </thead>
               <tbody>
                 {sortedTxs.map((t, i) => (
-                  <tr key={i} className="border-t border-border">
-                    <td className="px-5 py-2.5 font-mono text-fg-muted">
+                  <tr key={i} className="border-t border-zinc-200">
+                    <td className="px-5 py-2.5 font-mono text-zinc-600">
                       {formatDate(t.date)}
                     </td>
                     <td className="px-5 py-2.5">{t.investor}</td>
                     <td className="px-5 py-2.5 text-right font-mono">
                       {usd(t.amountUsd)}
                     </td>
-                    <td className="px-5 py-2.5 text-right font-mono text-fg-muted">
+                    <td className="px-5 py-2.5 text-right font-mono text-zinc-600">
                       {usdShort(t.valuationCapUsd)}
                     </td>
                     <td className="px-5 py-2.5 text-right font-mono">
@@ -345,6 +366,7 @@ export default function CapTablePage() {
           </Card>
 
           <SectionHeader
+            id="simulator"
             label="Simulator"
             title="What would your investment return?"
             sub="Pick an investment, an entry valuation, and an exit scenario. Dilution from the planned follow-on rounds is applied automatically."
@@ -355,6 +377,7 @@ export default function CapTablePage() {
           </Card>
 
           <SectionHeader
+            id="actuals"
             label="Traction"
             title="Financial actuals"
             sub="Eight quarters of actuals plus the H2-2026 forecast. Revenue in $k."
@@ -389,7 +412,7 @@ export default function CapTablePage() {
           <Card title="Quarterly KPIs">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-[10px] uppercase tracking-wider text-fg-dim">
+                <tr className="text-left text-[10px] uppercase tracking-wider text-zinc-500">
                   <th className="px-5 py-2 font-medium">Metric</th>
                   {quarterlyActuals.filter((q) => !q.forecast).map((q) => (
                     <th key={q.quarter} className="px-3 py-2 text-right font-medium">
@@ -408,10 +431,10 @@ export default function CapTablePage() {
                     ['Team size', (q: (typeof quarterlyActuals)[number]) => q.employees],
                   ] as const
                 ).map(([label, pick]) => (
-                  <tr key={label} className="border-t border-border">
+                  <tr key={label} className="border-t border-zinc-200">
                     <td className="px-5 py-2.5">{label}</td>
                     {quarterlyActuals.filter((q) => !q.forecast).map((q) => (
-                      <td key={q.quarter} className="px-3 py-2.5 text-right font-mono text-fg-muted">
+                      <td key={q.quarter} className="px-3 py-2.5 text-right font-mono text-zinc-600">
                         {pick(q) == null ? '—' : num(pick(q)!)}
                       </td>
                     ))}
@@ -424,7 +447,7 @@ export default function CapTablePage() {
           <Card title="Balance sheet" hint="$k · condensed">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-[10px] uppercase tracking-wider text-fg-dim">
+                <tr className="text-left text-[10px] uppercase tracking-wider text-zinc-500">
                   <th className="px-5 py-2 font-medium">$k</th>
                   {balanceSheet.map((c) => (
                     <th key={c.label} className="px-5 py-2 text-right font-medium">
@@ -444,10 +467,10 @@ export default function CapTablePage() {
                     ['Retained earnings', (c: (typeof balanceSheet)[number]) => c.retainedEarnings],
                   ] as const
                 ).map(([label, pick, bold]) => (
-                  <tr key={label} className={`border-t border-border ${bold ? 'font-bold' : ''}`}>
+                  <tr key={label} className={`border-t border-zinc-200 ${bold ? 'font-bold' : ''}`}>
                     <td className="px-5 py-2.5">{label}</td>
                     {balanceSheet.map((c) => (
-                      <td key={c.label} className={`px-5 py-2.5 text-right font-mono ${bold ? '' : 'text-fg-muted'}`}>
+                      <td key={c.label} className={`px-5 py-2.5 text-right font-mono ${bold ? '' : 'text-zinc-600'}`}>
                         {kNum(pick(c))}
                       </td>
                     ))}
@@ -458,6 +481,7 @@ export default function CapTablePage() {
           </Card>
 
           <SectionHeader
+            id="plan"
             label="Plan"
             title="Five-year plan (FY27–FY31)"
             sub="Budget scenario funded by the staged raise. Faded bars are plan, solid are actuals."
@@ -479,7 +503,7 @@ export default function CapTablePage() {
           <Card title="P&L summary" hint="$k · A = actual, F = forecast, B = budget">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-[10px] uppercase tracking-wider text-fg-dim">
+                <tr className="text-left text-[10px] uppercase tracking-wider text-zinc-500">
                   <th className="px-5 py-2 font-medium">$k</th>
                   {annualPnl.map((y) => (
                     <th key={y.year} className="px-3 py-2 text-right font-medium">
@@ -505,10 +529,10 @@ export default function CapTablePage() {
                     ['EBITDA', (y: (typeof annualPnl)[number]) => y.ebitda, true],
                   ] as const
                 ).map(([label, pick, bold]) => (
-                  <tr key={label} className={`border-t border-border ${bold ? 'font-bold' : ''}`}>
+                  <tr key={label} className={`border-t border-zinc-200 ${bold ? 'font-bold' : ''}`}>
                     <td className="px-5 py-2">{label}</td>
                     {annualPnl.map((y) => (
-                      <td key={y.year} className={`px-3 py-2 text-right font-mono ${bold ? '' : 'text-fg-muted'}`}>
+                      <td key={y.year} className={`px-3 py-2 text-right font-mono ${bold ? '' : 'text-zinc-600'}`}>
                         {kNum(pick(y))}
                       </td>
                     ))}
@@ -549,7 +573,7 @@ export default function CapTablePage() {
           </Card>
 
           <Card title="Key plan assumptions">
-            <ul className="list-disc space-y-1.5 px-5 py-4 pl-10 text-sm text-fg-muted">
+            <ul className="list-disc space-y-1.5 px-5 py-4 pl-10 text-sm text-zinc-600">
               {planAssumptions.map((a) => (
                 <li key={a}>{a}</li>
               ))}
@@ -557,6 +581,7 @@ export default function CapTablePage() {
           </Card>
 
           <SectionHeader
+            id="unit-economics"
             label="Unit economics"
             title="CAC & LTV"
             sub="Current blended figures at ~4:1 LTV/CAC. Net churn 10%/month, ~10-month customer lifespan."
@@ -572,7 +597,7 @@ export default function CapTablePage() {
           <Card title="By region">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-[10px] uppercase tracking-wider text-fg-dim">
+                <tr className="text-left text-[10px] uppercase tracking-wider text-zinc-500">
                   <th className="px-5 py-2 font-medium">Region</th>
                   <th className="px-5 py-2 text-right font-medium">CPI</th>
                   <th className="px-5 py-2 text-right font-medium">CAC / AU</th>
@@ -582,7 +607,7 @@ export default function CapTablePage() {
               </thead>
               <tbody>
                 {unitEconomics.regions.map((r) => (
-                  <tr key={r.region} className={`border-t border-border ${r.region === 'Blended' ? 'font-bold' : ''}`}>
+                  <tr key={r.region} className={`border-t border-zinc-200 ${r.region === 'Blended' ? 'font-bold' : ''}`}>
                     <td className="px-5 py-2.5">{r.region}</td>
                     <td className="px-5 py-2.5 text-right font-mono">${r.cpi}</td>
                     <td className="px-5 py-2.5 text-right font-mono">${r.cacPerActiveUser}</td>
@@ -595,6 +620,7 @@ export default function CapTablePage() {
           </Card>
 
           <SectionHeader
+            id="funding"
             label="Funding"
             title="Funding plan & valuation"
             sub="Seed $5M at $30M (H2 2026) → Series A $19.5M at $130M (H1 2028) → Series B $50M at $500M (H2 2029), targeting a $1B IPO or sale in H2 2031."
@@ -603,7 +629,7 @@ export default function CapTablePage() {
           <Card title="Planned rounds">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-[10px] uppercase tracking-wider text-fg-dim">
+                <tr className="text-left text-[10px] uppercase tracking-wider text-zinc-500">
                   <th className="px-5 py-2 font-medium">Round</th>
                   <th className="px-5 py-2 text-right font-medium">Raise</th>
                   <th className="px-5 py-2 text-right font-medium">Timing</th>
@@ -613,15 +639,15 @@ export default function CapTablePage() {
               </thead>
               <tbody>
                 {fundingPlan.map((r) => (
-                  <tr key={r.name} className="border-t border-border">
+                  <tr key={r.name} className="border-t border-zinc-200">
                     <td className="px-5 py-2.5">{r.name}</td>
                     <td className="px-5 py-2.5 text-right font-mono">${r.raiseUsdM}M</td>
-                    <td className="px-5 py-2.5 text-right font-mono text-fg-muted">{r.timing}</td>
+                    <td className="px-5 py-2.5 text-right font-mono text-zinc-600">{r.timing}</td>
                     <td className="px-5 py-2.5 text-right font-mono">${r.postMoneyUsdM}M</td>
                     <td className="px-5 py-2.5 text-right font-mono">{pct(r.equitySold)}</td>
                   </tr>
                 ))}
-                <tr className="border-t border-border font-bold">
+                <tr className="border-t border-zinc-200 font-bold">
                   <td className="px-5 py-2.5">Total</td>
                   <td className="px-5 py-2.5 text-right font-mono">
                     ${fundingPlan.reduce((s, r) => s + r.raiseUsdM, 0)}M
@@ -650,7 +676,7 @@ export default function CapTablePage() {
           >
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-[10px] uppercase tracking-wider text-fg-dim">
+                <tr className="text-left text-[10px] uppercase tracking-wider text-zinc-500">
                   <th className="px-5 py-2 font-medium">Investor</th>
                   <th className="px-4 py-2 text-right font-medium">Invested</th>
                   <th className="px-4 py-2 text-right font-medium">Stake</th>
@@ -663,25 +689,25 @@ export default function CapTablePage() {
               </thead>
               <tbody>
                 {investors.map((r) => (
-                  <tr key={r.name} className="border-t border-border">
+                  <tr key={r.name} className="border-t border-zinc-200">
                     <td className="px-5 py-2.5">{r.name}</td>
-                    <td className="px-4 py-2.5 text-right font-mono text-fg-muted">
+                    <td className="px-4 py-2.5 text-right font-mono text-zinc-600">
                       {usdCompact(r.totalUsd)}
                     </td>
-                    <td className="px-4 py-2.5 text-right font-mono text-fg-muted">
+                    <td className="px-4 py-2.5 text-right font-mono text-zinc-600">
                       {pct(r.share)}
                     </td>
                     {exitStages.map((st) => (
                       <td key={st.name} className="px-4 py-2.5 text-right font-mono">
                         {usdCompact(r.share * st.effectiveValueUsd)}
-                        <span className="ml-1 text-[10px] text-fg-dim">
+                        <span className="ml-1 text-[10px] text-zinc-500">
                           {(r.share * st.effectiveValueUsd / r.totalUsd).toFixed(1)}×
                         </span>
                       </td>
                     ))}
                   </tr>
                 ))}
-                <tr className="border-t border-border font-bold">
+                <tr className="border-t border-zinc-200 font-bold">
                   <td className="px-5 py-2.5">Total</td>
                   <td className="px-4 py-2.5 text-right font-mono">
                     {usdCompact(investorTotalUsd)}
@@ -697,7 +723,7 @@ export default function CapTablePage() {
                 </tr>
               </tbody>
             </table>
-            <p className="border-t border-border px-5 py-3 text-[11px] leading-relaxed text-fg-dim">
+            <p className="border-t border-zinc-200 px-5 py-3 text-[11px] leading-relaxed text-zinc-500">
               Each column assumes the investor sells their full stake in that
               round at that round's post-money valuation, after being diluted by
               every round up to and including it. Exit assumes no further rounds
@@ -705,7 +731,7 @@ export default function CapTablePage() {
             </p>
           </Card>
 
-          <p className="text-[11px] leading-relaxed text-fg-dim">
+          <p className="text-[11px] leading-relaxed text-zinc-500">
             Founding split as declared by the founders (July 2026): 50/15/15/10
             across the four founders plus a 10% employee pool, totalling 100%
             pre-investment. Investor stakes are derived from the transaction
@@ -735,10 +761,10 @@ function Card({
   children: ReactNode;
 }) {
   return (
-    <section className="overflow-hidden rounded-2xl border border-border bg-bg-card">
-      <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-border px-5 py-3">
-        <h2 className="text-sm font-bold">{title}</h2>
-        {hint ? <div className="text-[11px] text-fg-dim">{hint}</div> : null}
+    <section className="overflow-hidden rounded-2xl border border-zinc-200 bg-white">
+      <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-zinc-200 px-5 py-3">
+        <h2 className="text-sm font-extrabold">{title}</h2>
+        {hint ? <div className="text-[11px] text-zinc-500">{hint}</div> : null}
       </div>
       <div className="overflow-x-auto">{children}</div>
     </section>
@@ -746,21 +772,23 @@ function Card({
 }
 
 function SectionHeader({
+  id,
   label,
   title,
   sub,
 }: {
+  id?: string;
   label: string;
   title: string;
   sub?: string;
 }) {
   return (
-    <div className="mt-6 border-t border-border pt-6">
-      <div className="mono-label !text-brand">{label}</div>
+    <div id={id} className="mt-6 scroll-mt-16 border-t border-zinc-200 pt-6">
+      <div className="mono-label !text-brand-dark">{label}</div>
       <h2 className="mt-1 text-xl font-extrabold tracking-tight md:text-2xl">
         {title}
       </h2>
-      {sub ? <p className="mt-1 max-w-2xl text-sm text-fg-muted">{sub}</p> : null}
+      {sub ? <p className="mt-1 max-w-2xl text-sm text-zinc-600">{sub}</p> : null}
     </div>
   );
 }
@@ -776,9 +804,9 @@ function ValuationRow({
 }) {
   return (
     <div
-      className={`flex items-baseline justify-between gap-3 border-t border-border px-5 py-2.5 first:border-t-0 md:[&:nth-child(2)]:border-t-0 ${bold ? 'font-bold' : ''}`}
+      className={`flex items-baseline justify-between gap-3 border-t border-zinc-200 px-5 py-2.5 first:border-t-0 md:[&:nth-child(2)]:border-t-0 ${bold ? 'font-bold' : ''}`}
     >
-      <span className={bold ? '' : 'text-fg-muted'}>{label}</span>
+      <span className={bold ? '' : 'text-zinc-600'}>{label}</span>
       <span className="font-mono">{value}</span>
     </div>
   );
@@ -786,11 +814,11 @@ function ValuationRow({
 
 function StatTile({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-xl border border-border bg-bg-card p-3">
-      <div className="text-[10px] uppercase tracking-wider text-fg-dim">
+    <div className="rounded-xl border border-zinc-200 bg-white p-3">
+      <div className="text-[10px] uppercase tracking-wider text-zinc-500">
         {label}
       </div>
-      <div className="mt-1 text-lg font-bold font-mono">{value}</div>
+      <div className="mt-1 text-lg font-extrabold font-mono">{value}</div>
     </div>
   );
 }
