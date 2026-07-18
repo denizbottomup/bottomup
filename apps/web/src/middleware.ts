@@ -80,6 +80,10 @@ const MARKETING_PREFIXES = [
   // host so the lab branch's new code answers, instead of being
   // 308'd to the legacy bottomup web service.
   '/home',
+  // Liste dışı hissedar sayfası — login yok, sadece linki bilen açar.
+  // Prefix'e alınmazsa bupcore.ai'dan trade host'una 308'lenir ve
+  // oradaki eski sürümde 404 olur.
+  '/cap-table',
 ];
 
 function isLandingPath(pathname: string): boolean {
