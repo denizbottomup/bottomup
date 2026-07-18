@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { exitPlan, fundingPlan } from './financials';
 
 /**
@@ -114,13 +114,28 @@ export function InvestorSimulator() {
   const [stageKey, setStageKey] = useState('EXIT');
   const [exit, setExit] = useState(exitPlan.valuationUsdM * 1e6);
 
-  const stage = EXIT_STAGES.find((st) => st.key === stageKey) ?? EXIT_STAGES[EXIT_STAGES.length - 1]!;
+  // Girdiğin turda satamazsın: yalnızca girişten SONRAKİ turlar + nihai
+  // exit seçilebilir. Giriş değerlemesi değişince seçenekler de değişir.
+  const availableStages = EXIT_STAGES.filter(
+    (st) => st.key === 'EXIT' || st.plannedUsd > valuation,
+  );
+  const stage =
+    availableStages.find((st) => st.key === stageKey) ??
+    availableStages[availableStages.length - 1]!;
 
   function pickStage(key: string) {
     const st = EXIT_STAGES.find((x) => x.key === key)!;
     setStageKey(key);
     setExit(st.plannedUsd); // planlanan değer default gelir, üzerine yazılabilir
   }
+
+  // Seçili aşama giriş değerlemesinin gerisinde kaldıysa exit'e düş.
+  useEffect(() => {
+    if (!availableStages.some((st) => st.key === stageKey)) {
+      pickStage('EXIT');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [valuation]);
 
   const r = useMemo(() => {
     if (valuation <= 0 || investment <= 0 || exit <= 0) return null;
@@ -163,7 +178,7 @@ export function InvestorSimulator() {
             When do you exit?
           </div>
           <div className="mt-1.5 flex flex-wrap gap-2">
-            {EXIT_STAGES.map((st) => (
+            {availableStages.map((st) => (
               <button
                 key={st.key}
                 onClick={() => pickStage(st.key)}
