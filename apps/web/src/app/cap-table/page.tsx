@@ -30,7 +30,7 @@ import {
 } from './financials';
 
 export const metadata: Metadata = {
-  title: 'Cap Table — Bottomup',
+  title: 'Financials and Cap Table — Bottomup',
   robots: { index: false, follow: false },
 };
 
@@ -83,9 +83,9 @@ export default function CapTablePage() {
   return (
     <div className="flex min-h-screen flex-col">
       <header className="flex flex-col gap-1 border-b border-border px-4 py-4 md:px-8 md:py-5">
-        <div className="mono-label !text-brand">Cap Table · Ownership</div>
+        <div className="mono-label !text-brand">Bottomup · Investor page</div>
         <h1 className="mt-1 text-2xl font-extrabold tracking-tight md:text-3xl">
-          Who owns Bottomup?
+          Financials and Cap Table
         </h1>
         <p className="max-w-2xl text-sm text-fg-muted">
           Ownership, actuals, and the five-year plan in one place. Investor
