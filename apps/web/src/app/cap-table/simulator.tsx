@@ -72,6 +72,16 @@ function NumberField({
   step: number;
   hint?: string;
 }) {
+  // Metin alanı yarı-kontrollü: silinince "0" dayatmak yerine boş
+  // kalır, geçerli sayı yazıldıkça üst state güncellenir; slider veya
+  // preset değeri dışarıdan değiştirirse (odak yokken) senkronlanır.
+  const [text, setText] = useState(String(value));
+  const [focused, setFocused] = useState(false);
+
+  useEffect(() => {
+    if (!focused) setText(String(value));
+  }, [value, focused]);
+
   return (
     <label className="block">
       <div className="flex items-baseline justify-between gap-2">
@@ -94,8 +104,21 @@ function NumberField({
           type="number"
           min={min}
           step={step}
-          value={value}
-          onChange={(e) => onChange(Number(e.target.value) || 0)}
+          value={text}
+          onFocus={() => setFocused(true)}
+          onBlur={() => {
+            setFocused(false);
+            const n = Number(text);
+            if (text === '' || !Number.isFinite(n) || n <= 0) {
+              setText(String(value)); // geçersiz bırakıldıysa eski değere dön
+            }
+          }}
+          onChange={(e) => {
+            const t = e.target.value;
+            setText(t);
+            const n = Number(t);
+            if (t !== '' && Number.isFinite(n) && n > 0) onChange(n);
+          }}
           className="w-32 rounded-lg border border-zinc-200 bg-zinc-50 px-2 py-1.5 text-right font-mono text-sm text-zinc-900 outline-none focus:border-brand/60"
         />
       </div>
