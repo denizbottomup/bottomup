@@ -19,6 +19,7 @@ import {
   annualPnl,
   autoTrade,
   balanceSheet,
+  exitPlan,
   fundingPlan,
   grossProfit,
   planAssumptions,
@@ -26,7 +27,6 @@ import {
   totalOpex,
   totalRevenue,
   unitEconomics,
-  valuationWalk,
 } from './financials';
 import { InvestorSimulator } from './simulator';
 
@@ -76,6 +76,22 @@ export default function CapTablePage() {
     })),
     { label: 'Investors', share: investorShare, kind: 'investor' },
   ];
+
+  // Çıkış senaryoları: her turda kümülatif dilüsyon sonrası hissenin o
+  // turun post-money değerlemesindeki karşılığı. stake × retention × post
+  // = stake × (o turdan sonraki efektif değer) — tek çarpan olarak tutulur.
+  let retention = 1;
+  const exitStages = fundingPlan.map((r) => {
+    retention *= 1 - r.equitySold;
+    return {
+      name: `${r.name} '${r.timing.slice(2, 4)}`,
+      effectiveValueUsd: retention * r.postMoneyUsdM * 1e6,
+    };
+  });
+  exitStages.push({
+    name: `Exit $${exitPlan.valuationUsdM / 1000}B '${exitPlan.timing.slice(2, 4)}`,
+    effectiveValueUsd: retention * exitPlan.valuationUsdM * 1e6,
+  });
 
   let running = 0;
   const raisePoints: RaisePoint[] = sortedTxs.map((t) => {
@@ -382,7 +398,7 @@ export default function CapTablePage() {
           <SectionHeader
             label="Plan"
             title="Five-year plan (FY27–FY31)"
-            sub="Budget scenario funded by the $57M staged raise. Faded bars are plan, solid are actuals."
+            sub="Budget scenario funded by the staged raise. Faded bars are plan, solid are actuals."
           />
 
           <Card title="Revenue & EBITDA" hint="$k · FY24A–FY31B">
@@ -519,7 +535,7 @@ export default function CapTablePage() {
           <SectionHeader
             label="Funding"
             title="Funding plan & valuation"
-            sub="Staged $57M raise over five years; seed priced off the VC method."
+            sub="Seed $5M at $30M (H2 2026) → Series A $26M at $130M (H1 2028) → Series B $100M at $500M (H2 2029), targeting a $1B IPO or sale in H2 2031."
           />
 
           <Card title="Planned rounds">
@@ -554,16 +570,77 @@ export default function CapTablePage() {
             </table>
           </Card>
 
-          <Card title="Seed valuation walk" hint="VC method · fintech median revenue multiple">
+          <Card title="Exit target">
             <div className="grid gap-0 text-sm md:grid-cols-2">
-              <ValuationRow label="Revenue at exit (FY31B)" value={`$${valuationWalk.exitYearRevenueUsdM.toFixed(1)}M`} />
-              <ValuationRow label={`Revenue multiple (fintech median)`} value={`${valuationWalk.revenueMultiple}×`} />
-              <ValuationRow label="Implied exit valuation" value={`$${valuationWalk.exitValuationUsdM.toFixed(0)}M`} />
-              <ValuationRow label={`Discounted at ${valuationWalk.vcRateOfReturn * 100}% for ${valuationWalk.exitYears}y`} value={`$${valuationWalk.postMoneyTodayUsdM.toFixed(1)}M`} />
-              <ValuationRow label="Less discounted future rounds" value={`−$${valuationWalk.discountedInvestmentUsdM.toFixed(1)}M`} />
-              <ValuationRow label="Pre-money today" value={`$${valuationWalk.preMoneyTodayUsdM.toFixed(1)}M`} />
-              <ValuationRow label="Seed post-money (rounded)" value={`$${valuationWalk.seedPostMoneyUsdM}M`} bold />
+              <ValuationRow label="Target exit valuation" value={`$${exitPlan.valuationUsdM / 1000}B`} bold />
+              <ValuationRow label="Exit window" value={exitPlan.timing} />
+              <ValuationRow label="Path" value={exitPlan.path} />
+              <ValuationRow
+                label="Growth from seed post-money"
+                value={`${(exitPlan.valuationUsdM / fundingPlan[0]!.postMoneyUsdM).toFixed(1)}×`}
+              />
             </div>
+          </Card>
+
+          <Card
+            title="Investor exit outcomes"
+            hint="Value of each current stake if sold in that round, after cumulative dilution"
+          >
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-[10px] uppercase tracking-wider text-fg-dim">
+                  <th className="px-5 py-2 font-medium">Investor</th>
+                  <th className="px-4 py-2 text-right font-medium">Invested</th>
+                  <th className="px-4 py-2 text-right font-medium">Stake</th>
+                  {exitStages.map((st) => (
+                    <th key={st.name} className="px-4 py-2 text-right font-medium">
+                      {st.name}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {investors.map((r) => (
+                  <tr key={r.name} className="border-t border-border">
+                    <td className="px-5 py-2.5">{r.name}</td>
+                    <td className="px-4 py-2.5 text-right font-mono text-fg-muted">
+                      {usdCompact(r.totalUsd)}
+                    </td>
+                    <td className="px-4 py-2.5 text-right font-mono text-fg-muted">
+                      {pct(r.share)}
+                    </td>
+                    {exitStages.map((st) => (
+                      <td key={st.name} className="px-4 py-2.5 text-right font-mono">
+                        {usdCompact(r.share * st.effectiveValueUsd)}
+                        <span className="ml-1 text-[10px] text-fg-dim">
+                          {(r.share * st.effectiveValueUsd / r.totalUsd).toFixed(1)}×
+                        </span>
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+                <tr className="border-t border-border font-bold">
+                  <td className="px-5 py-2.5">Total</td>
+                  <td className="px-4 py-2.5 text-right font-mono">
+                    {usdCompact(investorTotalUsd)}
+                  </td>
+                  <td className="px-4 py-2.5 text-right font-mono">
+                    {pct(investorShare)}
+                  </td>
+                  {exitStages.map((st) => (
+                    <td key={st.name} className="px-4 py-2.5 text-right font-mono">
+                      {usdCompact(investorShare * st.effectiveValueUsd)}
+                    </td>
+                  ))}
+                </tr>
+              </tbody>
+            </table>
+            <p className="border-t border-border px-5 py-3 text-[11px] leading-relaxed text-fg-dim">
+              Each column assumes the investor sells their full stake in that
+              round at that round's post-money valuation, after being diluted by
+              every round up to and including it. Exit assumes no further rounds
+              after Series B. Illustrative only.
+            </p>
           </Card>
 
           <p className="text-[11px] leading-relaxed text-fg-dim">
@@ -572,7 +649,7 @@ export default function CapTablePage() {
             pre-investment. Investor stakes are derived from the transaction
             list under a post-money SAFE assumption and dilute founders and the
             pool pro-rata. Net stakes reflect dilution <em>to date</em> only —
-            the planned FY27–FY31 rounds will dilute founders and the pool
+            the planned Seed, Series A, and Series B rounds will dilute founders and the pool
             further (see the funding plan and simulator above). Actual
             conversion terms are governed by the round documents. Financials per the "bottomUP Financials
             FY24A–FY31B" model (AY update, Jul 2026): FY24–FY25 audited-basis
@@ -682,6 +759,14 @@ function kNum(n: number): string {
 /** $k tutarı $ etiketine çevirir (346.43 → "$346K"). */
 function usdK(n: number): string {
   return n >= 1000 ? `$${(n / 1000).toFixed(2)}M` : `$${n.toFixed(0)}K`;
+}
+
+/** $ tutarı kompakt etikete çevirir (520833 → "$521K", 11.1e6 → "$11.11M"). */
+function usdCompact(n: number): string {
+  if (n >= 1e9) return `$${(n / 1e9).toFixed(2)}B`;
+  if (n >= 1e6) return `$${(n / 1e6).toFixed(2)}M`;
+  if (n >= 1e3) return `$${(n / 1e3).toFixed(0)}K`;
+  return `$${n.toFixed(0)}`;
 }
 
 function formatDate(iso: string): string {

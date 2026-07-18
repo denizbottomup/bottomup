@@ -89,30 +89,23 @@ export const unitEconomics = {
 export interface FundingRound {
   name: string;
   raiseUsdM: number;
-  timing: string; // "2027"
+  timing: string; // "2026 H2"
   postMoneyUsdM: number;
-  equitySold: number; // 0–1
+  /** raise / post-money — o turda satılan hisse. */
+  equitySold: number;
 }
 
+/** Kurucu beyanı (Tem 2026) — üç tur + $1B exit hedefi. */
 export const fundingPlan: FundingRound[] = [
-  { name: 'Seed', raiseUsdM: 5, timing: '2027', postMoneyUsdM: 30, equitySold: 0.1667 },
-  { name: 'Series A.1', raiseUsdM: 7, timing: '2028', postMoneyUsdM: 40.5, equitySold: 0.1727 },
-  { name: 'Series A.2', raiseUsdM: 10, timing: '2029', postMoneyUsdM: 80.5, equitySold: 0.1242 },
-  { name: 'Series B.1', raiseUsdM: 15, timing: '2030', postMoneyUsdM: 115.1, equitySold: 0.1303 },
-  { name: 'Series B.2', raiseUsdM: 20, timing: '2031', postMoneyUsdM: 170.8, equitySold: 0.1171 },
+  { name: 'Seed', raiseUsdM: 5, timing: '2026 H2', postMoneyUsdM: 30, equitySold: 5 / 30 },
+  { name: 'Series A', raiseUsdM: 26, timing: '2028 H1', postMoneyUsdM: 130, equitySold: 26 / 130 },
+  { name: 'Series B', raiseUsdM: 100, timing: '2029 H2', postMoneyUsdM: 500, equitySold: 100 / 500 },
 ];
 
-/** VC yöntemi değerleme yürüyüşü — Valuation sekmesindeki adımlar. */
-export const valuationWalk = {
-  exitYearRevenueUsdM: 44.578,
-  revenueMultiple: 5.25,
-  exitValuationUsdM: 234.03,
-  vcRateOfReturn: 0.35,
-  exitYears: 5,
-  postMoneyTodayUsdM: 52.19,
-  discountedInvestmentUsdM: 27.79,
-  preMoneyTodayUsdM: 24.4,
-  seedPostMoneyUsdM: 30,
+export const exitPlan = {
+  valuationUsdM: 1000,
+  timing: '2031 H2',
+  path: 'IPO or acquisition',
 };
 
 export interface BalanceSheetCol {

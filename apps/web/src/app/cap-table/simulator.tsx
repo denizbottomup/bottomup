@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { fundingPlan, valuationWalk } from './financials';
+import { exitPlan, fundingPlan } from './financials';
 
 /**
  * Yatırımcı getiri simülatörü. Üç girdi: yatırım tutarı, giriş
@@ -13,9 +13,9 @@ import { fundingPlan, valuationWalk } from './financials';
  */
 
 const EXIT_PRESETS = [
-  { label: 'Low · 3.3× revenue', valuation: 147_000_000 },
-  { label: 'Base · 5.25× revenue', valuation: 234_000_000 },
-  { label: 'High · 7.2× revenue', valuation: 321_000_000 },
+  { label: 'Conservative', valuation: 500_000_000 },
+  { label: 'Target · IPO/sale 2031', valuation: 1_000_000_000 },
+  { label: 'Stretch', valuation: 2_000_000_000 },
 ];
 
 function fmtUsd(n: number): string {
@@ -87,11 +87,9 @@ function NumberField({
 export function InvestorSimulator() {
   const [investment, setInvestment] = useState(100_000);
   const [valuation, setValuation] = useState(
-    valuationWalk.seedPostMoneyUsdM * 1e6,
+    fundingPlan[0]!.postMoneyUsdM * 1e6,
   );
-  const [exit, setExit] = useState(
-    Math.round(valuationWalk.exitValuationUsdM) * 1e6,
-  );
+  const [exit, setExit] = useState(exitPlan.valuationUsdM * 1e6);
 
   const r = useMemo(() => {
     if (valuation <= 0 || investment <= 0 || exit <= 0) return null;
@@ -126,18 +124,18 @@ export function InvestorSimulator() {
           value={valuation}
           onChange={setValuation}
           min={5_000_000}
-          max={200_000_000}
+          max={500_000_000}
           step={1_000_000}
-          hint={`planned seed: $${valuationWalk.seedPostMoneyUsdM}M`}
+          hint={`planned seed: $${fundingPlan[0]!.postMoneyUsdM}M`}
         />
         <NumberField
           label="Exit valuation"
           value={exit}
           onChange={setExit}
-          min={20_000_000}
-          max={1_000_000_000}
-          step={5_000_000}
-          hint="model exit: FY31"
+          min={50_000_000}
+          max={2_000_000_000}
+          step={25_000_000}
+          hint={`target: $1B ${exitPlan.timing}`}
         />
         <div className="flex flex-wrap gap-2">
           {EXIT_PRESETS.map((p) => (
