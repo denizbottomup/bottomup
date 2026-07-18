@@ -21,7 +21,11 @@ export interface CapTableTransaction {
 
 export interface FounderEntry {
   name: string;
-  /** 0–1 arası oran. */
+  /**
+   * Kuruluş (yatırım öncesi) oranı, 0–1. Kurucular + ESOP toplamı 1.0;
+   * yatırımcı hissesi geldikçe herkes orantılı dilüte olur — net oran
+   * sayfada `share × (1 - yatırımcı toplamı)` olarak türetilir.
+   */
   share: number;
   /** true → kurucu değil, çalışan hisse havuzu. */
   pool?: boolean;
@@ -34,9 +38,9 @@ export const ROUND_CAPS: Record<1 | 2, number> = {
 
 export const founders: FounderEntry[] = [
   { name: 'Deniz Saglam', share: 0.5 },
-  { name: 'Erdogan Yucel', share: 0.1 },
-  { name: 'Mehmet Karakucuk', share: 0.1 },
-  { name: 'Alex Yusifli', share: 0.05 },
+  { name: 'Erdogan Yucel', share: 0.15 },
+  { name: 'Mehmet Karakucuk', share: 0.15 },
+  { name: 'Alex Yusifli', share: 0.1 },
   { name: 'Employee stock pool (ESOP)', share: 0.1, pool: true },
 ];
 

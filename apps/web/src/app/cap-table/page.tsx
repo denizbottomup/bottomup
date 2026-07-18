@@ -52,8 +52,17 @@ export default function CapTablePage() {
   const investorTotalUsd = investors.reduce((s, r) => s + r.totalUsd, 0);
   const round1Usd = investors.reduce((s, r) => s + r.round1Usd, 0);
   const round2Usd = investors.reduce((s, r) => s + r.round2Usd, 0);
-  const founderShare = founders.reduce((s, f) => s + f.share, 0);
-  const unallocated = 1 - founderShare - investorShare;
+  // Kuruluş dağılımı (kurucular + ESOP) 1.0'a tamamlanır; yatırımcı
+  // hissesi herkesi orantılı dilüte eder.
+  const dilution = 1 - investorShare;
+  const founderNet = (share: number) => share * dilution;
+  const foundersOnlyNet = founders
+    .filter((f) => !f.pool)
+    .reduce((s, f) => s + founderNet(f.share), 0);
+  const esopNet = founders
+    .filter((f) => f.pool)
+    .reduce((s, f) => s + founderNet(f.share), 0);
+  const founderInitialTotal = founders.reduce((s, f) => s + f.share, 0);
 
   const sortedTxs = [...transactions].sort((a, b) =>
     a.date.localeCompare(b.date),
@@ -62,11 +71,10 @@ export default function CapTablePage() {
   const ownershipSegments: OwnershipSegment[] = [
     ...founders.map((f) => ({
       label: f.name,
-      share: f.share,
+      share: founderNet(f.share),
       kind: f.pool ? ('esop' as const) : ('founder' as const),
     })),
     { label: 'Investors', share: investorShare, kind: 'investor' },
-    { label: 'Unallocated', share: unallocated, kind: 'unallocated' },
   ];
 
   let running = 0;
@@ -100,12 +108,15 @@ export default function CapTablePage() {
         <div className="mx-auto flex max-w-4xl flex-col gap-6">
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
             <StatTile label="Total invested" value={usd(investorTotalUsd)} />
-            <StatTile label="Founders + ESOP" value={pct(founderShare)} />
+            <StatTile label="Founders (net)" value={pct(foundersOnlyNet)} />
+            <StatTile label="ESOP (net)" value={pct(esopNet)} />
             <StatTile label="Investors" value={pct(investorShare)} />
-            <StatTile label="Unallocated" value={pct(unallocated)} />
           </div>
 
-          <Card title="Ownership breakdown">
+          <Card
+            title="Ownership breakdown"
+            hint="Fully diluted — investor stake applied pro-rata"
+          >
             <div className="px-5 py-4">
               <OwnershipChart segments={ownershipSegments} />
             </div>
@@ -120,12 +131,16 @@ export default function CapTablePage() {
             </div>
           </Card>
 
-          <Card title="Founders & employee pool">
+          <Card
+            title="Founders & employee pool"
+            hint="Initial = founding split · Net = after investor dilution"
+          >
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-[10px] uppercase tracking-wider text-fg-dim">
                   <th className="px-5 py-2 font-medium">Shareholder</th>
-                  <th className="px-5 py-2 text-right font-medium">Stake</th>
+                  <th className="px-5 py-2 text-right font-medium">Initial</th>
+                  <th className="px-5 py-2 text-right font-medium">Net after dilution</th>
                 </tr>
               </thead>
               <tbody>
@@ -139,15 +154,28 @@ export default function CapTablePage() {
                         </span>
                       ) : null}
                     </td>
-                    <td className="px-5 py-2.5 text-right font-mono">
+                    <td className="px-5 py-2.5 text-right font-mono text-fg-muted">
                       {pct(f.share)}
+                    </td>
+                    <td className="px-5 py-2.5 text-right font-mono">
+                      {pct(founderNet(f.share))}
                     </td>
                   </tr>
                 ))}
+                <tr className="border-t border-border">
+                  <td className="px-5 py-2.5 text-fg-muted">Investors</td>
+                  <td className="px-5 py-2.5 text-right font-mono text-fg-dim">—</td>
+                  <td className="px-5 py-2.5 text-right font-mono text-fg-muted">
+                    {pct(investorShare)}
+                  </td>
+                </tr>
                 <tr className="border-t border-border font-bold">
                   <td className="px-5 py-2.5">Total</td>
                   <td className="px-5 py-2.5 text-right font-mono">
-                    {pct(founderShare)}
+                    {pct(founderInitialTotal)}
+                  </td>
+                  <td className="px-5 py-2.5 text-right font-mono">
+                    {pct(founderInitialTotal * dilution + investorShare)}
                   </td>
                 </tr>
               </tbody>
@@ -539,10 +567,12 @@ export default function CapTablePage() {
           </Card>
 
           <p className="text-[11px] leading-relaxed text-fg-dim">
-            Founder and ESOP allocations as declared by the founders (July
-            2026). Investor stakes are derived from the transaction list under a
-            post-money SAFE assumption; actual conversion terms are governed by
-            the round documents. Financials per the "bottomUP Financials
+            Founding split as declared by the founders (July 2026): 50/15/15/10
+            across the four founders plus a 10% employee pool, totalling 100%
+            pre-investment. Investor stakes are derived from the transaction
+            list under a post-money SAFE assumption and dilute founders and the
+            pool pro-rata; actual conversion terms are governed by the round
+            documents. Financials per the "bottomUP Financials
             FY24A–FY31B" model (AY update, Jul 2026): FY24–FY25 audited-basis
             actuals, FY26 forecast, FY27–FY31 budget contingent on the staged
             raise. This page is unlisted — only people with the link can see
