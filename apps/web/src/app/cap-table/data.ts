@@ -49,7 +49,7 @@ export const transactions: CapTableTransaction[] = [
   { date: '2024-07-19', investor: 'Ertekin Can Olguner', amountUsd: 45_000, valuationCapUsd: 3_000_000, round: 1 },
   { date: '2024-08-23', investor: 'Ertekin Can Olguner', amountUsd: 17_500, valuationCapUsd: 3_000_000, round: 1 },
   { date: '2024-09-10', investor: 'Ekrem Ozan Olguner', amountUsd: 17_500, valuationCapUsd: 3_000_000, round: 1 },
-  { date: '2025-08-14', investor: 'Omer Akarca', amountUsd: 25_000, valuationCapUsd: 5_000_000, round: 2 },
+  { date: '2025-08-14', investor: 'Omer Akarca', amountUsd: 75_000, valuationCapUsd: 5_000_000, round: 2 },
   { date: '2025-08-29', investor: 'Varol Civil', amountUsd: 10_000, valuationCapUsd: 5_000_000, round: 2 },
   { date: '2025-10-08', investor: 'Refia B Kucukkoylu', amountUsd: 25_000, valuationCapUsd: 5_000_000, round: 2 },
   { date: '2025-11-10', investor: 'Adil Esat Ugurlu', amountUsd: 10_000, valuationCapUsd: 5_000_000, round: 2 },
