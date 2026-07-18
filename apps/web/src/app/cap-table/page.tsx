@@ -107,12 +107,12 @@ export default function CapTablePage() {
   });
 
   const navItems = [
+    { href: '#funding', label: 'Funding' },
     { href: '#captable', label: 'Cap table' },
     { href: '#simulator', label: 'Simulator' },
     { href: '#actuals', label: 'Actuals' },
     { href: '#plan', label: '5-Year plan' },
     { href: '#unit-economics', label: 'Unit economics' },
-    { href: '#funding', label: 'Funding' },
   ];
 
   return (
@@ -144,7 +144,126 @@ export default function CapTablePage() {
 
       <div className="flex-1 px-4 py-6 md:px-8">
         <div className="mx-auto flex max-w-4xl flex-col gap-6">
-          <div id="captable" className="grid scroll-mt-16 grid-cols-2 gap-3 md:grid-cols-4">
+          <SectionHeader
+            id="funding"
+            label="Funding"
+            title="Funding plan & valuation"
+            sub="Seed $5M at $30M (H2 2026) → Series A $19.5M at $130M (H1 2028) → Series B $50M at $500M (H2 2029), targeting a $1B IPO or sale in H2 2031."
+          />
+
+          <Card title="Planned rounds">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-[10px] uppercase tracking-wider text-zinc-500">
+                  <th className="px-5 py-2 font-medium">Round</th>
+                  <th className="px-5 py-2 text-right font-medium">Raise</th>
+                  <th className="px-5 py-2 text-right font-medium">Timing</th>
+                  <th className="px-5 py-2 text-right font-medium">Est. post-money</th>
+                  <th className="px-5 py-2 text-right font-medium">Equity sold</th>
+                </tr>
+              </thead>
+              <tbody>
+                {fundingPlan.map((r) => (
+                  <tr key={r.name} className="border-t border-zinc-200">
+                    <td className="px-5 py-2.5">{r.name}</td>
+                    <td className="px-5 py-2.5 text-right font-mono">${r.raiseUsdM}M</td>
+                    <td className="px-5 py-2.5 text-right font-mono text-zinc-600">{r.timing}</td>
+                    <td className="px-5 py-2.5 text-right font-mono">${r.postMoneyUsdM}M</td>
+                    <td className="px-5 py-2.5 text-right font-mono">{pct(r.equitySold)}</td>
+                  </tr>
+                ))}
+                <tr className="border-t border-zinc-200 font-bold">
+                  <td className="px-5 py-2.5">Total</td>
+                  <td className="px-5 py-2.5 text-right font-mono">
+                    ${fundingPlan.reduce((s, r) => s + r.raiseUsdM, 0)}M
+                  </td>
+                  <td colSpan={3} />
+                </tr>
+              </tbody>
+            </table>
+          </Card>
+
+          <Card title="Exit target">
+            <div className="grid gap-0 text-sm md:grid-cols-2">
+              <ValuationRow label="Target exit valuation" value={`$${exitPlan.valuationUsdM / 1000}B`} bold />
+              <ValuationRow label="Exit window" value={exitPlan.timing} />
+              <ValuationRow label="Path" value={exitPlan.path} />
+              <ValuationRow
+                label="Growth from seed post-money"
+                value={`${(exitPlan.valuationUsdM / fundingPlan[0]!.postMoneyUsdM).toFixed(1)}×`}
+              />
+            </div>
+          </Card>
+
+          <Card
+            title="Investor exit outcomes"
+            hint="Value of each current stake if sold in that round, after cumulative dilution"
+          >
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-[10px] uppercase tracking-wider text-zinc-500">
+                  <th className="px-5 py-2 font-medium">Investor</th>
+                  <th className="px-4 py-2 text-right font-medium">Invested</th>
+                  <th className="px-4 py-2 text-right font-medium">Stake</th>
+                  {exitStages.map((st) => (
+                    <th key={st.name} className="px-4 py-2 text-right font-medium">
+                      {st.name}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {investors.map((r) => (
+                  <tr key={r.name} className="border-t border-zinc-200">
+                    <td className="px-5 py-2.5">{r.name}</td>
+                    <td className="px-4 py-2.5 text-right font-mono text-zinc-600">
+                      {usdCompact(r.totalUsd)}
+                    </td>
+                    <td className="px-4 py-2.5 text-right font-mono text-zinc-600">
+                      {pct(r.share)}
+                    </td>
+                    {exitStages.map((st) => (
+                      <td key={st.name} className="px-4 py-2.5 text-right font-mono">
+                        {usdCompact(r.share * st.effectiveValueUsd)}
+                        <span className="ml-1 text-[10px] text-zinc-500">
+                          {(r.share * st.effectiveValueUsd / r.totalUsd).toFixed(1)}×
+                        </span>
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+                <tr className="border-t border-zinc-200 font-bold">
+                  <td className="px-5 py-2.5">Total</td>
+                  <td className="px-4 py-2.5 text-right font-mono">
+                    {usdCompact(investorTotalUsd)}
+                  </td>
+                  <td className="px-4 py-2.5 text-right font-mono">
+                    {pct(investorShare)}
+                  </td>
+                  {exitStages.map((st) => (
+                    <td key={st.name} className="px-4 py-2.5 text-right font-mono">
+                      {usdCompact(investorShare * st.effectiveValueUsd)}
+                    </td>
+                  ))}
+                </tr>
+              </tbody>
+            </table>
+            <p className="border-t border-zinc-200 px-5 py-3 text-[11px] leading-relaxed text-zinc-500">
+              Each column assumes the investor sells their full stake in that
+              round at that round's post-money valuation, after being diluted by
+              every round up to and including it. Exit assumes no further rounds
+              after Series B. Illustrative only.
+            </p>
+          </Card>
+
+          <SectionHeader
+            id="captable"
+            label="Ownership"
+            title="Cap table"
+            sub="Who holds what today — founders, employee pool, and the SAFE investors."
+          />
+
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
             <StatTile label="Total invested" value={usd(investorTotalUsd)} />
             <StatTile label="Founders (net)" value={pct(foundersOnlyNet)} />
             <StatTile label="ESOP (net)" value={pct(esopNet)} />
@@ -617,118 +736,6 @@ export default function CapTablePage() {
                 ))}
               </tbody>
             </table>
-          </Card>
-
-          <SectionHeader
-            id="funding"
-            label="Funding"
-            title="Funding plan & valuation"
-            sub="Seed $5M at $30M (H2 2026) → Series A $19.5M at $130M (H1 2028) → Series B $50M at $500M (H2 2029), targeting a $1B IPO or sale in H2 2031."
-          />
-
-          <Card title="Planned rounds">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-[10px] uppercase tracking-wider text-zinc-500">
-                  <th className="px-5 py-2 font-medium">Round</th>
-                  <th className="px-5 py-2 text-right font-medium">Raise</th>
-                  <th className="px-5 py-2 text-right font-medium">Timing</th>
-                  <th className="px-5 py-2 text-right font-medium">Est. post-money</th>
-                  <th className="px-5 py-2 text-right font-medium">Equity sold</th>
-                </tr>
-              </thead>
-              <tbody>
-                {fundingPlan.map((r) => (
-                  <tr key={r.name} className="border-t border-zinc-200">
-                    <td className="px-5 py-2.5">{r.name}</td>
-                    <td className="px-5 py-2.5 text-right font-mono">${r.raiseUsdM}M</td>
-                    <td className="px-5 py-2.5 text-right font-mono text-zinc-600">{r.timing}</td>
-                    <td className="px-5 py-2.5 text-right font-mono">${r.postMoneyUsdM}M</td>
-                    <td className="px-5 py-2.5 text-right font-mono">{pct(r.equitySold)}</td>
-                  </tr>
-                ))}
-                <tr className="border-t border-zinc-200 font-bold">
-                  <td className="px-5 py-2.5">Total</td>
-                  <td className="px-5 py-2.5 text-right font-mono">
-                    ${fundingPlan.reduce((s, r) => s + r.raiseUsdM, 0)}M
-                  </td>
-                  <td colSpan={3} />
-                </tr>
-              </tbody>
-            </table>
-          </Card>
-
-          <Card title="Exit target">
-            <div className="grid gap-0 text-sm md:grid-cols-2">
-              <ValuationRow label="Target exit valuation" value={`$${exitPlan.valuationUsdM / 1000}B`} bold />
-              <ValuationRow label="Exit window" value={exitPlan.timing} />
-              <ValuationRow label="Path" value={exitPlan.path} />
-              <ValuationRow
-                label="Growth from seed post-money"
-                value={`${(exitPlan.valuationUsdM / fundingPlan[0]!.postMoneyUsdM).toFixed(1)}×`}
-              />
-            </div>
-          </Card>
-
-          <Card
-            title="Investor exit outcomes"
-            hint="Value of each current stake if sold in that round, after cumulative dilution"
-          >
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-[10px] uppercase tracking-wider text-zinc-500">
-                  <th className="px-5 py-2 font-medium">Investor</th>
-                  <th className="px-4 py-2 text-right font-medium">Invested</th>
-                  <th className="px-4 py-2 text-right font-medium">Stake</th>
-                  {exitStages.map((st) => (
-                    <th key={st.name} className="px-4 py-2 text-right font-medium">
-                      {st.name}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {investors.map((r) => (
-                  <tr key={r.name} className="border-t border-zinc-200">
-                    <td className="px-5 py-2.5">{r.name}</td>
-                    <td className="px-4 py-2.5 text-right font-mono text-zinc-600">
-                      {usdCompact(r.totalUsd)}
-                    </td>
-                    <td className="px-4 py-2.5 text-right font-mono text-zinc-600">
-                      {pct(r.share)}
-                    </td>
-                    {exitStages.map((st) => (
-                      <td key={st.name} className="px-4 py-2.5 text-right font-mono">
-                        {usdCompact(r.share * st.effectiveValueUsd)}
-                        <span className="ml-1 text-[10px] text-zinc-500">
-                          {(r.share * st.effectiveValueUsd / r.totalUsd).toFixed(1)}×
-                        </span>
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-                <tr className="border-t border-zinc-200 font-bold">
-                  <td className="px-5 py-2.5">Total</td>
-                  <td className="px-4 py-2.5 text-right font-mono">
-                    {usdCompact(investorTotalUsd)}
-                  </td>
-                  <td className="px-4 py-2.5 text-right font-mono">
-                    {pct(investorShare)}
-                  </td>
-                  {exitStages.map((st) => (
-                    <td key={st.name} className="px-4 py-2.5 text-right font-mono">
-                      {usdCompact(investorShare * st.effectiveValueUsd)}
-                    </td>
-                  ))}
-                </tr>
-              </tbody>
-            </table>
-            <p className="border-t border-zinc-200 px-5 py-3 text-[11px] leading-relaxed text-zinc-500">
-              Each column assumes the investor sells their full stake in that
-              round at that round's post-money valuation, after being diluted by
-              every round up to and including it. Exit assumes no further rounds
-              after Series B. Illustrative only.
-            </p>
           </Card>
 
           <p className="text-[11px] leading-relaxed text-zinc-500">
