@@ -12,10 +12,26 @@ import { exitPlan, fundingPlan } from './financials';
  * her tur için (1 - satılan hisse) çarpımı.
  */
 
-const EXIT_PRESETS = [
-  { label: 'Conservative', valuation: 500_000_000 },
-  { label: 'Target · IPO/sale 2031', valuation: 1_000_000_000 },
-  { label: 'Stretch', valuation: 2_000_000_000 },
+/**
+ * Çıkış aşamaları: funding planındaki her tur + nihai exit. Her aşamanın
+ * "planlanan" değerlemesi vardır; kullanıcı üzerine yazabilir. Dilüsyon,
+ * girişten SONRAKİ ve seçilen aşamaya KADARKİ (aşama dahil) turların
+ * equity-sold oranlarıyla kümülatif hesaplanır — exit'in kendisi tur
+ * olmadığı için ek dilüsyon getirmez.
+ */
+const EXIT_STAGES = [
+  ...fundingPlan.map((r, i) => ({
+    key: r.name,
+    label: `${r.name} · ${r.timing}`,
+    plannedUsd: r.postMoneyUsdM * 1e6,
+    roundLimit: i,
+  })),
+  {
+    key: 'EXIT',
+    label: `Exit · ${exitPlan.timing}`,
+    plannedUsd: exitPlan.valuationUsdM * 1e6,
+    roundLimit: fundingPlan.length - 1,
+  },
 ];
 
 function fmtUsd(n: number): string {
@@ -26,10 +42,16 @@ function fmtUsd(n: number): string {
   return `$${n.toFixed(0)}`;
 }
 
-/** Girilen post-money'den sonra gelmesi planlanan turların dilüsyonu. */
-function retentionAfterEntry(entryValuation: number): number {
+/**
+ * Girişten sonra gelen ve seçilen aşamaya kadarki (dahil) turların
+ * kümülatif dilüsyonu. roundLimit = fundingPlan'de dahil edilecek son
+ * turun index'i.
+ */
+function retention(entryValuation: number, roundLimit: number): number {
   return fundingPlan
-    .filter((r) => r.postMoneyUsdM * 1e6 > entryValuation)
+    .filter(
+      (r, i) => i <= roundLimit && r.postMoneyUsdM * 1e6 > entryValuation,
+    )
     .reduce((acc, r) => acc * (1 - r.equitySold), 1);
 }
 
@@ -89,24 +111,31 @@ export function InvestorSimulator() {
   const [valuation, setValuation] = useState(
     fundingPlan[0]!.postMoneyUsdM * 1e6,
   );
+  const [stageKey, setStageKey] = useState('EXIT');
   const [exit, setExit] = useState(exitPlan.valuationUsdM * 1e6);
+
+  const stage = EXIT_STAGES.find((st) => st.key === stageKey) ?? EXIT_STAGES[EXIT_STAGES.length - 1]!;
+
+  function pickStage(key: string) {
+    const st = EXIT_STAGES.find((x) => x.key === key)!;
+    setStageKey(key);
+    setExit(st.plannedUsd); // planlanan değer default gelir, üzerine yazılabilir
+  }
 
   const r = useMemo(() => {
     if (valuation <= 0 || investment <= 0 || exit <= 0) return null;
     const stake = Math.min(1, investment / valuation);
-    const retention = retentionAfterEntry(valuation);
-    const gross = stake * exit;
-    const diluted = stake * retention * exit;
+    const kept = retention(valuation, stage.roundLimit);
+    const dilutedStake = stake * kept;
+    const value = dilutedStake * exit;
     return {
       stake,
-      retention,
-      gross,
-      grossMultiple: gross / investment,
-      diluted,
-      dilutedMultiple: diluted / investment,
-      dilutedProfit: diluted - investment,
+      dilutedStake,
+      value,
+      multiple: value / investment,
+      profit: value - investment,
     };
-  }, [investment, valuation, exit]);
+  }, [investment, valuation, exit, stage]);
 
   return (
     <div className="grid gap-6 px-5 py-4 md:grid-cols-2">
@@ -128,30 +157,37 @@ export function InvestorSimulator() {
           step={1_000_000}
           hint={`planned seed: $${fundingPlan[0]!.postMoneyUsdM}M`}
         />
+
+        <div>
+          <div className="text-[10px] uppercase tracking-wider text-zinc-500">
+            When do you exit?
+          </div>
+          <div className="mt-1.5 flex flex-wrap gap-2">
+            {EXIT_STAGES.map((st) => (
+              <button
+                key={st.key}
+                onClick={() => pickStage(st.key)}
+                className={`rounded-full border px-3 py-1.5 text-[11px] font-bold transition ${
+                  stageKey === st.key
+                    ? 'border-brand-dark/60 bg-brand/10 text-brand-dark'
+                    : 'border-zinc-300 text-zinc-600 hover:border-zinc-400 hover:text-zinc-900'
+                }`}
+              >
+                {st.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
         <NumberField
-          label="Exit valuation"
+          label={`Valuation at your exit (${stage.key === 'EXIT' ? 'IPO/sale' : stage.key})`}
           value={exit}
           onChange={setExit}
-          min={50_000_000}
+          min={10_000_000}
           max={2_000_000_000}
-          step={25_000_000}
-          hint={`target: $1B ${exitPlan.timing}`}
+          step={10_000_000}
+          hint={`planned: ${fmtUsd(stage.plannedUsd)} — customize freely`}
         />
-        <div className="flex flex-wrap gap-2">
-          {EXIT_PRESETS.map((p) => (
-            <button
-              key={p.label}
-              onClick={() => setExit(p.valuation)}
-              className={`rounded-full border px-3 py-1 text-[11px] transition ${
-                exit === p.valuation
-                  ? 'border-brand-dark/60 bg-brand/10 text-brand-dark'
-                  : 'border-zinc-300 text-zinc-600 hover:border-zinc-400 hover:text-zinc-900'
-              }`}
-            >
-              {p.label} · {fmtUsd(p.valuation)}
-            </button>
-          ))}
-        </div>
       </div>
 
       <div className="flex flex-col justify-center gap-3 rounded-xl border border-zinc-200 bg-zinc-50 p-4">
@@ -165,25 +201,25 @@ export function InvestorSimulator() {
             </div>
             <div className="flex items-baseline justify-between">
               <span className="text-sm text-zinc-600">
-                Value at exit (no dilution)
+                Stake when you exit (after dilution)
               </span>
               <span className="font-mono font-bold">
-                {fmtUsd(r.gross)}{' '}
-                <span className="text-zinc-500">
-                  ({r.grossMultiple.toFixed(1)}×)
-                </span>
+                {(r.dilutedStake * 100).toFixed(3)}%
               </span>
             </div>
             <div className="flex items-baseline justify-between">
               <span className="text-sm text-zinc-600">
-                After planned rounds dilute you to{' '}
-                {(r.stake * r.retention * 100).toFixed(3)}%
+                You walk away with
               </span>
               <span className="font-mono font-bold text-brand-dark">
-                {fmtUsd(r.diluted)}{' '}
-                <span className="text-zinc-500">
-                  ({r.dilutedMultiple.toFixed(1)}×)
-                </span>
+                {fmtUsd(r.value)}{' '}
+                <span className="text-zinc-500">({r.multiple.toFixed(1)}×)</span>
+              </span>
+            </div>
+            <div className="flex items-baseline justify-between">
+              <span className="text-sm text-zinc-600">Profit</span>
+              <span className="font-mono font-bold">
+                {fmtUsd(r.profit)}
               </span>
             </div>
             <div className="mt-1 border-t border-zinc-200 pt-3 text-sm leading-relaxed text-zinc-600">
@@ -191,13 +227,16 @@ export function InvestorSimulator() {
               <span className="font-mono text-zinc-900">
                 {(r.stake * 100).toFixed(3)}%
               </span>
-              . If Bottomup exits at {fmtUsd(exit)}, that stake returns{' '}
-              <span className="font-mono text-zinc-900">{fmtUsd(r.diluted)}</span>{' '}
-              after the planned follow-on rounds — a profit of{' '}
+              . Selling in {stage.key === 'EXIT' ? `the ${exitPlan.path.toLowerCase()} (${exitPlan.timing})` : `${stage.key} (${stage.label.split('·')[1]?.trim()})`}{' '}
+              at a {fmtUsd(exit)} valuation, your stake is diluted to{' '}
               <span className="font-mono text-zinc-900">
-                {fmtUsd(r.dilutedProfit)}
+                {(r.dilutedStake * 100).toFixed(3)}%
               </span>{' '}
-              ({r.dilutedMultiple.toFixed(1)}× your money).
+              by the rounds in between and returns{' '}
+              <span className="font-mono text-zinc-900">{fmtUsd(r.value)}</span>{' '}
+              — a profit of{' '}
+              <span className="font-mono text-zinc-900">{fmtUsd(r.profit)}</span>{' '}
+              ({r.multiple.toFixed(1)}× your money).
             </div>
           </>
         ) : (
