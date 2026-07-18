@@ -28,6 +28,7 @@ import {
   unitEconomics,
   valuationWalk,
 } from './financials';
+import { InvestorSimulator } from './simulator';
 
 export const metadata: Metadata = {
   title: 'Financials and Cap Table — Bottomup',
@@ -489,6 +490,16 @@ export default function CapTablePage() {
               <ValuationRow label="Pre-money today" value={`$${valuationWalk.preMoneyTodayUsdM.toFixed(1)}M`} />
               <ValuationRow label="Seed post-money (rounded)" value={`$${valuationWalk.seedPostMoneyUsdM}M`} bold />
             </div>
+          </Card>
+
+          <SectionHeader
+            label="Simulator"
+            title="What would your investment return?"
+            sub="Pick an investment, an entry valuation, and an exit scenario. Dilution from the planned follow-on rounds is applied automatically."
+          />
+
+          <Card title="Investor return simulator" hint="Illustrative only — not an offer">
+            <InvestorSimulator />
           </Card>
 
           <Card title="Balance sheet" hint="$k · condensed">
