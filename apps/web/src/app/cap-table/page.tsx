@@ -115,7 +115,7 @@ export default function CapTablePage() {
 
           <Card
             title="Ownership breakdown"
-            hint="Fully diluted — investor stake applied pro-rata"
+            hint="Fully diluted · as of Jul 2026 — future rounds will dilute further"
           >
             <div className="px-5 py-4">
               <OwnershipChart segments={ownershipSegments} />
@@ -133,7 +133,7 @@ export default function CapTablePage() {
 
           <Card
             title="Founders & employee pool"
-            hint="Initial = founding split · Net = after investor dilution"
+            hint="Initial = founding split · Net = after dilution to date (Jul 2026)"
           >
             <table className="w-full text-sm">
               <thead>
@@ -267,6 +267,16 @@ export default function CapTablePage() {
           </Card>
 
           <SectionHeader
+            label="Simulator"
+            title="What would your investment return?"
+            sub="Pick an investment, an entry valuation, and an exit scenario. Dilution from the planned follow-on rounds is applied automatically."
+          />
+
+          <Card title="Investor return simulator" hint="Illustrative only — not an offer">
+            <InvestorSimulator />
+          </Card>
+
+          <SectionHeader
             label="Traction"
             title="Financial actuals"
             sub="Eight quarters of actuals plus the H2-2026 forecast. Revenue in $k."
@@ -325,6 +335,42 @@ export default function CapTablePage() {
                     {quarterlyActuals.filter((q) => !q.forecast).map((q) => (
                       <td key={q.quarter} className="px-3 py-2.5 text-right font-mono text-fg-muted">
                         {pick(q) == null ? '—' : num(pick(q)!)}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </Card>
+
+          <Card title="Balance sheet" hint="$k · condensed">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-[10px] uppercase tracking-wider text-fg-dim">
+                  <th className="px-5 py-2 font-medium">$k</th>
+                  {balanceSheet.map((c) => (
+                    <th key={c.label} className="px-5 py-2 text-right font-medium">
+                      {c.label}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {(
+                  [
+                    ['Cash at bank', (c: (typeof balanceSheet)[number]) => c.cashAtBank],
+                    ['Cash at exchanges', (c: (typeof balanceSheet)[number]) => c.cashAtCex],
+                    ['Total assets', (c: (typeof balanceSheet)[number]) => c.cashAtBank + c.cashAtCex, true],
+                    ['Liabilities', (c: (typeof balanceSheet)[number]) => -c.liabilities],
+                    ['Share capital', (c: (typeof balanceSheet)[number]) => c.shareCapital],
+                    ['Retained earnings', (c: (typeof balanceSheet)[number]) => c.retainedEarnings],
+                  ] as const
+                ).map(([label, pick, bold]) => (
+                  <tr key={label} className={`border-t border-border ${bold ? 'font-bold' : ''}`}>
+                    <td className="px-5 py-2.5">{label}</td>
+                    {balanceSheet.map((c) => (
+                      <td key={c.label} className={`px-5 py-2.5 text-right font-mono ${bold ? '' : 'text-fg-muted'}`}>
+                        {kNum(pick(c))}
                       </td>
                     ))}
                   </tr>
@@ -520,59 +566,15 @@ export default function CapTablePage() {
             </div>
           </Card>
 
-          <SectionHeader
-            label="Simulator"
-            title="What would your investment return?"
-            sub="Pick an investment, an entry valuation, and an exit scenario. Dilution from the planned follow-on rounds is applied automatically."
-          />
-
-          <Card title="Investor return simulator" hint="Illustrative only — not an offer">
-            <InvestorSimulator />
-          </Card>
-
-          <Card title="Balance sheet" hint="$k · condensed">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-[10px] uppercase tracking-wider text-fg-dim">
-                  <th className="px-5 py-2 font-medium">$k</th>
-                  {balanceSheet.map((c) => (
-                    <th key={c.label} className="px-5 py-2 text-right font-medium">
-                      {c.label}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {(
-                  [
-                    ['Cash at bank', (c: (typeof balanceSheet)[number]) => c.cashAtBank],
-                    ['Cash at exchanges', (c: (typeof balanceSheet)[number]) => c.cashAtCex],
-                    ['Total assets', (c: (typeof balanceSheet)[number]) => c.cashAtBank + c.cashAtCex, true],
-                    ['Liabilities', (c: (typeof balanceSheet)[number]) => -c.liabilities],
-                    ['Share capital', (c: (typeof balanceSheet)[number]) => c.shareCapital],
-                    ['Retained earnings', (c: (typeof balanceSheet)[number]) => c.retainedEarnings],
-                  ] as const
-                ).map(([label, pick, bold]) => (
-                  <tr key={label} className={`border-t border-border ${bold ? 'font-bold' : ''}`}>
-                    <td className="px-5 py-2.5">{label}</td>
-                    {balanceSheet.map((c) => (
-                      <td key={c.label} className={`px-5 py-2.5 text-right font-mono ${bold ? '' : 'text-fg-muted'}`}>
-                        {kNum(pick(c))}
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </Card>
-
           <p className="text-[11px] leading-relaxed text-fg-dim">
             Founding split as declared by the founders (July 2026): 50/15/15/10
             across the four founders plus a 10% employee pool, totalling 100%
             pre-investment. Investor stakes are derived from the transaction
             list under a post-money SAFE assumption and dilute founders and the
-            pool pro-rata; actual conversion terms are governed by the round
-            documents. Financials per the "bottomUP Financials
+            pool pro-rata. Net stakes reflect dilution <em>to date</em> only —
+            the planned FY27–FY31 rounds will dilute founders and the pool
+            further (see the funding plan and simulator above). Actual
+            conversion terms are governed by the round documents. Financials per the "bottomUP Financials
             FY24A–FY31B" model (AY update, Jul 2026): FY24–FY25 audited-basis
             actuals, FY26 forecast, FY27–FY31 budget contingent on the staged
             raise. This page is unlisted — only people with the link can see
