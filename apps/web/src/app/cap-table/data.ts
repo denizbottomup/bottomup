@@ -3,8 +3,10 @@
  *
  * Yatırımcı yüzdeleri SAFE post-money varsayımıyla işlemlerden türetilir
  * (hisse % = yatırım / değerleme cap). Kurucu ve ESOP oranları kurucu
- * beyanı (18.07.2026). Kaynak işlem listesi: yatırım CSV'si — Excel
- * karşılığı repo dışında cap-table.xlsx olarak tutuluyor.
+ * beyanı (18.07.2026). İşlem listesi "bottomUP Financials" workbook'unun
+ * Investments sekmesiyle mutabık (BS ile birebir tutuyor) — CSV'deki
+ * eksik Omer Akarca kaydı ve Refia tarih farkı kurucu onayıyla Excel'e
+ * eşitlendi (Tem 2026).
  */
 
 export interface CapTableTransaction {
@@ -43,10 +45,11 @@ export const transactions: CapTableTransaction[] = [
   { date: '2024-07-19', investor: 'Ertekin Can Olguner', amountUsd: 45_000, valuationCapUsd: 3_000_000, round: 1 },
   { date: '2024-08-23', investor: 'Ertekin Can Olguner', amountUsd: 17_500, valuationCapUsd: 3_000_000, round: 1 },
   { date: '2024-09-10', investor: 'Ekrem Ozan Olguner', amountUsd: 17_500, valuationCapUsd: 3_000_000, round: 1 },
+  { date: '2025-08-14', investor: 'Omer Akarca', amountUsd: 25_000, valuationCapUsd: 5_000_000, round: 2 },
   { date: '2025-08-29', investor: 'Varol Civil', amountUsd: 10_000, valuationCapUsd: 5_000_000, round: 2 },
+  { date: '2025-10-08', investor: 'Refia B Kucukkoylu', amountUsd: 25_000, valuationCapUsd: 5_000_000, round: 2 },
   { date: '2025-11-10', investor: 'Adil Esat Ugurlu', amountUsd: 10_000, valuationCapUsd: 5_000_000, round: 2 },
   { date: '2025-11-12', investor: 'Goktug Akarcay', amountUsd: 9_970, valuationCapUsd: 5_000_000, round: 2 },
-  { date: '2025-12-01', investor: 'Refia B Kucukkoylu', amountUsd: 25_000, valuationCapUsd: 5_000_000, round: 2 },
   { date: '2026-01-20', investor: 'Hasan Eray Dogan', amountUsd: 29_999, valuationCapUsd: 5_000_000, round: 2 },
   { date: '2026-04-06', investor: 'Alp Resat Capa', amountUsd: 29_900, valuationCapUsd: 5_000_000, round: 2 },
   { date: '2026-04-08', investor: 'Fethi Saruhan Tan', amountUsd: 50_000, valuationCapUsd: 5_000_000, round: 2 },

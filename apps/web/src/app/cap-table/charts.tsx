@@ -111,6 +111,14 @@ const W = 640;
 const H = 230;
 const M = { top: 16, right: 16, bottom: 28, left: 52 };
 
+function usdShortLabel(n: number): string {
+  const abs = Math.abs(n);
+  const sign = n < 0 ? '-' : '';
+  if (abs >= 1e6) return `${sign}$${(abs / 1e6).toFixed(1)}B`; // $k cinsinden girdi
+  if (abs >= 1e3) return `${sign}$${(abs / 1e3).toFixed(1)}M`;
+  return `${sign}$${abs.toFixed(0)}K`;
+}
+
 export function CapitalRaisedChart({ points }: { points: RaisePoint[] }) {
   const [hover, setHover] = useState<number | null>(null);
   const svgRef = useRef<SVGSVGElement | null>(null);
@@ -279,6 +287,329 @@ export function CapitalRaisedChart({ points }: { points: RaisePoint[] }) {
           Round 2 · $5M cap
         </span>
       </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Finansal grafikler — girdiler $k cinsinden.                         */
+/* ------------------------------------------------------------------ */
+
+export interface StackedColumn {
+  label: string;
+  forecast?: boolean;
+  values: number[]; // seri sırasıyla
+}
+
+export interface StackedSeries {
+  name: string;
+  color: string;
+}
+
+/**
+ * Dikey stacked kolon grafiği — çeyreklik gelir ve yıllık gelir mix'i
+ * için ortak. Forecast kolonları yarı saydam çizilir; hover'da kolonun
+ * dökümü gösterilir.
+ */
+export function StackedColumnsChart({
+  columns,
+  series,
+  percentMode = false,
+}: {
+  columns: StackedColumn[];
+  series: StackedSeries[];
+  percentMode?: boolean;
+}) {
+  const [hover, setHover] = useState<number | null>(null);
+  const fmt = usdShortLabel;
+
+  const CW = 640;
+  const CH = 230;
+  const m = { top: 14, right: 12, bottom: 26, left: percentMode ? 40 : 52 };
+  const totals = columns.map((c) => c.values.reduce((s, v) => s + v, 0));
+  const maxY = percentMode ? 1 : Math.max(...totals) * 1.08;
+  const innerW = CW - m.left - m.right;
+  const innerH = CH - m.top - m.bottom;
+  const slot = innerW / columns.length;
+  const barW = Math.min(38, slot * 0.6);
+
+  const yTickCount = 4;
+  const yTicks = Array.from({ length: yTickCount + 1 }, (_, i) => (maxY / yTickCount) * i);
+
+  return (
+    <div className="relative">
+      <svg viewBox={`0 0 ${CW} ${CH}`} className="w-full" role="img">
+        {yTicks.map((v) => {
+          const y = m.top + innerH - (v / maxY) * innerH;
+          return (
+            <g key={v}>
+              <line x1={m.left} x2={CW - m.right} y1={y} y2={y} stroke="#23272D" strokeWidth={1} />
+              <text x={m.left - 6} y={y + 3} textAnchor="end" fontSize={10} fill="#5A616B" fontFamily="monospace">
+                {percentMode ? `${Math.round(v * 100)}%` : fmt(v)}
+              </text>
+            </g>
+          );
+        })}
+        {columns.map((c, ci) => {
+          const x = m.left + slot * ci + (slot - barW) / 2;
+          const total = totals[ci]! || 1;
+          let yCursor = m.top + innerH;
+          return (
+            <g
+              key={c.label}
+              opacity={hover === null || hover === ci ? (c.forecast ? 0.55 : 1) : 0.3}
+              onMouseEnter={() => setHover(ci)}
+              onMouseLeave={() => setHover(null)}
+            >
+              {c.values.map((v, si) => {
+                const frac = percentMode ? v / total : v / maxY;
+                const h = Math.max(0, frac * innerH);
+                yCursor -= h;
+                const y = yCursor;
+                yCursor -= 2; // 2px yüzey boşluğu
+                return (
+                  <rect key={si} x={x} y={y} width={barW} height={Math.max(0, h - 0)} fill={series[si]!.color} rx={2} />
+                );
+              })}
+              <text
+                x={x + barW / 2}
+                y={CH - m.bottom + 15}
+                textAnchor="middle"
+                fontSize={9.5}
+                fill={c.forecast ? '#5A616B' : '#8B9097'}
+                fontFamily="monospace"
+              >
+                {c.label}
+              </text>
+              {/* Hover hedefi tüm slot */}
+              <rect x={m.left + slot * ci} y={m.top} width={slot} height={innerH} fill="transparent" />
+            </g>
+          );
+        })}
+      </svg>
+
+      {hover !== null ? (
+        <div
+          className="pointer-events-none absolute z-10 rounded-lg border border-border bg-bg-elev px-3 py-2 text-xs shadow-lg"
+          style={{
+            left: `${(((m.left + slot * hover + slot / 2) / CW) * 100).toFixed(1)}%`,
+            top: '8%',
+            transform: hover > columns.length / 2 ? 'translate(-100%, 0)' : 'none',
+          }}
+        >
+          <div className="mb-1 font-bold text-fg">
+            {columns[hover]!.label}
+            {columns[hover]!.forecast ? ' · forecast' : ''}
+          </div>
+          {series.map((s, si) => (
+            <div key={s.name} className="flex items-center gap-1.5 font-mono text-fg-muted">
+              <span className="h-2 w-2 rounded-full" style={{ backgroundColor: s.color }} />
+              {s.name}: {fmt(columns[hover]!.values[si]!)}
+              {percentMode ? ` (${((columns[hover]!.values[si]! / (totals[hover]! || 1)) * 100).toFixed(0)}%)` : ''}
+            </div>
+          ))}
+          {!percentMode ? (
+            <div className="mt-1 font-mono font-bold text-fg">Total: {fmt(totals[hover]!)}</div>
+          ) : null}
+        </div>
+      ) : null}
+
+      <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-fg-muted">
+        {series.map((s) => (
+          <span key={s.name} className="flex items-center gap-1.5">
+            <span className="h-2 w-2 rounded-full" style={{ backgroundColor: s.color }} />
+            {s.name}
+          </span>
+        ))}
+        <span className="flex items-center gap-1.5">
+          <span className="h-2 w-2 rounded-full opacity-50" style={{ backgroundColor: '#8B9097' }} />
+          Faded = forecast/budget
+        </span>
+      </div>
+    </div>
+  );
+}
+
+export interface AnnualPoint {
+  label: string;
+  kind: 'actual' | 'forecast' | 'budget';
+  revenue: number; // $k
+  ebitda: number; // $k
+}
+
+/**
+ * Yıllık gelir kolonları + EBITDA çizgisi, tek $ ekseni. EBITDA erken
+ * yıllarda negatif olduğu için sıfır çizgisi vurgulu.
+ */
+export function RevenueEbitdaChart({ points }: { points: AnnualPoint[] }) {
+  const [hover, setHover] = useState<number | null>(null);
+
+  const CW = 640;
+  const CH = 250;
+  const m = { top: 18, right: 14, bottom: 26, left: 56 };
+  const maxV = Math.max(...points.map((p) => p.revenue)) * 1.06;
+  const minV = Math.min(0, ...points.map((p) => p.ebitda)) * 1.4;
+  const innerW = CW - m.left - m.right;
+  const innerH = CH - m.top - m.bottom;
+  const y = (v: number) => m.top + innerH - ((v - minV) / (maxV - minV)) * innerH;
+  const slot = innerW / points.length;
+  const barW = Math.min(40, slot * 0.55);
+
+  const ticks = [0, 10_000, 20_000, 30_000, 40_000].filter((v) => v <= maxV);
+
+  return (
+    <div className="relative">
+      <svg viewBox={`0 0 ${CW} ${CH}`} className="w-full" role="img">
+        {ticks.map((v) => (
+          <g key={v}>
+            <line x1={m.left} x2={CW - m.right} y1={y(v)} y2={y(v)} stroke={v === 0 ? '#3A4048' : '#23272D'} strokeWidth={v === 0 ? 1.5 : 1} />
+            <text x={m.left - 6} y={y(v) + 3} textAnchor="end" fontSize={10} fill="#5A616B" fontFamily="monospace">
+              {usdShortLabel(v)}
+            </text>
+          </g>
+        ))}
+        {points.map((p, i) => {
+          const x = m.left + slot * i + (slot - barW) / 2;
+          const h = ((p.revenue - 0) / (maxV - minV)) * innerH;
+          return (
+            <g key={p.label} opacity={hover === null || hover === i ? 1 : 0.35}>
+              <rect
+                x={x}
+                y={y(p.revenue)}
+                width={barW}
+                height={Math.max(1, h)}
+                rx={3}
+                fill="#E56B1A"
+                opacity={p.kind === 'actual' ? 1 : 0.5}
+              />
+              <text x={x + barW / 2} y={CH - m.bottom + 15} textAnchor="middle" fontSize={9.5} fill={p.kind === 'actual' ? '#8B9097' : '#5A616B'} fontFamily="monospace">
+                {p.label}
+              </text>
+              <rect
+                x={m.left + slot * i}
+                y={m.top}
+                width={slot}
+                height={innerH}
+                fill="transparent"
+                onMouseEnter={() => setHover(i)}
+                onMouseLeave={() => setHover(null)}
+              />
+            </g>
+          );
+        })}
+        <path
+          d={points
+            .map((p, i) => `${i === 0 ? 'M' : 'L'} ${m.left + slot * i + slot / 2} ${y(p.ebitda)}`)
+            .join(' ')}
+          fill="none"
+          stroke="#1FA576"
+          strokeWidth={2}
+        />
+        {points.map((p, i) => (
+          <circle
+            key={p.label}
+            cx={m.left + slot * i + slot / 2}
+            cy={y(p.ebitda)}
+            r={hover === i ? 5 : 3.5}
+            fill="#1FA576"
+            stroke="#14171B"
+            strokeWidth={2}
+          />
+        ))}
+      </svg>
+
+      {hover !== null ? (
+        <div
+          className="pointer-events-none absolute z-10 rounded-lg border border-border bg-bg-elev px-3 py-2 text-xs shadow-lg"
+          style={{
+            left: `${(((m.left + slot * hover + slot / 2) / CW) * 100).toFixed(1)}%`,
+            top: '6%',
+            transform: hover > points.length / 2 ? 'translate(-100%, 0)' : 'none',
+          }}
+        >
+          <div className="mb-1 font-bold text-fg">
+            {points[hover]!.label}
+            <span className="ml-1 font-normal text-fg-dim">({points[hover]!.kind})</span>
+          </div>
+          <div className="font-mono text-fg-muted">Revenue: {usdShortLabel(points[hover]!.revenue)}</div>
+          <div className="font-mono text-fg-muted">EBITDA: {usdShortLabel(points[hover]!.ebitda)}</div>
+        </div>
+      ) : null}
+
+      <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-fg-muted">
+        <span className="flex items-center gap-1.5">
+          <span className="h-2 w-2 rounded-full" style={{ backgroundColor: '#E56B1A' }} />
+          Revenue (solid = actual, faded = plan)
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="h-2 w-2 rounded-full" style={{ backgroundColor: '#1FA576' }} />
+          EBITDA
+        </span>
+      </div>
+    </div>
+  );
+}
+
+/** Tek serilik kullanıcı büyümesi — alan + uç etiket. */
+export function UsersChart({
+  points,
+}: {
+  points: { label: string; value: number; kind: 'actual' | 'forecast' | 'budget' }[];
+}) {
+  const [hover, setHover] = useState<number | null>(null);
+  const CW = 640;
+  const CH = 200;
+  const m = { top: 20, right: 20, bottom: 26, left: 52 };
+  const maxV = Math.max(...points.map((p) => p.value)) * 1.08;
+  const innerW = CW - m.left - m.right;
+  const innerH = CH - m.top - m.bottom;
+  const x = (i: number) => m.left + (i / (points.length - 1)) * innerW;
+  const y = (v: number) => m.top + innerH - (v / maxV) * innerH;
+
+  const line = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${x(i)} ${y(p.value)}`).join(' ');
+  const area = `${line} L ${x(points.length - 1)} ${y(0)} L ${x(0)} ${y(0)} Z`;
+
+  return (
+    <div className="relative">
+      <svg viewBox={`0 0 ${CW} ${CH}`} className="w-full" role="img">
+        {[0, 250_000, 500_000].map((v) => (
+          <g key={v}>
+            <line x1={m.left} x2={CW - m.right} y1={y(v)} y2={y(v)} stroke="#23272D" strokeWidth={1} />
+            <text x={m.left - 6} y={y(v) + 3} textAnchor="end" fontSize={10} fill="#5A616B" fontFamily="monospace">
+              {v === 0 ? '0' : `${v / 1000}K`}
+            </text>
+          </g>
+        ))}
+        <path d={area} fill="#7C5CFF" opacity={0.12} />
+        <path d={line} fill="none" stroke="#7C5CFF" strokeWidth={2} />
+        {points.map((p, i) => (
+          <g key={p.label}>
+            <circle cx={x(i)} cy={y(p.value)} r={hover === i ? 5 : 3.5} fill="#7C5CFF" stroke="#14171B" strokeWidth={2} opacity={p.kind === 'actual' ? 1 : 0.6} />
+            <circle cx={x(i)} cy={y(p.value)} r={12} fill="transparent" onMouseEnter={() => setHover(i)} onMouseLeave={() => setHover(null)} />
+            <text x={x(i)} y={CH - m.bottom + 15} textAnchor="middle" fontSize={9.5} fill={p.kind === 'actual' ? '#8B9097' : '#5A616B'} fontFamily="monospace">
+              {p.label}
+            </text>
+          </g>
+        ))}
+        <text x={x(points.length - 1)} y={y(points[points.length - 1]!.value) - 10} textAnchor="end" fontSize={11} fontWeight={700} fill="#E8EAED" fontFamily="monospace">
+          {(points[points.length - 1]!.value / 1000).toFixed(0)}K users
+        </text>
+      </svg>
+      {hover !== null ? (
+        <div
+          className="pointer-events-none absolute z-10 rounded-lg border border-border bg-bg-elev px-3 py-1.5 text-xs shadow-lg"
+          style={{
+            left: `${((x(hover) / CW) * 100).toFixed(1)}%`,
+            top: '4%',
+            transform: hover > points.length / 2 ? 'translate(-100%, 0)' : 'none',
+          }}
+        >
+          <span className="text-fg">{points[hover]!.label}</span>{' '}
+          <span className="font-mono text-fg-muted">
+            {points[hover]!.value.toLocaleString('en-US')} users ({points[hover]!.kind})
+          </span>
+        </div>
+      ) : null}
     </div>
   );
 }
