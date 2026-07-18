@@ -535,7 +535,7 @@ export default function CapTablePage() {
           <SectionHeader
             label="Funding"
             title="Funding plan & valuation"
-            sub="Seed $5M at $30M (H2 2026) → Series A $26M at $130M (H1 2028) → Series B $100M at $500M (H2 2029), targeting a $1B IPO or sale in H2 2031."
+            sub="Seed $5M at $30M (H2 2026) → Series A $19.5M at $130M (H1 2028) → Series B $50M at $500M (H2 2029), targeting a $1B IPO or sale in H2 2031."
           />
 
           <Card title="Planned rounds">

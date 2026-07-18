@@ -91,18 +91,15 @@ export interface FundingRound {
   raiseUsdM: number;
   timing: string; // "2026 H2"
   postMoneyUsdM: number;
-  /**
-   * O turda satılması planlanan hisse. Kurucu beyanı — raise/post-money
-   * oranından bilinçli olarak ayrışabilir (A ve B'de daha düşük tutuldu).
-   */
+  /** raise / post-money — o turda satılan hisse. */
   equitySold: number;
 }
 
 /** Kurucu beyanı (Tem 2026) — üç tur + $1B exit hedefi. */
 export const fundingPlan: FundingRound[] = [
   { name: 'Seed', raiseUsdM: 5, timing: '2026 H2', postMoneyUsdM: 30, equitySold: 5 / 30 },
-  { name: 'Series A', raiseUsdM: 26, timing: '2028 H1', postMoneyUsdM: 130, equitySold: 0.15 },
-  { name: 'Series B', raiseUsdM: 100, timing: '2029 H2', postMoneyUsdM: 500, equitySold: 0.1 },
+  { name: 'Series A', raiseUsdM: 19.5, timing: '2028 H1', postMoneyUsdM: 130, equitySold: 19.5 / 130 },
+  { name: 'Series B', raiseUsdM: 50, timing: '2029 H2', postMoneyUsdM: 500, equitySold: 50 / 500 },
 ];
 
 export const exitPlan = {
