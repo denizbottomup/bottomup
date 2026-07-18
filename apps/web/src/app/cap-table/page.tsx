@@ -279,6 +279,26 @@ export default function CapTablePage() {
                       <p className="mt-1 text-[13px] leading-relaxed text-fg-muted">
                         {p.bio}
                       </p>
+                      <div className="mt-1.5 flex gap-3 text-[11px]">
+                        {p.linkedinUrl ? (
+                          <a
+                            href={p.linkedinUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-brand hover:underline"
+                          >
+                            LinkedIn ↗
+                          </a>
+                        ) : null}
+                        <a
+                          href={p.sourceUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-fg-dim hover:text-fg hover:underline"
+                        >
+                          GBA profile ↗
+                        </a>
+                      </div>
                     </div>
                   </div>
                 );

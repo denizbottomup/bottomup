@@ -13,6 +13,8 @@ export interface InvestorProfile {
   photo: string;
   bio: string;
   sourceUrl: string;
+  /** Doğrulanmış kişisel LinkedIn profili — emin olunamayanlar boş bırakıldı. */
+  linkedinUrl?: string;
 }
 
 export const investorProfiles: InvestorProfile[] = [
@@ -36,6 +38,7 @@ export const investorProfiles: InvestorProfile[] = [
     photo: '/cap-table/omer-akarca.jpg',
     bio: 'Serial entrepreneur and startup advisor. Electrical-electronics engineer (Başkent University) with an entrepreneurship-focused MBA from the University of Illinois at Chicago, where he advised small businesses with the SBA. GBA member since 2010 and a founding member of Entrepreneurs’ Organization (EO) Turkey.',
     sourceUrl: 'https://galatabusinessangels.com/tr/biz/omer-akarca/',
+    linkedinUrl: 'https://www.linkedin.com/in/omerakarca/',
   },
   {
     investorName: 'Varol Civil',
@@ -50,5 +53,6 @@ export const investorProfiles: InvestorProfile[] = [
     photo: '/cap-table/esat-ugurlu.jpg',
     bio: 'E-learning entrepreneur, investor and mentor with 15+ years in the sector. Founder of Globed E-learning and Okuvaryum, whose content and services reach over a million users in four countries. Educated at Tarsus American College and Brandeis University; early career at SecondLife.com and UNESCO Bangkok / iGroup Asia Pacific. TEDx speaker.',
     sourceUrl: 'https://galatabusinessangels.com/tr/biz/esat-ugurlu/',
+    linkedinUrl: 'https://www.linkedin.com/in/esat-ugurlu-83b56b15',
   },
 ];
