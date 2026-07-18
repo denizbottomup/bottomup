@@ -35,7 +35,7 @@ export const founders: FounderEntry[] = [
   { name: 'Erdogan Yucel', share: 0.1 },
   { name: 'Mehmet Karakucuk', share: 0.1 },
   { name: 'Alex Yusifli', share: 0.05 },
-  { name: 'Çalışan hisse havuzu (ESOP)', share: 0.1, pool: true },
+  { name: 'Employee stock pool (ESOP)', share: 0.1, pool: true },
 ];
 
 export const transactions: CapTableTransaction[] = [

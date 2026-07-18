@@ -6,6 +6,12 @@ import {
   founders,
   transactions,
 } from './data';
+import {
+  CapitalRaisedChart,
+  OwnershipChart,
+  type OwnershipSegment,
+  type RaisePoint,
+} from './charts';
 
 export const metadata: Metadata = {
   title: 'Cap Table — Bottomup',
@@ -17,6 +23,7 @@ export const metadata: Metadata = {
  * hesaplamaların hepsini oradan türetir ki tek işlem eklemek tabloyu
  * baştan aşağı güncellesin. Bilerek liste dışı (unlisted): login yok,
  * navigasyondan link verilmez, noindex — sayfayı sadece linki bilen açar.
+ * Sayfa dili İngilizce (yatırımcılarla paylaşılıyor).
  */
 export default function CapTablePage() {
   const investors = aggregateInvestors(transactions);
@@ -31,44 +38,72 @@ export default function CapTablePage() {
     a.date.localeCompare(b.date),
   );
 
+  const ownershipSegments: OwnershipSegment[] = [
+    ...founders.map((f) => ({
+      label: f.name,
+      share: f.share,
+      kind: f.pool ? ('esop' as const) : ('founder' as const),
+    })),
+    { label: 'Investors', share: investorShare, kind: 'investor' },
+    { label: 'Unallocated', share: unallocated, kind: 'unallocated' },
+  ];
+
+  let running = 0;
+  const raisePoints: RaisePoint[] = sortedTxs.map((t) => {
+    running += t.amountUsd;
+    return {
+      date: t.date,
+      investor: t.investor,
+      amountUsd: t.amountUsd,
+      cumulativeUsd: running,
+      round: t.round,
+    };
+  });
+
   return (
     <div className="flex min-h-screen flex-col">
       <header className="flex flex-col gap-1 border-b border-border px-4 py-4 md:px-8 md:py-5">
-        <div className="mono-label !text-brand">Cap Table · hissedar yapısı</div>
+        <div className="mono-label !text-brand">Cap Table · Ownership</div>
         <h1 className="mt-1 text-2xl font-extrabold tracking-tight md:text-3xl">
-          Bottomup kimin?
+          Who owns Bottomup?
         </h1>
         <p className="max-w-2xl text-sm text-fg-muted">
-          Kurucu kadro, çalışan hisse havuzu ve iki SAFE turunun yatırımcıları.
-          Yatırımcı oranları post-money varsayımıyla hesaplanır: hisse % =
-          yatırım / değerleme cap.
+          Founding team, employee stock pool, and the investors across two SAFE
+          rounds. Investor stakes are computed on a post-money basis: stake % =
+          investment / valuation cap.
         </p>
       </header>
 
       <div className="flex-1 overflow-y-auto px-4 py-6 md:px-8">
         <div className="mx-auto flex max-w-4xl flex-col gap-6">
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-            <StatTile label="Toplam yatırım" value={usd(investorTotalUsd)} />
-            <StatTile
-              label="Kurucular + ESOP"
-              value={pct(founderShare)}
-            />
-            <StatTile label="Yatırımcılar" value={pct(investorShare)} />
-            <StatTile label="Dağıtılmamış" value={pct(unallocated)} />
+            <StatTile label="Total invested" value={usd(investorTotalUsd)} />
+            <StatTile label="Founders + ESOP" value={pct(founderShare)} />
+            <StatTile label="Investors" value={pct(investorShare)} />
+            <StatTile label="Unallocated" value={pct(unallocated)} />
           </div>
 
-          <OwnershipBar
-            founderShare={founderShare}
-            investorShare={investorShare}
-            unallocated={unallocated}
-          />
+          <Card title="Ownership breakdown">
+            <div className="px-5 py-4">
+              <OwnershipChart segments={ownershipSegments} />
+            </div>
+          </Card>
 
-          <Card title="Kurucular ve çalışan havuzu">
+          <Card
+            title="Capital raised"
+            hint={`${usd(investorTotalUsd)} across ${sortedTxs.length} checks`}
+          >
+            <div className="px-5 py-4">
+              <CapitalRaisedChart points={raisePoints} />
+            </div>
+          </Card>
+
+          <Card title="Founders & employee pool">
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-[10px] uppercase tracking-wider text-fg-dim">
-                  <th className="px-5 py-2 font-medium">Hissedar</th>
-                  <th className="px-5 py-2 text-right font-medium">Hisse</th>
+                  <th className="px-5 py-2 font-medium">Shareholder</th>
+                  <th className="px-5 py-2 text-right font-medium">Stake</th>
                 </tr>
               </thead>
               <tbody>
@@ -78,7 +113,7 @@ export default function CapTablePage() {
                       {f.name}
                       {f.pool ? (
                         <span className="ml-2 rounded-full border border-white/10 px-2 py-0.5 text-[10px] uppercase tracking-wider text-fg-dim">
-                          Havuz
+                          Pool
                         </span>
                       ) : null}
                     </td>
@@ -88,7 +123,7 @@ export default function CapTablePage() {
                   </tr>
                 ))}
                 <tr className="border-t border-border font-bold">
-                  <td className="px-5 py-2.5">Toplam</td>
+                  <td className="px-5 py-2.5">Total</td>
                   <td className="px-5 py-2.5 text-right font-mono">
                     {pct(founderShare)}
                   </td>
@@ -98,17 +133,17 @@ export default function CapTablePage() {
           </Card>
 
           <Card
-            title="Yatırımcılar"
-            hint={`Tur 1: ${usd(ROUND_CAPS[1])} cap (2024) · Tur 2: ${usd(ROUND_CAPS[2])} cap (2025–2026)`}
+            title="Investors"
+            hint={`Round 1: ${usd(ROUND_CAPS[1])} cap (2024) · Round 2: ${usd(ROUND_CAPS[2])} cap (2025–2026)`}
           >
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-[10px] uppercase tracking-wider text-fg-dim">
-                  <th className="px-5 py-2 font-medium">Yatırımcı</th>
-                  <th className="px-5 py-2 text-right font-medium">Tur 1</th>
-                  <th className="px-5 py-2 text-right font-medium">Tur 2</th>
-                  <th className="px-5 py-2 text-right font-medium">Toplam</th>
-                  <th className="px-5 py-2 text-right font-medium">Hisse</th>
+                  <th className="px-5 py-2 font-medium">Investor</th>
+                  <th className="px-5 py-2 text-right font-medium">Round 1</th>
+                  <th className="px-5 py-2 text-right font-medium">Round 2</th>
+                  <th className="px-5 py-2 text-right font-medium">Total</th>
+                  <th className="px-5 py-2 text-right font-medium">Stake</th>
                 </tr>
               </thead>
               <tbody>
@@ -130,7 +165,7 @@ export default function CapTablePage() {
                   </tr>
                 ))}
                 <tr className="border-t border-border font-bold">
-                  <td className="px-5 py-2.5">Toplam</td>
+                  <td className="px-5 py-2.5">Total</td>
                   <td className="px-5 py-2.5 text-right font-mono">
                     {usd(round1Usd)}
                   </td>
@@ -148,15 +183,15 @@ export default function CapTablePage() {
             </table>
           </Card>
 
-          <Card title="İşlem geçmişi" hint={`${sortedTxs.length} işlem`}>
+          <Card title="Transaction history" hint={`${sortedTxs.length} checks`}>
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-[10px] uppercase tracking-wider text-fg-dim">
-                  <th className="px-5 py-2 font-medium">Tarih</th>
-                  <th className="px-5 py-2 font-medium">Yatırımcı</th>
-                  <th className="px-5 py-2 text-right font-medium">Tutar</th>
+                  <th className="px-5 py-2 font-medium">Date</th>
+                  <th className="px-5 py-2 font-medium">Investor</th>
+                  <th className="px-5 py-2 text-right font-medium">Amount</th>
                   <th className="px-5 py-2 text-right font-medium">Cap</th>
-                  <th className="px-5 py-2 text-right font-medium">Hisse</th>
+                  <th className="px-5 py-2 text-right font-medium">Stake</th>
                 </tr>
               </thead>
               <tbody>
@@ -182,10 +217,11 @@ export default function CapTablePage() {
           </Card>
 
           <p className="text-[11px] leading-relaxed text-fg-dim">
-            Kurucu ve ESOP oranları kurucu beyanıdır (Temmuz 2026). Yatırımcı
-            oranları SAFE post-money varsayımıyla işlem listesinden türetilir;
-            hisseye dönüşüm koşulları tur belgelerine tabidir. Bu sayfa liste
-            dışıdır — sadece linki olanlar görüntüler.
+            Founder and ESOP allocations as declared by the founders (July
+            2026). Investor stakes are derived from the transaction list under a
+            post-money SAFE assumption; actual conversion terms are governed by
+            the round documents. This page is unlisted — only people with the
+            link can see it.
           </p>
         </div>
       </div>
@@ -224,43 +260,6 @@ function StatTile({ label, value }: { label: string; value: string }) {
   );
 }
 
-function OwnershipBar({
-  founderShare,
-  investorShare,
-  unallocated,
-}: {
-  founderShare: number;
-  investorShare: number;
-  unallocated: number;
-}) {
-  const segments = [
-    { label: 'Kurucular + ESOP', share: founderShare, cls: 'bg-brand' },
-    { label: 'Yatırımcılar', share: investorShare, cls: 'bg-emerald-400' },
-    { label: 'Dağıtılmamış', share: unallocated, cls: 'bg-white/20' },
-  ];
-  return (
-    <div>
-      <div className="flex h-3 overflow-hidden rounded-full">
-        {segments.map((s) => (
-          <div
-            key={s.label}
-            className={s.cls}
-            style={{ width: `${(s.share * 100).toFixed(2)}%` }}
-          />
-        ))}
-      </div>
-      <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-fg-muted">
-        {segments.map((s) => (
-          <div key={s.label} className="flex items-center gap-1.5">
-            <span className={`h-2 w-2 rounded-full ${s.cls}`} />
-            {s.label} · <span className="font-mono">{pct(s.share)}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 function usd(n: number): string {
   return `$${n.toLocaleString('en-US', { maximumFractionDigits: 0 })}`;
 }
@@ -270,13 +269,13 @@ function usdShort(n: number): string {
 }
 
 function pct(n: number): string {
-  return `%${(n * 100).toLocaleString('tr-TR', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`;
+  return `${(n * 100).toFixed(2)}%`;
 }
 
 function formatDate(iso: string): string {
-  const [y, m, d] = iso.split('-');
-  return `${d}.${m}.${y}`;
+  return new Date(iso).toLocaleDateString('en-US', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
 }
