@@ -28,6 +28,7 @@ import {
   totalRevenue,
   unitEconomics,
 } from './financials';
+import { investorProfiles } from './profiles';
 import { InvestorSimulator } from './simulator';
 
 export const metadata: Metadata = {
@@ -247,6 +248,47 @@ export default function CapTablePage() {
                 </tr>
               </tbody>
             </table>
+          </Card>
+
+          <Card
+            title="Investor profiles"
+            hint="Angel investors backing Bottomup · bios via Galata Business Angels"
+          >
+            <div className="grid gap-x-6 gap-y-5 px-5 py-5 md:grid-cols-2">
+              {investorProfiles.map((p) => {
+                const inv = investors.find((r) => r.name === p.investorName);
+                return (
+                  <div key={p.investorName} className="flex gap-4">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={p.photo}
+                      alt={p.displayName}
+                      width={72}
+                      height={72}
+                      className="h-[72px] w-[72px] shrink-0 rounded-xl border border-border object-cover"
+                    />
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-baseline gap-x-2">
+                        <span className="font-bold">{p.displayName}</span>
+                        {inv ? (
+                          <span className="font-mono text-[11px] text-fg-dim">
+                            {usd(inv.totalUsd)} · {pct(inv.share)}
+                          </span>
+                        ) : null}
+                      </div>
+                      <p className="mt-1 text-[13px] leading-relaxed text-fg-muted">
+                        {p.bio}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <p className="border-t border-border px-5 py-3 text-[11px] text-fg-dim">
+              Bios condensed from Galata Business Angels member pages (Jul
+              2026). Remaining investors are private individuals without public
+              profiles.
+            </p>
           </Card>
 
           <Card title="Transaction history" hint={`${sortedTxs.length} checks`}>
