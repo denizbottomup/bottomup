@@ -109,7 +109,7 @@ export interface RaisePoint {
 
 const W = 640;
 const H = 230;
-const M = { top: 16, right: 16, bottom: 28, left: 52 };
+const M = { top: 30, right: 16, bottom: 28, left: 52 };
 
 function usdShortLabel(n: number): string {
   const abs = Math.abs(n);
@@ -242,7 +242,7 @@ export function CapitalRaisedChart({ points }: { points: RaisePoint[] }) {
         {/* Son değer doğrudan etiketli. */}
         <text
           x={dots[dots.length - 1]!.cx - 6}
-          y={dots[dots.length - 1]!.cy - 10}
+          y={Math.max(14, dots[dots.length - 1]!.cy - 12)}
           textAnchor="end"
           fontSize={11}
           fontWeight={700}
