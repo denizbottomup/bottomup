@@ -68,6 +68,9 @@ export default function CapTablePage() {
   const sortedTxs = [...transactions].sort((a, b) =>
     a.date.localeCompare(b.date),
   );
+  const paidTxs = sortedTxs.filter((t) => !t.pending);
+  const paidTotalUsd = paidTxs.reduce((s, t) => s + t.amountUsd, 0);
+  const committedUsd = investorTotalUsd - paidTotalUsd;
 
   const ownershipSegments: OwnershipSegment[] = [
     ...founders.map((f) => ({
@@ -95,7 +98,7 @@ export default function CapTablePage() {
   });
 
   let running = 0;
-  const raisePoints: RaisePoint[] = sortedTxs.map((t) => {
+  const raisePoints: RaisePoint[] = paidTxs.map((t) => {
     running += t.amountUsd;
     return {
       date: t.date,
@@ -123,10 +126,10 @@ export default function CapTablePage() {
           Financials and Cap Table
         </h1>
         <p className="max-w-2xl text-sm text-zinc-600">
-          Ownership, actuals, and the five-year plan in one place. Investor
-          stakes are computed on a post-money basis (stake % = investment /
-          valuation cap); financials follow the FY24A–FY31B model (AY update,
-          Jul 2026).
+          Ownership, actuals, and the five-year plan in one place. Stakes
+          follow the CFO cap table (Jul 2026): each round is priced post-money
+          and later rounds dilute earlier holders sequentially. Financials
+          follow the FY24A–FY31B model (AY update, Jul 2026).
         </p>
       </header>
 
@@ -169,7 +172,7 @@ export default function CapTablePage() {
 
           <Card
             title="Capital raised"
-            hint={`${usd(investorTotalUsd)} across ${sortedTxs.length} checks`}
+            hint={`${usd(paidTotalUsd)} paid across ${paidTxs.length} checks · ${usd(committedUsd)} committed, not yet paid`}
           >
             <div className="px-5 py-4">
               <div className="min-w-[560px]">
@@ -231,7 +234,7 @@ export default function CapTablePage() {
 
           <Card
             title="Investors"
-            hint={`Round 1: ${usd(ROUND_CAPS[1])} cap (2024) · Round 2: ${usd(ROUND_CAPS[2])} cap (2025–2026)`}
+            hint={`Round 1: ${usd(ROUND_CAPS[1])} cap (2024) · Round 2: ${usd(ROUND_CAPS[2])} cap (2025–26) · stakes fully diluted — Round 1 diluted by Round 2 · incl. ${usd(committedUsd)} committed`}
           >
             <table className="w-full text-sm">
               <thead>
@@ -358,7 +361,14 @@ export default function CapTablePage() {
                     <td className="px-5 py-2.5 font-mono text-zinc-600">
                       {formatDate(t.date)}
                     </td>
-                    <td className="px-5 py-2.5">{t.investor}</td>
+                    <td className="px-5 py-2.5">
+                      {t.investor}
+                      {t.pending ? (
+                        <span className="ml-2 rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-700">
+                          Committed · not paid
+                        </span>
+                      ) : null}
+                    </td>
                     <td className="px-5 py-2.5 text-right font-mono">
                       {usd(t.amountUsd)}
                     </td>
@@ -751,9 +761,13 @@ export default function CapTablePage() {
           <p className="text-[11px] leading-relaxed text-zinc-500">
             Founding split as declared by the founders (July 2026): 50/15/15/10
             across the four founders plus a 10% employee pool, totalling 100%
-            pre-investment. Investor stakes are derived from the transaction
-            list under a post-money SAFE assumption and dilute founders and the
-            pool pro-rata. Net stakes reflect dilution <em>to date</em> only —
+            pre-investment. Stakes follow the CFO cap table model (V2, Jul
+            2026): the $3M round dilutes founders and the pool; the $5M round
+            then dilutes everyone holding at that point, including Round-1
+            investors, while $5M-round investors keep investment / $5M.
+            Committed-but-unpaid amounts (Ömer Akarca, $50K) count toward
+            stakes per the CFO sheet but are excluded from paid-in capital.
+            Net stakes reflect dilution <em>to date</em> only —
             the planned Seed, Series A, and Series B rounds will dilute founders and the pool
             further (see the funding plan and simulator above). Actual
             conversion terms are governed by the round documents. Financials per the "bottomUP Financials

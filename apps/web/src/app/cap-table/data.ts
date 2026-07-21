@@ -10,13 +10,15 @@
  */
 
 export interface CapTableTransaction {
-  /** ISO tarih (YYYY-MM-DD). */
+  /** ISO tarih (YYYY-MM-DD). Taahhüt satırlarında imza/karar tarihi. */
   date: string;
   investor: string;
   amountUsd: number;
   /** Turun post-money değerleme cap'i ($). */
   valuationCapUsd: number;
   round: 1 | 2;
+  /** true → taahhüt edildi, henüz ödenmedi (CFO: "not paid up"). */
+  pending?: boolean;
 }
 
 export interface FounderEntry {
@@ -49,7 +51,8 @@ export const transactions: CapTableTransaction[] = [
   { date: '2024-07-19', investor: 'Ertekin Can Olguner', amountUsd: 45_000, valuationCapUsd: 3_000_000, round: 1 },
   { date: '2024-08-23', investor: 'Ertekin Can Olguner', amountUsd: 17_500, valuationCapUsd: 3_000_000, round: 1 },
   { date: '2024-09-10', investor: 'Ekrem Ozan Olguner', amountUsd: 17_500, valuationCapUsd: 3_000_000, round: 1 },
-  { date: '2025-08-14', investor: 'Omer Akarca', amountUsd: 75_000, valuationCapUsd: 5_000_000, round: 2 },
+  { date: '2025-08-14', investor: 'Omer Akarca', amountUsd: 25_000, valuationCapUsd: 5_000_000, round: 2 },
+  { date: '2025-08-14', investor: 'Omer Akarca', amountUsd: 50_000, valuationCapUsd: 5_000_000, round: 2, pending: true },
   { date: '2025-08-29', investor: 'Varol Civil', amountUsd: 10_000, valuationCapUsd: 5_000_000, round: 2 },
   { date: '2025-10-08', investor: 'Refia B Kucukkoylu', amountUsd: 25_000, valuationCapUsd: 5_000_000, round: 2 },
   { date: '2025-11-10', investor: 'Adil Esat Ugurlu', amountUsd: 10_000, valuationCapUsd: 5_000_000, round: 2 },
@@ -71,8 +74,19 @@ export interface InvestorRow {
   share: number;
 }
 
-/** İşlemleri yatırımcı bazında toplar, hisse oranına göre sıralar. */
+/**
+ * İşlemleri yatırımcı bazında toplar; hisseler CFO'nun sıralı dilüsyon
+ * modeliyle hesaplanır (V2 workbook, Cap Table sekmesi): $3M turundaki
+ * yatırımcılar $5M turu tarafından (1 − tur2Toplam/5M) çarpanıyla dilüte
+ * olur, $5M turundakiler kendi ham oranını (tutar/5M) korur. Taahhüt
+ * (pending) tutarlar CFO ile uyumlu olarak hisseye dahildir.
+ */
 export function aggregateInvestors(txs: CapTableTransaction[]): InvestorRow[] {
+  const round2TotalUsd = txs
+    .filter((t) => t.round === 2)
+    .reduce((s, t) => s + t.amountUsd, 0);
+  const round2Dilution = 1 - round2TotalUsd / ROUND_CAPS[2];
+
   const byName = new Map<string, InvestorRow>();
   for (const t of txs) {
     const row =
@@ -81,8 +95,12 @@ export function aggregateInvestors(txs: CapTableTransaction[]): InvestorRow[] {
     if (t.round === 1) row.round1Usd += t.amountUsd;
     else row.round2Usd += t.amountUsd;
     row.totalUsd += t.amountUsd;
-    row.share += t.amountUsd / t.valuationCapUsd;
     byName.set(t.investor, row);
+  }
+  for (const row of byName.values()) {
+    row.share =
+      (row.round1Usd / ROUND_CAPS[1]) * round2Dilution +
+      row.round2Usd / ROUND_CAPS[2];
   }
   return [...byName.values()].sort((a, b) => b.share - a.share);
 }
