@@ -176,12 +176,45 @@ export interface LandingStats {
   active_setups: number;
 }
 
+// 2026-08-03: stats/topTraders/latestSetups used to read a Railway mirror
+// kept warm by a `workers` replicator polling 24 backend tables every 10s
+// over HTTP. That poll-regardless-of-traffic load is what got replication
+// vetoed (see incident notes on bottomup-backend's /analytic/landing-summary
+// endpoint). These three now call that endpoint directly — same shape the
+// status.bottomup.app page already uses (call the live backend on demand,
+// no local mirror) — with a short in-process cache so N landing-page loads
+// within the TTL cost one backend request, not N.
+const BACKEND_API_URL = process.env.BACKEND_API_URL ?? 'https://api.bottomup.app';
+const LANDING_SUMMARY_TTL_MS = 60_000;
+
+interface BackendLandingSummary {
+  stats: LandingStats;
+  top_traders: LandingTrader[];
+  latest_setups: LandingSetup[];
+}
+
 @Injectable()
 export class PublicService {
+  private landingSummaryCache: { data: BackendLandingSummary; expiresAt: number } | null = null;
+
   constructor(
     @Inject(PRISMA) private readonly prisma: PrismaClient,
     private readonly intel: MarketIntelService,
   ) {}
+
+  private async fetchLandingSummary(): Promise<BackendLandingSummary> {
+    const now = Date.now();
+    if (this.landingSummaryCache && this.landingSummaryCache.expiresAt > now) {
+      return this.landingSummaryCache.data;
+    }
+    const res = await fetch(`${BACKEND_API_URL}/analytic/landing-summary`);
+    if (!res.ok) {
+      throw new Error(`landing-summary fetch failed: ${res.status}`);
+    }
+    const data = (await res.json()) as BackendLandingSummary;
+    this.landingSummaryCache = { data, expiresAt: now + LANDING_SUMMARY_TTL_MS };
+    return data;
+  }
 
   /**
    * Marketing-safe landing payload. The Phase-1 signup wall locked
@@ -229,28 +262,8 @@ export class PublicService {
   }
 
   private async stats(): Promise<LandingStats> {
-    const rows = await this.prisma.$queryRawUnsafe<Array<Record<string, unknown>>>(
-      `SELECT
-         (SELECT COUNT(*)::int FROM "user"
-           WHERE is_trader = TRUE AND is_deleted = FALSE AND is_active = TRUE) AS total_traders,
-         (SELECT COUNT(*)::int FROM setup
-           WHERE is_deleted = FALSE) AS total_setups,
-         (SELECT COUNT(*)::int FROM setup
-           WHERE is_deleted = FALSE AND status IN ('incoming'::statuses_type,'active'::statuses_type)) AS active_setups,
-         (SELECT (
-            COUNT(*) FILTER (WHERE status IN ('success'::statuses_type,'closed'::statuses_type))::float
-            / NULLIF(COUNT(*) FILTER (WHERE status IN ('success'::statuses_type,'closed'::statuses_type,'stopped'::statuses_type)), 0)
-          ) FROM setup
-           WHERE is_deleted = FALSE
-             AND close_date > NOW() - INTERVAL '30 days') AS success_rate_30d`,
-    );
-    const r = rows[0] ?? {};
-    return {
-      total_traders: Number(r.total_traders ?? 0),
-      total_setups: Number(r.total_setups ?? 0),
-      active_setups: Number(r.active_setups ?? 0),
-      success_rate_30d: r.success_rate_30d == null ? null : Number(r.success_rate_30d),
-    };
+    const { stats } = await this.fetchLandingSummary();
+    return stats;
   }
 
   /**
@@ -723,116 +736,14 @@ export class PublicService {
    */
   async topTraders(limit: number): Promise<LandingTrader[]> {
     const capped = Math.max(1, Math.min(20, limit));
-    const rows = await this.prisma.$queryRawUnsafe<Array<Record<string, unknown>>>(
-      // `close_date` is null for many stopped trades — same fallback as
-      // getTrader() so the monthly window includes stop-loss closures.
-      // Without this, the leaderboard counts only manually-closed trades,
-      // which biases the win-rate sharply upward (most cards end up
-      // showing 100% WR because every loss is filtered out).
-      // Rolling 30-day window — same as the trader detail modal.
-      // Calendar months emptied the leaderboard on the 1st of every
-      // month; rolling stays meaningful every day.
-      //
-      // LEFT JOIN onto trader_setup_pnl_performance — the PnL table is
-      // refreshed by a daily cron and trails the setup table by up to
-      // 24h. Without LEFT JOIN, today's closed setups disappear from
-      // the leaderboard until the cron runs. With LEFT JOIN, they
-      // count toward trade tallies even before PnL lands (their PnL
-      // contribution is NULL=0 until the cron catches up).
-      // 'closed' (manual break-even close) is included in the trade
-      // count alongside success/stopped.
-      `WITH monthly AS (
-         SELECT s.trader_id,
-                COUNT(*) FILTER (WHERE s.status = 'success'::statuses_type)::int AS success,
-                COUNT(*) FILTER (WHERE s.status = 'stopped'::statuses_type)::int AS stopped,
-                COUNT(*) FILTER (WHERE s.status = 'closed'::statuses_type)::int AS closed,
-                COALESCE(SUM(p.estimated_pnl), 0) AS net_pnl,
-                COALESCE(SUM(p.estimated_pnl_rate), 0) AS net_r
-           FROM setup s
-           LEFT JOIN trader_setup_pnl_performance p ON p.setup_id = s.id
-          WHERE s.is_deleted = FALSE
-            AND s.category = 'futures'::categories_type
-            AND s.status IN ('success'::statuses_type,'stopped'::statuses_type,'closed'::statuses_type)
-            AND COALESCE(s.close_date, s.stop_date, s.tp1_date, s.last_acted_at, p.updated_at, p.created_at) >= NOW() - INTERVAL '30 days'
-          GROUP BY s.trader_id
-       )
-       SELECT u.id::text AS trader_id, u.name, u.first_name, u.last_name, u.image,
-              (SELECT COUNT(*)::int FROM follow_notify f
-                WHERE f.trader_id = u.id AND f.follow = TRUE AND f.is_deleted = FALSE) AS followers,
-              COALESCE(m.success + m.stopped + m.closed, 0) AS trades,
-              COALESCE(m.success, 0) AS wins,
-              COALESCE(m.success + m.stopped, 0) AS scored_trades,
-              COALESCE(m.net_pnl, 0) AS net_pnl,
-              COALESCE(m.net_r, 0) AS net_r
-         FROM "user" u
-         LEFT JOIN monthly m ON m.trader_id = u.id
-        WHERE u.is_trader = TRUE AND u.is_active = TRUE AND u.is_deleted = FALSE
-          AND m.success + m.stopped + m.closed > 0
-        ORDER BY m.net_pnl DESC NULLS LAST
-        LIMIT ${capped}`,
-    );
-    const STARTING = 10000;
-    return rows.map((r) => {
-      const trades = Number(r.trades ?? 0);
-      const wins = Number(r.wins ?? 0);
-      const scored = Number(r.scored_trades ?? 0);
-      const netPnl = Number(r.net_pnl ?? 0);
-      const balance = STARTING + netPnl;
-      const returnPct = ((balance - STARTING) / STARTING) * 100;
-      return {
-        trader_id: r.trader_id as string,
-        name: (r.name as string | null) ?? null,
-        first_name: (r.first_name as string | null) ?? null,
-        last_name: (r.last_name as string | null) ?? null,
-        image: (r.image as string | null) ?? null,
-        followers: Number(r.followers ?? 0),
-        virtual_balance_usd: Math.round(balance * 100) / 100,
-        virtual_return_pct: Math.round(returnPct * 100) / 100,
-        monthly_trades: trades,
-        monthly_wins: wins,
-        monthly_win_rate: scored > 0 ? wins / scored : null,
-      };
-    });
+    const { top_traders } = await this.fetchLandingSummary();
+    return top_traders.slice(0, capped);
   }
 
   private async latestSetups(limit: number): Promise<LandingSetup[]> {
-    const rows = await this.prisma.$queryRawUnsafe<Array<Record<string, unknown>>>(
-      `SELECT s.id::text      AS id,
-              s.coin_name      AS coin_name,
-              s.status::text   AS status,
-              s.position::text AS position,
-              s.category::text AS category,
-              s.entry_value    AS entry_value,
-              s.stop_value     AS stop_value,
-              s.profit_taking_1 AS profit_taking_1,
-              s.r_value        AS r_value,
-              u.name           AS trader_name,
-              u.image          AS trader_image,
-              c.image          AS coin_image,
-              s.created_at     AS created_at
-         FROM setup s
-         LEFT JOIN "user" u ON u.id = s.trader_id
-         LEFT JOIN coin c ON c.code = s.coin_name AND c.is_deleted = FALSE
-        WHERE s.is_deleted = FALSE
-          AND s.status IN ('incoming'::statuses_type,'active'::statuses_type)
-        ORDER BY s.last_acted_at DESC NULLS LAST
-        LIMIT ${Math.max(1, Math.min(40, limit))}`,
-    );
-    return rows.map((r) => ({
-      id: r.id as string,
-      coin_name: r.coin_name as string,
-      status: r.status as string,
-      position: (r.position as string | null) ?? null,
-      category: (r.category as string) ?? 'spot',
-      entry_value: Number(r.entry_value ?? 0),
-      stop_value: r.stop_value == null ? null : Number(r.stop_value),
-      profit_taking_1: r.profit_taking_1 == null ? null : Number(r.profit_taking_1),
-      r_value: r.r_value == null ? null : Number(r.r_value),
-      trader_name: (r.trader_name as string | null) ?? null,
-      trader_image: (r.trader_image as string | null) ?? null,
-      coin_image: (r.coin_image as string | null) ?? null,
-      created_at: (r.created_at as Date | null) ?? null,
-    }));
+    const capped = Math.max(1, Math.min(40, limit));
+    const { latest_setups } = await this.fetchLandingSummary();
+    return latest_setups.slice(0, capped);
   }
 
   private async latestNews(limit: number, locale = 'en'): Promise<LandingNews[]> {
