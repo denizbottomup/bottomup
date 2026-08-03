@@ -746,46 +746,40 @@ export class PublicService {
     return latest_setups.slice(0, capped);
   }
 
+  // 2026-08-03: this used to read the mirror's `news`/`news_text` tables,
+  // kept warm by the (now-disabled) replicator plus a separate Google
+  // Translate worker writing straight into the mirror. Call the backend's
+  // own /feed/news instead — same on-demand + cached pattern as
+  // fetchLandingSummary. It only pre-translates en/tr/de (vs. the
+  // translator's wider locale list); other locales fall back to English,
+  // same graceful-fallback behavior the old code had for a cold translator.
   private async latestNews(limit: number, locale = 'en'): Promise<LandingNews[]> {
     const cap = Math.max(1, Math.min(20, limit));
-    // English is the source language; for any other locale we LEFT JOIN
-    // the news_text translation table and COALESCE the title / text /
-    // full_text. If the translator hasn't caught up yet, the request
-    // gracefully falls back to the source-language copy.
     const lang = String(locale ?? 'en').toLowerCase();
-    if (lang === 'en') {
-      const rows = await this.prisma.$queryRawUnsafe<Array<Record<string, unknown>>>(
-        `SELECT n.id::text AS id, n.title, n.text, n.source_name AS source,
-                COALESCE(n.thumbnail_url, n.image_url) AS image,
-                n.news_url AS url, n.date, n.sentiment,
-                COALESCE(n.tickers, ARRAY[]::text[]) AS tickers
-           FROM news n
-          WHERE n.is_deleted = FALSE
-          ORDER BY n.date DESC NULLS LAST
-          LIMIT ${cap}`,
-      );
-      return rows.map((r) => mapNewsRow(r));
+    const backendLang = ['en', 'tr', 'de'].includes(lang) ? lang : 'en';
+    const res = await fetch(`${BACKEND_API_URL}/feed/news?limit=${cap}`, {
+      headers: { 'accept-language': backendLang },
+    });
+    if (!res.ok) {
+      throw new Error(`feed/news fetch failed: ${res.status}`);
     }
-
-    const rows = await this.prisma.$queryRawUnsafe<Array<Record<string, unknown>>>(
-      `SELECT n.id::text AS id,
-              COALESCE(nt.title, n.title) AS title,
-              COALESCE(nt.text,  n.text)  AS text,
-              n.source_name AS source,
-              COALESCE(n.thumbnail_url, n.image_url) AS image,
-              n.news_url AS url, n.date, n.sentiment,
-              COALESCE(n.tickers, ARRAY[]::text[]) AS tickers
-         FROM news n
-         LEFT JOIN news_text nt
-                ON nt.news_id = n.id AND nt.language = $1
-        WHERE n.is_deleted = FALSE
-        ORDER BY n.date DESC NULLS LAST
-        LIMIT ${cap}`,
-      lang,
+    const body = (await res.json()) as {
+      data?: Array<Record<string, unknown>>;
+    };
+    return (body.data ?? []).map((r) =>
+      mapNewsRow({
+        id: r.id,
+        title: r.title,
+        text: r.text,
+        source: r.source_name,
+        image: r.thumbnail_url ?? r.image_url,
+        url: r.news_url,
+        date: r.date,
+        sentiment: r.sentiment,
+        tickers: r.tickers ?? [],
+      }),
     );
-    return rows.map((r) => mapNewsRow(r));
   }
-
 }
 
 function mapNewsRow(r: Record<string, unknown>): LandingNews {
