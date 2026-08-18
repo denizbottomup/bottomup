@@ -37,7 +37,7 @@ export class PublicController {
   /** Deploy liveness probe — the build marker tells which commit serves. */
   @Get('/ping')
   ping(): { ok: boolean; build: string } {
-    return { ok: true, build: 'b-2026-07-04-b' };
+    return { ok: true, build: 'b-2026-08-18-a' };
   }
 
   @Get('/landing')
