@@ -190,14 +190,12 @@ async function main(): Promise<void> {
   }
 
   // ─── Trader watcher ────────────────────────────────────────────────
-  // Polls trader_stats every N ms and publishes per-trader deltas to
-  // ws channel `analyst:<name>` + wildcard `analyst:*`. Powers the
-  // bottomup.app/analyst directory & detail "live" headline numbers
-  // without each browser polling the API.
+  // Polls FastAPI /public/analysts every N ms and publishes per-trader
+  // deltas to ws channel `analyst:<name>` + wildcard `analyst:*`.
   let traderWatcher: TraderWatcher | null = null;
   if (env.TRADER_WATCHER_ENABLED) {
     traderWatcher = new TraderWatcher(
-      env.DATABASE_URL,
+      process.env.BACKEND_API_URL ?? 'https://api.bottomup.app',
       realtime,
       log.child({ component: 'trader-watcher' }),
       env.TRADER_WATCHER_INTERVAL_MS,
