@@ -1,6 +1,7 @@
 import { Pool } from 'pg';
 import type { Logger } from 'pino';
 import { REPLICATED_TABLES, type TableReplicationSpec } from './tables.js';
+import { fetchSourceRowsFromDatabase } from './source.js';
 import type { RealtimeBus } from '../realtime-bus.js';
 
 const CURSOR_SLACK_MS = 2_000;
@@ -16,27 +17,28 @@ const REALTIME_TABLES: Record<string, 'setup' | 'trader'> = {
 };
 
 export interface ReplicatorOpts {
-  // Base URL of the bottomup-backend /internal/replication router, e.g.
-  // https://api.bottomup.app/internal/replication — NOT a Postgres DSN.
-  // Source Postgres is Hetzner-firewalled with no static-IP allowlist path
-  // (Railway's outbound IPv4 is Pro-plan-only and unavailable here), so we
-  // pull rows over HTTPS instead of connecting to the DB port directly.
-  sourceApiUrl: string;
-  sourceApiKey: string;
+  // Preferred: read-only report_user DSN (umay.bottomup.app). Replaces the
+  // HTTPS /internal/replication pull. Direct SELECT, same table allowlist.
+  sourceDatabaseUrl?: string;
+  // Legacy HTTP source. Used only when sourceDatabaseUrl is unset.
+  sourceApiUrl?: string;
+  sourceApiKey?: string;
   targetUrl: string;
   log: Logger;
   realtime?: RealtimeBus | null;
 }
 
 /**
- * Polls each table for rows newer than the last-seen cursor (via the
- * bottomup-backend replication API) and upserts them into the target DB.
+ * Polls each table for rows newer than the last-seen cursor and upserts
+ * them into the target DB. Source is the read-only report DSN when set,
+ * otherwise the legacy HTTPS replication API.
  *
  * Deletes are NOT captured — logical replication would be needed for that.
  */
 export class Replicator {
-  private readonly sourceApiUrl: string;
-  private readonly sourceApiKey: string;
+  private readonly sourceApiUrl: string | null;
+  private readonly sourceApiKey: string | null;
+  private readonly src: Pool | null;
   private readonly dst: Pool;
   private readonly log: Logger;
   private readonly cursors = new Map<string, string | null>();
@@ -44,8 +46,19 @@ export class Replicator {
   private ticking = false;
 
   constructor(opts: ReplicatorOpts) {
-    this.sourceApiUrl = opts.sourceApiUrl.replace(/\/+$/, '');
-    this.sourceApiKey = opts.sourceApiKey;
+    const sourceDb = opts.sourceDatabaseUrl?.trim() || '';
+    this.sourceApiUrl = opts.sourceApiUrl ? opts.sourceApiUrl.replace(/\/+$/, '') : null;
+    this.sourceApiKey = opts.sourceApiKey?.trim() || null;
+    this.src = sourceDb
+      ? new Pool({
+          connectionString: sourceDb,
+          max: 2,
+          idleTimeoutMillis: 30_000,
+        })
+      : null;
+    if (!this.src && !(this.sourceApiUrl && this.sourceApiKey)) {
+      throw new Error('replicator: set SOURCE_DATABASE_URL or REPLICATION_API_URL+KEY');
+    }
     this.dst = new Pool({
       connectionString: opts.targetUrl,
       ssl: { rejectUnauthorized: false as const },
@@ -54,6 +67,9 @@ export class Replicator {
     });
     this.log = opts.log;
     this.realtime = opts.realtime ?? null;
+    this.src?.on('error', (err) =>
+      this.log.warn({ err: err.message }, 'replicator: src pool idle error'),
+    );
 
     // Swallow idle-client errors so one bad connection doesn't crash the
     // whole process — the pool will reconnect on next checkout.
@@ -101,7 +117,7 @@ export class Replicator {
   }
 
   async stop(): Promise<void> {
-    await this.dst.end();
+    await Promise.all([this.dst.end(), this.src?.end() ?? Promise.resolve()]);
   }
 
   /**
@@ -147,7 +163,7 @@ export class Replicator {
       ? new Date(new Date(cursor ?? '1970-01-01').getTime() - CURSOR_SLACK_MS).toISOString()
       : undefined;
 
-    const rows = await this.fetchSourceRows(spec.name, since, BATCH_SIZE);
+    const rows = await this.fetchSourceRows(spec, since, BATCH_SIZE);
     if (rows.length === 0) return 0;
 
     // Source now returns every column it has (SELECT * on the backend) —
@@ -262,14 +278,18 @@ export class Replicator {
     return rows.length;
   }
 
-  /** GET {sourceApiUrl}/tables/{table}?since=...&limit=... — see
-   * bottomup-backend apps/replication/api.py for the contract. */
   private async fetchSourceRows(
-    table: string,
+    spec: TableReplicationSpec,
     since: string | undefined,
     limit: number,
   ): Promise<Record<string, unknown>[]> {
-    const url = new URL(`${this.sourceApiUrl}/tables/${encodeURIComponent(table)}`);
+    if (this.src) {
+      return fetchSourceRowsFromDatabase(this.src, spec, since, limit);
+    }
+    if (!this.sourceApiUrl || !this.sourceApiKey) {
+      throw new Error('replicator: HTTP source is not configured');
+    }
+    const url = new URL(`${this.sourceApiUrl}/tables/${encodeURIComponent(spec.name)}`);
     url.searchParams.set('limit', String(limit));
     if (since) url.searchParams.set('since', since);
     const res = await fetch(url, {

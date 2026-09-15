@@ -1,7 +1,6 @@
 /**
- * Tables we actively replicate from the source production Postgres
- * (`85.105.161.240:5432/app`) to the Railway Postgres mirror. Ordered
- * by business-importance.
+ * Tables we actively replicate from prod (report_user @ umay.bottomup.app)
+ * to the Railway Postgres mirror. Ordered by business-importance.
  *
  * `cursorCol` must be a monotonic timestamptz column that exists on BOTH
  * source and target. If a table lacks such a column, set cursorCol=null —
