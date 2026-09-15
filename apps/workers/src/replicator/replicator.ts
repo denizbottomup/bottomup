@@ -52,6 +52,10 @@ export class Replicator {
     this.src = sourceDb
       ? new Pool({
           connectionString: sourceDb,
+          // umay.bottomup.app terminates TLS with a self-signed cert.
+          // sslmode=require encrypts but node-pg still verifies the CA
+          // unless this is off — same posture as the Railway dest pool.
+          ssl: { rejectUnauthorized: false as const },
           max: 2,
           idleTimeoutMillis: 30_000,
         })
