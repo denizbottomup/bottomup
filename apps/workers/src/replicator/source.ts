@@ -59,3 +59,13 @@ export async function fetchSourceRowsFromDatabase(
   const { rows } = await pool.query<Record<string, unknown>>(sql, params);
   return rows.map(stripSensitive);
 }
+
+// node-pg parses sslmode=require from the DSN into rejectUnauthorized:true
+// and that wins over a sibling `ssl:` option. Strip it so the pool ssl
+// config is the only TLS policy.
+export function sourcePoolConnectionString(dsn: string): string {
+  const u = new URL(dsn);
+  u.searchParams.delete('sslmode');
+  u.searchParams.delete('ssl');
+  return u.toString();
+}

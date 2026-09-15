@@ -1,7 +1,7 @@
 import { Pool } from 'pg';
 import type { Logger } from 'pino';
 import { REPLICATED_TABLES, type TableReplicationSpec } from './tables.js';
-import { fetchSourceRowsFromDatabase } from './source.js';
+import { fetchSourceRowsFromDatabase, sourcePoolConnectionString } from './source.js';
 import type { RealtimeBus } from '../realtime-bus.js';
 
 const CURSOR_SLACK_MS = 2_000;
@@ -51,10 +51,7 @@ export class Replicator {
     this.sourceApiKey = opts.sourceApiKey?.trim() || null;
     this.src = sourceDb
       ? new Pool({
-          connectionString: sourceDb,
-          // umay.bottomup.app terminates TLS with a self-signed cert.
-          // sslmode=require encrypts but node-pg still verifies the CA
-          // unless this is off — same posture as the Railway dest pool.
+          connectionString: sourcePoolConnectionString(sourceDb),
           ssl: { rejectUnauthorized: false as const },
           max: 2,
           idleTimeoutMillis: 30_000,

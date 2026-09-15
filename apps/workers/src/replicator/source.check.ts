@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { buildSourceQuery, stripSensitive } from './source.js';
+import { buildSourceQuery, sourcePoolConnectionString, stripSensitive } from './source.js';
 
 const q = buildSourceQuery({ name: 'setup', cursorCol: 'last_acted_at' }, '2026-01-01', 500);
 assert.equal(
@@ -19,5 +19,11 @@ const stripped = stripSensitive({
   name: 'ok',
 });
 assert.deepEqual(stripped, { id: '1', name: 'ok' });
+
+const dsn = sourcePoolConnectionString(
+  'postgres://report_user:secret@umay.bottomup.app:5432/app?sslmode=require',
+);
+assert.equal(new URL(dsn).searchParams.get('sslmode'), null);
+assert.equal(new URL(dsn).hostname, 'umay.bottomup.app');
 
 console.log('source.check ok');
