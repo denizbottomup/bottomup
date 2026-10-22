@@ -36,6 +36,8 @@ export interface ReplicatorOpts {
  * Deletes are NOT captured — logical replication would be needed for that.
  */
 export class Replicator {
+  /** Whether this login may set session_replication_role (null until the first try). */
+  private replicaRole: boolean | null = null;
   private readonly sourceApiUrl: string | null;
   private readonly sourceApiKey: string | null;
   private readonly src: Pool | null;
@@ -184,7 +186,21 @@ export class Replicator {
     let lastSkipErr: string | null = null;
     try {
       await dst.query('BEGIN');
-      await dst.query(`SET LOCAL session_replication_role = 'replica'`);
+      // Skipping FK triggers needs a superuser (Railway's postgres role was one). On a managed database
+      // without it (Render) the SET fails; carry on with the checks on: parents are replicated before
+      // children, and a row that still breaks a key is skipped by its own savepoint below.
+      if (this.replicaRole !== false) {
+        await dst.query('SAVEPOINT sp_role');
+        try {
+          await dst.query(`SET LOCAL session_replication_role = 'replica'`);
+          await dst.query('RELEASE SAVEPOINT sp_role');
+          this.replicaRole = true;
+        } catch (err) {
+          await dst.query('ROLLBACK TO SAVEPOINT sp_role');
+          this.replicaRole = false;
+          this.log.warn({ err: (err as Error).message }, 'replicator: cannot skip FK triggers; replicating with them on');
+        }
+      }
       const upsertSql = buildUpsert(spec, cols);
       for (let i = 0; i < rows.length; i++) {
         const row = rows[i] as Record<string, unknown>;
