@@ -19,6 +19,11 @@ export const REPLICATED_TABLES: TableReplicationSpec[] = [
   // ─── Users & identity ─────────────────────────────────────────────
   { name: 'user', pkCols: ['id'], cursorCol: 'updated_at' },
   { name: 'trader_profile', pkCols: ['id'], cursorCol: 'updated_at' },
+  // Creator shops. setup.shop_id references shop, so a setup in a shop the mirror has not seen is
+  // refused (setup_shop_id_fkey) and so is everything hanging off it. Listed before setup on purpose.
+  // The source has two columns the mirror lacks (category, payout_schedule); the replicator only
+  // copies the mirror's own columns, so they are skipped without an excludeCols entry.
+  { name: 'shop', pkCols: ['id'], cursorCol: 'updated_at' },
 
   // ─── Setups & social ──────────────────────────────────────────────
   // cursorCol is `last_acted_at` (not `updated_at`): source mobile app
